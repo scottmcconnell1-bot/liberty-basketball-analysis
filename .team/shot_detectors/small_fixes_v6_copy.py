@@ -178,6 +178,7 @@ def decide_shot(
     switch_a8: bool = False,
     switch_a4: bool = False,
     switch_c4: bool = False,
+    switch_fall_through: bool = False,
 ) -> Tuple[bool, Dict[str, Any]]:
     """Copy of run_saved_v6_rule's per-shot decision, with four default-OFF switches.
 
@@ -507,9 +508,80 @@ def decide_shot(
                         details["veto_reason"] = "short_make_bodd_fail"
                         details["bodd_ratio"] = round(bodd_ratio, 3)
 
+        if pred and switch_fall_through:
+            cross_frame = combined[cross_idx][0]
+            ft_reason = fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y)
+            if ft_reason is not None:
+                pred = False
+                details["vetoed"] = True
+                details["veto_reason"] = "fall_through_fail"
+                details["fall_through_why"] = ft_reason
+
         return pred, details
 
     return False, {"reason": "ball_starts_well_below", "first_y": first_ball_y, "hoop_y": hoop_y}
+
+
+def fall_through_check(
+    ball: List[Tuple[int, float, float]],
+    cross_frame: int,
+    hoop_x: float,
+    hoop_y: float,
+    hoop_w: float,
+    scale_y: float,
+) -> Optional[str]:
+    """Guard: ball must be seen falling through the rim.
+
+    Returns None if pass, else one of:
+    - "no_ball_crossing"
+    - "short_fall"
+    - "outside_rim"
+    - "went_up"
+    """
+    # Step 1: build G = ball points at/after cross_frame, below rim, up to 180*scale_y depth
+    G = []
+    for pt in ball:
+        fr, x, y = pt
+        if fr < cross_frame:
+            continue
+        yr = y - hoop_y
+        if yr > 180.0 * scale_y:
+            break
+        if yr > 0:
+            G.append(pt)
+
+    # Step 2: no_ball_crossing
+    if not G:
+        return "no_ball_crossing"
+    first_G_frame = G[0][0]
+    # The LAST ball point before G[0] must exist and be above the rim (spec: ball itself seen
+    # above, then below). An earlier above-rim point followed by below-rim points does not count.
+    # Points exactly at the rim plane (y == hoop_y) are skipped; the nearest earlier point
+    # off the plane must be above the rim.
+    before = [pt for pt in ball if pt[0] < first_G_frame and pt[2] != hoop_y]
+    if not before or not (before[-1][2] < hoop_y):
+        return "no_ball_crossing"
+
+    # Step 3: short_fall (3 = existing short_net_depth minimum, line ~271)
+    if len(G) < 3:
+        return "short_fall"
+
+    # Step 4: outside_rim (0.5 * hoop_w, stricter than existing 0.55/0.6)
+    half_w = 0.5 * hoop_w
+    for pt in G:
+        if abs(pt[1] - hoop_x) >= half_w:
+            return "outside_rim"
+
+    # Step 5: went_up (5 = existing bounce tolerance line ~483)
+    max_depth = -1.0
+    for pt in G:
+        yr = pt[2] - hoop_y
+        if yr > max_depth:
+            max_depth = yr
+        elif yr < max_depth - 5.0 * scale_y:
+            return "went_up"
+
+    return None
 
 
 def reason_of(details: Dict[str, Any]) -> Optional[str]:

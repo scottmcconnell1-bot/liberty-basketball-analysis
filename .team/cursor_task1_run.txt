@@ -1,0 +1,40 @@
+Task 1 step 1 done. Measurement ran successfully on the build set.
+
+### Command
+```bash
+python3 .team/shot_detectors/pixel_miss/measure_net_moved.py --out .team/shot_outputs_test
+```
+
+### Console summary (verbatim)
+```
+=== SUMMARY ===
+# net_moved_after_shot baseline (Task 1 step 1)
+
+Build shots processed: 142
+Shots using no-crossing rule: 50
+
+| Metric | Build Set | Unseen Set |
+|--------|-----------|------------|
+| Missed Makes (GT=Make, Rule=Miss) | 19 | n/a |
+| Of Missed Makes: Net Moved = True | 6 (recovery 31.6%) | n/a |
+| Of Missed Makes: Net Moved = False | 13 | n/a |
+| Misses (GT=Miss) | 95 | n/a |
+| Of Misses: Net Moved = True (False Makes) | 40 | n/a |
+| Of Misses: Net Moved = False | 55 | n/a |
+
+Unseen set: not available: Adrian Q4 tracks were never built
+```
+
+**No-crossing rule used on: 50 shots** (makes and misses).
+
+### Files created
+- **Only source file:** `.team/shot_detectors/pixel_miss/measure_net_moved.py`
+- **Sandbox test outputs** (not for commit):  
+  `.team/shot_outputs_test/net_moved_build_results.json`  
+  `.team/shot_outputs_test/net_moved_unseen_results.json`  
+  `.team/shot_outputs_test/net_moved_summary.md`
+
+No edits to `net_detector.py`, `ai_bridge.py`, or other protected files. No commit/push.
+
+**Proven notes:** 31 Notus + 111 Adrian rows = 142. Adrian Q1–Q3 tags have two duplicate timestamps (`2738600`, `2747200`), so those appear twice in the false-make detail list. Claude can re-run with the Windows venv and default `--out` to `C:\Users\scott\Documents\Liberty_Shot_Outputs`.Task 1 step 1 finished: `measure_net_moved.py` is in place and the sandbox run completed (142 build shots; 50 used the no-crossing rule; 6/19 missed makes recovered; unseen Q4 unavailable). Results are under `.team/shot_outputs_test/`.
+[cursor_wsl] exit 0 at 20:51:03

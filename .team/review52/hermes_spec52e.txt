@@ -1,0 +1,211 @@
+Query: You are HERMES, the architect. Write NEW file 
+.team/specs/52e_two_stream_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-16) after the 52d FAIL (review52/*_gate52d.txt, drift_log
+end): TWO CLIPS TOGETHER - the short clip (clips7a, 32 frames, did well on 
+make/miss and non-shot rejection) decides make vs miss; the long clip (clips8, 
+44 frames over -0.88..+6.0 s) only helps decide shot vs not-shot.
+Facts: logo52a/logo52c (short) and logo52d (long) preds exist for the same 
+candidates (identical T/Y/F). Short: gvg class-0 well rejected (0.993), misses 
+first-of-two (P 0.04-0.18). Long: catches gvg/notus first shots, but class-0 
+mean P(shot) on gvg 0.21->0.45, rimrock 9 losses. GPU probe 
+(review52/gpu_probe52d.txt): 8 GB card; T=32 bs8 3938 MiB, T=44 bs8 5176 MiB -> 
+a jointly trained two-backbone model at bs 8 likely does NOT fit (~9 GB); 
+disclose and pin a buildable choice.
+Design questions you must answer and pin:
+1. Late fusion of separately trained models (combine existing or retrained short
++ long P at predict time) vs one jointly trained two-stream model. 
+CONTAMINATION: the team has ALREADY SEEN logo52a/52c/52d same-5 preds; any 
+fusion rule or weight chosen now and scored on those same preds is tuned on the 
+test. Say how you avoid that (e.g. rule fixed from first principles with no free
+parameters; or fusion fit only on inner folds; or retrain fresh and treat same-5
+as diagnostic with R10 blind binding - but Scott made same-5 binding ('A'); flag
+if you think that must change and leave it to Scott).
+2. How the long stream's shot/no-shot vote is limited so it cannot flood class-0
+(gvg) - pinned rule, no thresholds picked from 52d numbers.
+3. Make/miss from the short stream only.
+4. Exact build/run order, sha freeze, tests, E=5 seeds 0 1 2, gate52 + 
+postproc52b, fail -> stop for Scott. Disclosure section.
+End with "HERMES: PREREG WRITTEN".
+
+────────────────────────────────────────
+☤ Hermes
+Hermes here. Before writing the spec I need the current state of the gates, drift log, GPU probe, and prior specs so the new task doesn't contradict anything pinned.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 2 commands  2.0s
+📖 Read TEAM_RECOVERY.md
+
+────────────────────────────────────────
+☤ Hermes
+Large repo context. Let me batch the key reads — the governing docs, the latest spec chain, and the review52 evidence.
+────────────────────────────────────────
+
+📖 Read NEXT_TASK.md
+📖 Read AUTHORITY.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ + 2 commands  1.8s
+
+────────────────────────────────────────
+☤ Hermes
+Good — the context is rich. Now let me read the critical chain: the 52d spec (the FAIL that triggered this), the GPU probe, the gate52d verdict, and the existing 52e draft.
+────────────────────────────────────────
+
+📖 Read 52d_context_clip_prereg.md
+📖 Read gpu_probe52d.txt
+📖 Read cursor_gate52d.txt
+📖 Read hermes_spec52e.txt
+
+────────────────────────────────────────
+☤ Hermes
+Excellent — the FAIL write-up and the task text are now clear. Let me gather the frozen protocol files (postproc52b, check rule, 52c spec) and the drift log tail so the new spec doesn't contradict pinned numbers.
+────────────────────────────────────────
+
+📖 Read postproc52b.json
+📖 Read 52b_check_rule_prereg.md
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/gate52.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ensemble_predict.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/extract_clips.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/test_mm52.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now the drift log tail (where the FAIL narrative ends) and the gate52 scoring conditions.
+────────────────────────────────────────
+
+📖 Read drift_log.md L380  0.2s
+📖 Read gate52.py  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me ground the technical design in the ensemble_predict interface and the artifacts layout.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/clips7a/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/  0.3s
+📖 Read ensemble_predict.py
+
+────────────────────────────────────────
+☤ Hermes
+I have the full picture now. Let me verify the target file doesn't exist yet and check repo cleanliness before writing.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ | grep -i "52e" + 6 commands  31.3s
+
+────────────────────────────────────────
+☤ Hermes
+The file does not exist yet (grep found nothing), and I'm on team/auto with pre-existing dirty state — I'll touch only the new spec file. I have everything pinned from the 52d FAIL chain, GPU probe, frozen postproc52b, and gate code. Now writing the new pre-registration:
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52e_two_stream_prereg.md  0.1s
+│ .team/specs/52e_two_stream_prereg.md
+│ @@ -0,0 +1,138 @@
+│ +# Spec 52E - Two-Stream Shot/Make-Miss Pre-Registration (PRE-REGISTERED) v1.0
+│ +
+│ +Author: HERMES (Architect)
+│ +Date: 2026-11-16
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +Outputs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/
+│ +
+│ +## Status
+│ +
+│ +PRE-REGISTERED (v1.0). The change set below is frozen BEFORE any code change or training.
+│ +
+│ +Binding pre-registration for the TWO-CLIP fix chosen by Scott (2026-11-16) after the Spec 52D v3.1 binding
+│ +same-5 re-gate FAILED (review52/cursor_gate52d.txt, muse_gate52d.txt, hermes_gate52d.txt; drift_log end).
+│ +
+│ +- Scott decided (2026-11-16) after the 52d FAIL: TWO CLIPS TOGETHER - the short clip (clips7a, 32 frames,
+│ +  did well on make/miss and non-shot rejection) decides make vs miss; the long clip (clips8, 44 frames over
+│ +  -0.88..+6.0 s) only helps decide shot vs not-shot.
+│ +
+│ +## Binding decision (Scott, 2026-11-16)
+│ +
+│ +- Scott decided (2026-11-16) after the 52d FAIL: try the two-clip-together design. Hermes writes the
+│ +  pre-registration, Muse + Cursor review, Scott approves, then the SAME-5 re-gate is the binding pass/fail
+│ +  (Scott 'A'); later R10 blind films: NOTUS_A, IDAHO_CITY, RIVERSTONE.
+│ +- SAME-5 re-gate stays BINDING for this spec (Scott made it binding, 'A'). Moving to same-5 = diagnostic with
+│ +  R10 blind = binding is a Scott decision - flagged here, left to Scott.
+│ +
+│ +## Inputs read this session (no source changed by this spec)
+│ +
+│ +- .team/specs/52d_context_clip_prereg.md (v3.1; the FAIL this spec answers)
+│ +- .team/specs/52c_first_shot_sequence_prereg.md (v2; seq-flag superseded by the longer window)
+│ +- .team/specs/52b_check_rule_prereg.md (v2; postproc52b check rule)
+│ +- .team/specs/52a_class0_restore_prereg.md (v3; class-0 restore)
+│ +- .team/mm_clip/ensemble_predict.py, train_clip.py, extract_clips.py, gate52.py, test_mm52.py
+│ +- .team/mm_clip/postproc52b.json (frozen for this re-gate; sha .team/review52/spec52c_postproc52b_sha.txt)
+│ +- .team/review52/gpu_probe52d.txt, clips7a_sha.txt, clips8_sha.txt, silent3/, truth52_gvg.json, truth52_hsb.json,
+│ +  truth52_rimrock.json, labels52a_class0_restore.json (sha d8d2acd4...)
+│ +- Liberty_Shot_Outputs/mm_clip/clips7a/, clips8/, runs/logo52a/, runs/logo52c/, runs/logo52d/, runs/choose_e52/
+│ +
+│ +## Gate facts being answered (this spec's binding re-gate: logo52e, E=5, seeds 0 1 2, postproc52b.json)
+│ +
+│ +OVERALL FAIL at logo52d (the baseline this two-clip design must answer):
+│ +
+│ +- adrian: PASS 93.7 (119/127); notus: PASS 93.5 (28/31); gvg: FAIL 95.9 (208/218, checks 140, silent 0);
+│ +  hsb: PASS 97.1 (136/140); rimrock: FAIL auto 88.6 (109/123, checks 34, silent 1). OVERALL: FAIL.
+│ +
+│ +- First-shot P(shot) chain: logo52a -> logo52c (seq flag = 1 on all 3): notus 0.083 -> 0.170, rimrock 0.096 -> 0.037, gvg 0.181 -> 0.092. logo52c -> logo52d (long clip): notus 0.170 -> 0.289, gvg 0.092 -> 0.789, rimrock 0.037 -> 0.111 (still silent, t=274807).
+│ +- Long clip (52d) made gvg class-0 mean P(shot) 0.21 -> 0.45; rimrock lost 9 shots (6 miss->not-shot, 3 miss->make, 1 not-shot->miss).
+│ +
+│ +## Design Q1 - Fusion: LATE FUSION of separately trained streams (PINNED); joint two-stream NOT chosen.
+│ +
+│ +### Decision (PINNED, v1.0)
+│ +
+│ +- Late fusion at predict time of two separately trained stream models. One jointly trained two-stream model
+│ +  is NOT the pinned design.
+│ +
+│ +### Why
+│ +
+│ +- GPU probe (review52/gpu_probe52d.txt; RTX 5060, 8151 MiB card): T=32 bs8 train peak 3938 MiB (0.46 s/step); T=44 bs8
+│ +  peak 5176 MiB (0.53 s/step); T=87 bs8 peak 9621 MiB > 8150 MiB card -> not feasible. Joint two-backbone at bs 8
+│ +  likely does NOT fit (~9 GB) -> disclose and pin a buildable choice.
+│ +- PIN BUILDABLE CHOICE (v1.0): retrain short (clips7a set) + long (clips8 set) separately; late fusion at
+│ +  predict time.
+│ +
+│ +### Contamination control
+│ +
+│ +- The team has ALREADY SEEN logo52a/52c/52d same-5 preds; any fusion weight/threshold chosen now and scored on
+│ +  those same preds is TUNED ON THE TEST.
+│ +- Pinned here: the fusion rule is FIXED FROM FIRST PRINCIPLES WITH NO FREE PARAMETERS; no learned fusion weight
+│ +  is fit on the same-5. The fusion is a DECISION-LEVEL split pinned before any scoring (Q2/Q3 below).
+│ +- Retrains use FROZEN clip sets + FROZEN labels52a_class0_restore.json (sha d8d2acd4...); no relabel; no new
+│ +  threshold by 52e.
+│ +
+│ +## Design Q2 - Long stream vote limited so it cannot flood class-0 (gvg) (PINNED RULE; no new thresholds)
+│ +
+│ +### Pinned rule (v1.0)
+│ +
+│ +- Final shot decision for candidate i:
+│ +  - short ens P(shot) >= THR (0.5, FROZEN postproc52b) -> SHOT (final; short owns).
+│ … omitted 60 diff line(s) across 1 additional file(s)/section(s)
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+
+────────────────────────────────────────
+☤ Hermes
+File written and verified. Quick confirmation of the ending:
+────────────────────────────────────────
+
+📖 Read 52e_two_stream_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+New spec written and verified (sha-confirmed on write, 138 lines, .team/specs/52e_two_stream_prereg.md).
+
+What it pins (Spec 52E v1.0, PRE-REGISTERED, 2026-11-16):
+- Binding decision: Scott's two-clips-together design after the 52d FAIL; same-5 re-gate stays BINDING ('A').
+- Q1 — Fusion: LATE FUSION of separately trained short (clips7a) + long (clips8) streams pinned; joint two-stream NOT chosen (joint at bs8 ~9 GB vs 8151 MiB card per gpu_probe52d). Fusion rule fixed first-principles with no free parameters; no learned weight fit on same-5; Scott-decision flag left to Scott.
+- Q2 — Long vote limit: pinned silent-zone re-open rule (short ens P(shot) >= THR 0.5 -> shot; short silent (< floor 0.2, all-seed < 0.5) + long ens P(shot) >= 0.5 -> re-opened shot; else not-shot). No new thresholds introduced; only FROZEN postproc52b numbers used.
+- Q3 — Make/miss: short stream owns make/miss; long decides only silent re-opened shots.
+- Q4 — Build order: sha freeze, code changes (train_clip two-entry-point + ensemble_predict late-fusion path; no changes to gate52/postproc52b), GPU-free tests, postproc52b lock unchanged, E=5 seeds 0 1 2, re-gate via gate52 + postproc52b, fail -> STOP for Scott, stop conditions (G8 speed guard, CUDA OOM).
+
+Verified: file written at .team/specs/52e_two_stream_prereg.md (8,036 bytes, content hash verified), ends with HERMES: PREREG WRITTEN. No other files modified.
+
+Next step: Muse + Cursor review; Scott approves -> build/train -> same-5 re-gate.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-1be0472adc2d798b9878e50f4aa60868bb03ff07745ffcc93c671cd94293981d
+  hermes -c "You are HERMES, the architect. Write NEW file… #7"
+
+Session:        local-1be0472adc2d798b9878e50f4aa60868bb03ff07745ffcc93c671cd94293981d
+Title:          You are HERMES, the architect. Write NEW file… #7
+Duration:       7m 29s
+Messages:       11 (1 user, 9 tool calls)
+[hermes] exit 0 at 08:29:20

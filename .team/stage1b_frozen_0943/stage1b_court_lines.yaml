@@ -1,0 +1,134 @@
+# Stage 1b court-line measurement config.
+#
+# Thresholds below were fixed on the separate calibration frames listed under
+# `calibration` (each >= 60 s from every measurement frame) BEFORE the 60
+# measurement frames were measured.  Do not change them after seeing
+# measurement results.
+court:
+  hoop_to_baseline_ft: 5.25
+  ft_line_y_ft: 13.75
+  lane_half_width_ft: 6.0
+  three_point_radius_ft: 19.75
+  ft_circle_radius_ft: 6.0
+  plausible_half_court_y_min_ft: 28.0
+  plausible_half_court_y_max_ft: 46.0
+
+output_root: .team/stage1b_lines
+
+calibration:
+  min_separation_seconds: 60.0
+  adrian: [2436, 17055, 31674, 46293, 60912, 80404]
+  notus_a1: [2523, 17664, 32805, 47946, 63087, 83275]
+  notus_a: [2341, 16387, 30433, 44479, 58525, 77253]
+
+detection:
+  # Common
+  canny_low: 50
+  canny_high: 150
+  hough_threshold: 25
+  hough_min_line_length_px_at_1280: 40
+  hough_max_line_gap_px_at_1280: 15
+  merge_max_angle_deg: 2.0
+  merge_max_offset_px: 8.0
+  merge_max_gap_px: 20.0
+  max_lines_per_frame: 28
+  max_parallel_pairs: 120
+  exhaustive_top_lines: 12
+  max_condition_number: 10000.0
+
+  # Floor / paint segmentation
+  floor_hsv_low: [5, 20, 25]
+  floor_hsv_high: [45, 255, 255]
+  floor_close_kernel_px: 51
+  floor_dilate_kernel_px: 45
+  floor_keep_bottom_components: true
+  thin_line_kernel_px: 21
+
+  # Liberty: basketball lines are red.  Blue lines on this floor belong to
+  # other sports and are excluded after inspection of calibration frames.
+  liberty:
+    red_hsv_ranges:
+      - [[0, 90, 45], [14, 255, 255]]
+      - [[165, 90, 45], [180, 255, 255]]
+    blue_hsv_range: [[85, 45, 25], [145, 255, 255]]
+    use_blue: false
+    use_tophat: false
+
+  # Adrian: basketball lines are dark; white lines on this floor belong to
+  # other markings.  The dark centre line is included by the same mask.
+  adrian:
+    white_tophat_threshold: 35
+    dark_blackhat_threshold: 30
+    use_white_tophat: false
+    use_dark_line: true
+
+scoring:
+  # A model point is on a detected line if its distance to the paint mask is
+  # at most this many pixels.
+  inlier_distance_px: 2.5
+  # Success gates (per frame).
+  min_strong_structures: 3
+  min_structure_coverage: 0.40
+  min_median_reprojection_px: 2.0
+  min_inlier_lines: 4
+  min_lane_area_fraction: 0.004
+  max_lane_area_fraction: 0.60
+  # Minimum number of model samples that must fall inside the frame for a
+  # structure to count as visible.
+  min_visible_samples: 5
+
+  # Weights for structural coverage.
+  weights:
+    left_lane: 1.0
+    right_lane: 1.0
+    baseline: 1.0
+    ft_line: 1.0
+    three_pt_arc: 1.2
+    ft_circle: 0.8
+    center_line: 0.5
+    left_sideline: 0.6
+    right_sideline: 0.6
+
+center_line:
+  search_min_y_ft: 28.0
+  search_max_y_ft: 46.0
+  search_step_ft: 0.25
+  sample_x_min_ft: -25.0
+  sample_x_max_ft: 25.0
+  samples: 41
+  min_coverage: 0.45
+  min_visible_samples: 6
+
+sideline:
+  search_half_width_min_ft: 15.0
+  search_half_width_max_ft: 35.0
+  search_step_ft: 0.25
+  samples: 41
+  min_coverage: 0.35
+  min_visible_samples: 6
+
+games:
+  - game: adrian
+    dir: adrian
+    gym: adrian
+    video: uploads/nfhs_gam0a66d85e12.mp4
+    frame_indices: [0, 4873, 9746, 14619, 19492, 24365, 29238, 34111, 38984, 43857, 48730, 53603, 58476, 63349, 68222, 73095, 77968, 82841, 87714, 92587]
+    total_frames: 97475
+    fps: 25.0
+    keypoint_dir: .team/stage1_keypoints/adrian
+  - game: notus_a1
+    dir: notus_a1
+    gym: liberty
+    video: uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4
+    frame_indices: [0, 5047, 10094, 15141, 20188, 25235, 30282, 35329, 40376, 45423, 50470, 55517, 60564, 65611, 70658, 75705, 80752, 85799, 90846, 95893]
+    total_frames: 100950
+    fps: 25.0
+    keypoint_dir: .team/stage1_keypoints/notus_a1
+  - game: notus_a
+    dir: notus_a
+    gym: liberty
+    video: uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4
+    frame_indices: [0, 4682, 9364, 14046, 18728, 23410, 28092, 32774, 37456, 42138, 46820, 51502, 56184, 60866, 65548, 70230, 74912, 79594, 84276, 88958]
+    total_frames: 93650
+    fps: 25.0
+    keypoint_dir: .team/stage1_keypoints/notus_a

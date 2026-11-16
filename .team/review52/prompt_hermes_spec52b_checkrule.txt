@@ -1,0 +1,21 @@
+You are HERMES, the architect. Write NEW file .team/specs/52b_check_rule_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-14): the team writes a first-principles rule for which moments a coach must see (R7 review
+checks), pre-registered, Scott approves before any re-gate. Context: review52/{hermes,muse,cursor}_gate52a.txt,
+specs/52_*.md R6/R7, specs/52a_class0_restore_prereg.md, .team/mm_clip/{ensemble_predict.py,postproc52a.json,gate52.py}.
+Problem: R7 flags every in-session candidate with 0.2 <= P(shot) < 0.5 (floor band); on films with hundreds of
+non-shot candidates (gvg 145, rimrock 241 label 0) this band alone exceeds the 20-check cap.
+Requirements:
+1. Derive the rule from what a check is FOR (catch real shots the auto list would lose or miscall) and Scott's goal
+   (>= 90% of all shots found + called, coach involvement minimal, <= 20 checks), NOT from the logo52a numbers
+   (do not open logo52a preds/report to pick values). Options to weigh: rank-and-cap (top-K by risk, K fixed by the cap),
+   corroboration (band candidate flagged only with a second shot cue: seed disagreement, ball near rim/trajectory,
+   later referee/score cue), per-minute budget, or others. Pick one; state why.
+2. Silent-reject definition and its relation to the new rule (a real shot below every flag must still count as a fail).
+3. Honest review scoring unchanged in meaning; cap 20 unchanged unless argued from first principles.
+4. Validation: same-5 re-gate stays binding (Scott 'A'); state that the rule was written after seeing that checks failed
+   (disclosure) and that R10 blind films (NOTUS_A, IDAHO_CITY, RIVERSTONE) are the stronger test.
+5. Code surface + tests (ensemble_predict / gate52 / new postproc52b.json), defaults keep logo52/logo52a reproducible.
+6. Wait for Scott's 3-clip label check (notus 252520, rimrock 274807, gvg 1158600) - any label fix goes into a
+   labels52b file before the re-gate; say how.
+End with "HERMES: PREREG WRITTEN".

@@ -1,0 +1,9 @@
+Muse, you check the Vetter. Read-only: do not change any file. The spec is checked BEFORE code exists; "not coded yet" is normal, not a defect.
+Read: .team/specs/47_learned_make_miss_spec.md (Claude Code's VETTED WITH CONDITIONS V1-V8 at the top, then Hermes's spec with SETTINGS FIXED S1-S9), .team/shot_detectors/find_shots_measure.py (match_shot_indices ~112, load_shot_tags ~224), .team/specs/44_gv_score.py docstring (label format), last 4 entries of .team/drift_log.md.
+Check that Claude Code did not miss or approve anything wrong:
+- Leaks: can any tag, label or held-out-game information reach the features, the scaler, or the training of a fold? Are rule calls (F14/F15) a leak? (They come from the unchanged spec-46 rules, no labels.)
+- Labels: is the 4000 ms one-to-one matching plus "exclude unmatched moments within 4000 ms of a Make tag" sound? Could it bias makes found?
+- Is the pass bar (beat spec-46 rules on every held-out game: makes found >=, false makes <=, coach load <=) fair and fixed before any number? Is the rule side counted exactly like the learned side?
+- With ~350 labelled moments and 15 features, is logistic regression with class_weight balanced and a fixed 0.80/0.20 band reasonable, or is something set up to fail or to pass falsely?
+- Any edit outside the two new files, any unseen film touched, any tuning after a number?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

@@ -1,0 +1,70 @@
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/33_shot_flight_rules_measure_spec.md (line 1 is Claude Code's VETTED
+WITH CONDITIONS stamp; the spec below it is Hermes's v2) and 
+.team/specs/33_shot_flight_rules_measure_spec_v1_REJECTED.md (line 1 = why v1 
+was rejected). You may read event_generator.py (rim_arc_shots ~line 1071), 
+court_memory.py (ball_through_rim ~lines 160-195), ai_bridge.py (~1230-1240), 
+manual_tag_teach.py line 18. Edit nothing, run nothing that writes.
+
+Scott's goal (2026-11-04): find shots from video only, using four rules on how 
+the ball's flight ends: 1 caught before the hoop = pass; 2 comes down on 
+rim/backboard untouched = shot; 3 aimed at hoop, comes down near it, touches 
+nothing = airball (missed shot); 4 lands far from the hoop = bad pass; unclear =
+orange coach card. This spec only MEASURES those rules on Adrian Q1-Q3 and Notus
+Q1 tagged shots and on spec 32's fake shots.
+
+Check Claude Code's verdict:
+1. Are conditions C1-C7 correct and enough? In particular: does Rule 1 as Hermes
+wrote it really fire on the shooter's own hands at release (C1)? Is the rim zone
+/ player overlap problem real (C2)?
+2. Does anything in the spec still break the Golden Rules: core file edits, 
+banned trials (linear interpolation, ByteTrack, DeepSORT, early windows, wider 
+column, hoop recenter), a number with no source and no Scott gate, tuning after 
+results, Adrian Q4 used?
+3. Did Claude Code miss anything that would make the measurement misleading?
+
+Reply in under 300 words. Last line must START with exactly "MUSE: AGREE" or 
+"MUSE: DISAGREE: <reason>".
+📖 Read 33_shot_flight_rules_measure_spec.md  0.2s
+📖 Read 33_shot_flight_rules_measure_spec_v1_REJECTED.md  0.2s
+💻 $ sed -n '1040,1140p' event_generator.py
+💻 $ sed -n '100,210p' court_memory.py  0.1s
+💻 $ sed -n '1000,1100p;1200,1260p' ai_bridge.py  0.1s
+💻 $ sed -n '1,40p' manual_tag_teach.py
+💻 $ ls -la .team/ + 2 commands  0.9s
+💻 $ cat AGENT_OPERATIONAL_PROTOCOL.md 2>/dev/null  0.1s
+💻 $ cat AUTHORITY.md 2>/dev/null  0.1s
+✗ $ cat .team/05_VERDICT_claude.md + 3 commands  0.1s [exit 1]
+💻 $ cat TEAM_RECOVERY.md + 2 commands  0.2s
+💻 $ find . -maxdepth 2 -name '*spec33*' -o -maxdepth 2 -name '05_VERDICT_claude.md' -o -maxdepth 2 -name 'prompt_muse_check_spec33.txt' 2>/dev/null | grep -v node_modules  0.3s
+💻 $ ls -la  0.6s
+💻 $ ls -la .team/  0.7s
+✗ $ grep -rl "VETTED by Claude Code" --include='*' . 2>/dev/null | grep -v '.git/'  180.2s [exit 124]
+💻 $ cat .cursorrules + 2 commands  0.1s
+💻 $ grep -n "def net_moved_after_shot" -A 40 net_detector.py
+💻 $ cat CLAUDE.md + 2 commands  0.3s
+💻 $ sed -n '1,80p' .team/specs/32_find_shots_measure_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Muse check on the Claude Code verdict (2026-11-04, VETTED WITH CONDITIONS) for spec 33 v2, against the v1 REJECTED stamp and the cited source lines.
+
+Conditions C1-C7: C1 is correct — as written, the player-box catch test (ball in box before rim height) fires on the shooter's own hands at release, so every shot would be a pass. The leave-box → in-flight → re-enter fix is right, but it must be temporal in the code, not spatial-only. C2 is real — player boxes overlapping the hoop in 2D is plausible; a ball within rim distance at rim height is rim contact (court_memory.py:190 predicate exists), never a catch. C3-C7 are adequate fixes for all seven v1 reasons: hoop-relative units, net_moved_after_shot drop is sound for Rule 3, Q4 out of scope per Scott's goal, compute estimate flagged unverified, seven numbers Scott-gated.
+
+Golden Rules: no break found. No core edits, no interpolation/gap-fill, no ByteTrack/DeepSORT, window is a Scott-gated proposal rather than a banned early-window trial, no wider column (new airball ring gated), no hoop recenter, no tuning, no ungated new numbers.
+
+Missed: Claude Code stamped the C1/C2 fixes "binding on the code" but did not write them into the v2 prose or hand-made tests; the clean-shot test still encodes the spatial catch logic and contradicts the fix. The "in TIME" language also needs an operational definition.
+
+On balance the conditions are correct and sufficient; the residuals are implementation bindings, not verdict defects.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-47876803319f2642cc7b537fa70283ad2ea4f66a7de2c68013df0e3860184411
+  hermes -c "You are Muse, the checker of Claude Code's…"
+
+Session:        local-47876803319f2642cc7b537fa70283ad2ea4f66a7de2c68013df0e3860184411
+Title:          You are Muse, the checker of Claude Code's…
+Duration:       6m 9s
+Messages:       29 (1 user, 27 tool calls)

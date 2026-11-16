@@ -1,0 +1,6 @@
+Muse, you check the Vetter. Read-only: do not change any file.
+You said MUSE: DISAGREE on spec 46 (.team/muse_spec46_run.txt). Claude Code's answer is now in the block at the top of .team/specs/46_scaled_crop_spec.md (V6 replaced, V9 and V10 added). Note: the spec is checked BEFORE code is written; "not coded yet" is the normal state, not a defect.
+Your Q3: keep_ball_detections.py ~1143-1172 compares the proof file's "constants" with the d2v1 payload's. In this plan the proof file IS the scaled v6 run's candidates.json on the same tracks and same s, so both carry the same scaled ZONE_BELOW_PX. V9 also requires the tracker crop and the extract crop to be the same expressions, with the unchanged v6 mapping gate (>= 0.90) as the real check. Is that right and complete?
+Your Q5: V10 removes the BODD re-run: --reuse-hoops-from takes hoop and bodd from the existing track file, so scaled vs control (spec 45 runs) differ only in the ball series; v6 run-to-run noise is measured. Is that clean?
+Anything else that would stop the gates or mislead the report?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

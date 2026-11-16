@@ -1,0 +1,38 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code).
+The plan is NEXT_TASK.md (Notus reader v8); its first line is the Vetter's 
+VETTED stamp, including one Vetter edit (15% search trigger). Earlier 
+rejections: first line of .team/specs/09_notus_reader_v6_REJECTED.md and 
+_v7_REJECTED.md; failed runs in .team/reader_run2_FAILED/ and 
+.team/reader_run1_VOID/; history in .team/drift_log.md. The goal is that the 
+reader NEVER gives a wrong score (None is acceptable). Check whether the Vetter 
+missed anything: a path to a wrong score, gate or holdout information leaking 
+into any threshold, box or geometry, a cutoff chosen to make the gate pass, a 
+protected-file edit (scoreboard_clock.py), a file outside ## Files, a code bug 
+in the plan's snippets (check _SEVEN_SEGMENT in scoreboard_clock.py), a 
+remaining contradiction. Do NOT open .team/specs/04_notus_holdout_truth.json or 
+any holdout_*.png. Do not edit or create any file. End with exactly one line: 
+MUSE: AGREE  or  MUSE: DISAGREE: <reason>
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.8s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 5.0s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-738d65cf63051eec62477db123b33011d05f34ec70b84afce612a5ecfb86815c
+  hermes -c "Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md… #12"
+
+Session:        local-738d65cf63051eec62477db123b33011d05f34ec70b84afce612a5ecfb86815c
+Title:          Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md… #12
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

@@ -1,0 +1,5 @@
+Muse, you check. Read-only. Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis.
+Read .team/specs/43_ft_next_release_spec.md (Claude Code's V1-V5 block at top wins), .team/specs/43_ft_proto.py, .team/shot_detectors/ft_half_circle.py, last 4 lines of .team/drift_log.md.
+NOTE: labels file, score script, Cursor code and gate are LATER steps in order (V3: before the retrace; Cursor after AGREE). Judge the spec and prototype only.
+Check: (1) spec + V1-V5 match the prototype and SETTINGS FIXED; (2) nothing chosen after seeing Idaho City; Idaho labels frozen before the rule runs; one try; (3) the gate can catch a coding error incl. the maybe band; (4) no rule broken (no core edits, finder reads no tags, no banned trials, one try then stop for Scott); (5) anything missing for Cursor; (6) does the maybe band add coach load without need?
+Answer in at most 12 lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE.

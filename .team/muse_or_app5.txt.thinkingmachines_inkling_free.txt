@@ -1,0 +1,59 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md in 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are Muse: you 
+check the Vetter (Claude Code). The plan is 
+/mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_p
+lan.md; its first line is the Vetter's v5 VETTED stamp (viewer section amended; 
+one Vetter edit about helpers). Check against 
+/mnt/c/Users/scott/Documents/liberty-playbook/templates/playbook.html that every
+function named for copying exists at the stated line (use grep), that the plan 
+will make hand-drawn ink and coach order animate as in the program, that no 
+hidden play or source_image/court_frac/notes can reach dist/player, that nothing
+is committed to the public repo, that the live database is never written, and 
+that the Vetter's edit is correct. Do not edit or create any file. End with 
+exactly one line: MUSE: AGREE  or  MUSE: DISAGREE: <reason>
+
+────────────────────────────────────────
+☤ Hermes
+I'll read the required files in parallel.
+────────────────────────────────────────
+
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/  0.2s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/TEAM_RECOVERY.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/MUSE.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/AUTHORITY.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/AGENT_OPERATIONAL_PROTOCOL.md
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+Now reading templates/playbook.html and checking grep results.
+────────────────────────────────────────
+
+💻 $ grep -n -E 'ANIM|renderCourt|renderStep|positionsThrough|syncPlayerTokens|renderPlayerToken|inkPathActions|materializeInkActions|renderSheetInk|renderArrows|beatToMovement|pointAlongPolyline|pointAlongTravel|rewindPlay|stepForwardPlay|playSheetsDirectly|playAnimation' /mnt/c/Users/scott/Documents/liberty-playbook/templates/playbook.html
+
+────────────────────────────────────────
+☤ Hermes
+Plan line references verified against grep. Checking hidden-play exclusion, DB, commit, sync-check notes.
+────────────────────────────────────────
+
+💻 $ echo "=== Hidden play / source fields ===" + 1 command
+💻 $ echo "=== Git commit / public repo / DB live / Vetter edit check ===" + 4 commands
+
+────────────────────────────────────────
+☤ Hermes
+Vetter's v5 stamp correct: corrected v4's non-existent function names, added helpers sync-check note ("copied unchanged and sync-checked, never rewritten"). Animation names and lines verified by grep. Hidden plays rebuilt from scratch; source_image/court_frac/notes stripped per whitelist. DB used as copy outside repo (Liberty_Playbook_TestDB), live DB never written. dist/player/ gitignored, nothing committed to public repo. MUSE: AGREE
+────────────────────────────────────────
+
+💻 $ echo "MUSE: AGREE"
+
+────────────────────────────────────────
+☤ Hermes
+Plan verified: v5 VETTED stamp correct (fixed v4's fake names animateGroup/playPhases/groupsOf/pointAlong; all 15 real names + lines confirmed via grep against playbook.html). Hand-drawn ink (inkPathActions, materializeInkActions, renderSheetInk) and coach order (positionsThrough, syncPlayerTokens) animate unchanged; Vetter's edit requires helpers copied unchanged/sync-checked, never rewritten. Hidden plays rebuilt from scratch (zero-visible clean); source_image/court_frac/notes stripped per whitelist in bundle and choreography steps. DB copy outside repo (Liberty_Playbook_TestDB), live DB untouched; dist/player/ gitignored, nothing committed to public repo. No source files edited or created.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-67af5e9b94a71b3c2f9aff5c8047d6fbda185a3f747e267fc1b79465b1e46375
+  hermes -c "Verify Vetter v5 junior high plan"
+
+Session:        local-67af5e9b94a71b3c2f9aff5c8047d6fbda185a3f747e267fc1b79465b1e46375
+Title:          Verify Vetter v5 junior high plan
+Duration:       42s
+Messages:       16 (1 user, 14 tool calls)

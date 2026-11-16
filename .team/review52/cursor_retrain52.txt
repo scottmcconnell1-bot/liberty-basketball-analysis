@@ -1,0 +1,42 @@
+**Cursor (read-only).** Scott waived the second check and froze `labels52_v2`; that is binding. Retrain is the right next move; two scoring/protocol tweaks are needed so the 90% bar stays meaningful.
+
+**Proven:** R3 agreement 58/71 = 81.7% (`drift_log`); Scott’s 89 answers applied into `labels52_v2`; second 130-item check waived; labels frozen (`sha256 56f18cf0…`); `choose_e` already running. Spec 52 R6 still requires auto ≥90% and honest review ≥90% with ≤20 checks.
+
+---
+
+**Q1.** Yes — retrain now on `labels52_v2` is acceptable. Scott’s waiver ends the train-set review loop; his 89 answers are already in the labels.
+
+**Risk:** ~130 unchecked relabel/auto-dupe rows can still hold Claude under-calls or foul/wave-off mistakes. A gate/blind pass is **conditional** (good model fit on frozen, partially audited labels), not proof that R3’s 10% bar was met. A fail/near-miss should trigger **one** bounded confusion triage, not another open Scott audit.
+
+---
+
+**Q2. Recommend: exclude them from the auto e2e denominator** (when truth is known fouled / waved-off / warm-up).
+
+Do **not** score them as hard not-shots against the model — the clip cannot see the whistle. Do **not** leave them as required “real shots.” Product-side, residual false positives still go through existing coach-review flags (R7/R8) and get dropped within the ≤20 check budget. Warm-ups as `-1` already match this; treat clear foul/wave-off the same for **scoring**, even if a few train rows stay `0`.
+
+---
+
+**Q3. Minimum human role from here (one pass each, then stop):**
+
+| When | Who | What | Cap |
+|---|---|---|---|
+| Now → gate | Scott | Nothing on train labels | 0 |
+| Blind only | Scott | Label candidates on ≥2 new films **before** any model output | Once per film |
+| Blind QA | Claude Code (not Scott) | 20% of Scott’s blind labels (fixed seed); >10% disagree → redo that film’s labels once | One redo max |
+| After a scored run | Scott | Only flagged coach checks | ≤20 / film (spec hard cap) |
+| If gate fails | Scott | Answer only the failing confusion classes on that held-out game | ≤20 items, one round |
+
+No more train-set spot-check pages.
+
+---
+
+**Q4. Real changes only:**
+
+1. **Scoring:** fouled / waved-off / warm-up → exclude from auto e2e math (Q2).  
+2. **Blind second-person:** agent checks Scott, not Scott checking more clips.  
+3. **Otherwise keep:** `choose_e` → 3-seed LOGO gate → 5-seed final → blind on ≥2 new films. Do not reopen R2/R3 on rimrock/gvg/hsb.
+
+---
+
+**CURSOR: AGREE WITH CHANGES: exclude foul/wave-off/warm-up from auto e2e; blind 20% = agent vs Scott (not more Scott film); no new train-set review loop**
+[cursor_wsl] exit 0 at 12:21:54

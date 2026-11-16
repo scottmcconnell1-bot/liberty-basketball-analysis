@@ -1,0 +1,296 @@
+Query: You are HERMES, the architect. Update 
+.team/specs/53_referee_signals_spec.md to v5 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v4 reviews: MUSE AGREE (review52/muse_spec53_v4.txt); CURSOR AGREE WITH CHANGES 
+(review52/cursor_spec53_v4.txt).
+Apply exactly:
+A. Cursor's 4 changes: (1) 48b game_session = clock/session/FT windows only, NOT
+a score reader; score-change cue
+   uses scoreboard_clock.py / scoreboard_pair_rises.py only where a readable 
+score track exists, else the cue is
+   omitted (never inferred); (2) drop/defer "ball handed to ref" (spec-36 
+false-fire proxy) and "throw-in restart"
+   (no detector) until a safe source exists; (3) #22 travel / fist / thumbs / 3 
+fingers never claimed from pose;
+   (4) add a cue -> source file table (Cursor's table).
+B. Scott's numbers (review52/scott_numbers53.txt, binding) into the NUMBERS 
+TABLE, replacing every "Scott decides":
+   - waved_off: Scott "pretty immediate and short lasting" -> state concrete ms:
+wave must start within 1000 ms
+     after the ball reaches the rim (or release if rim time unknown) and last <=
+1500 ms; mark as Scott's rule.
+   - 3PT arm-up: Scott "his hand over his head" -> wrist keypoint above the head
+(above nose/eye keypoints).
+   - small-ref keypoint-found share: 80% of referee-visible moments (Scott), 
+else referee step stays OFF.
+   - false fires on labelled true shots: 0 (Scott: "Never") -> any labelled real
+shot cancelled/changed = step OFF.
+   - foul_ref_window_ms 1500 stands.
+C. Muse non-blocking: turn the v1 combination prose into a small written 
+combination table.
+Update the status line to v5. End with "HERMES: SPEC WRITTEN".
+📖 Read 53_referee_signals_spec.md  0.7s
+✗ Read muse_spec53_v4.txt  0.7s [File not found: muse_spec53_v4.txt]
+✗ Read cursor_spec53_v4.txt  0.7s [File not found: cursor_spec53_v4.txt]
+✗ Read scott_numbers53.txt  0.7s [error]
+
+────────────────────────────────────────
+☤ Hermes
+The review files weren't at the repo root — let me locate them.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "*spec53*" -o -name "*review52*" -o -name "*scott_numbers*" 2>/dev/null  14.9s
+📖 Read muse_spec53_v4.txt
+📖 Read cursor_spec53_v4.txt
+📖 Read scott_numbers53.txt
+
+────────────────────────────────────────
+☤ Hermes
+Found them under .team/review52/. Now let me read the addendum and Hermes's own v4 writeup for context on status-line accuracy.
+────────────────────────────────────────
+
+📖 Read addendum_ref53_scott.txt
+📖 Read hermes_spec53_v4.txt
+
+────────────────────────────────────────
+☤ Hermes
+I have full context now. Let me verify all occurrences of the relevant markers before editing.
+────────────────────────────────────────
+
+💻 $ grep -n "Scott decides\|SCOTT DECIDES\|scott_numbers\|48b\|scoreboard\|ball handed\|throw" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md
+💻 $ grep -n "#22\|fist\|thumbs\|3-finger\|3 finger\|3PT\|3-pt\|waved_off\|waved off\|wave" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the exact current text of the sections I'll be patching (sections 2, 9, and surroundings).
+────────────────────────────────────────
+
+📖 Read 53_referee_signals_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+All context confirmed. Now I'll apply the v5 edits. Starting with the status line and the pose-limit change.
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -2,7 +2,7 @@
+│
+│  Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│  File: .team/specs/53_referee_signals_spec.md (this file only; nothing else edited by this spec)
+│ -Status: v4 for team agreement (Hermes owns the rewrite; v3 applied MUSE C1/C2/C3 and the CURSOR v1-change audit from round 52/53, and CURSOR AGREED on v3, but MUSE DISAGREED on v3 - .team/review52/muse_spec53_v3.txt - because the Scott addendum per-shot cue fusion was not fully carried through: v2's explicit fusion block was compressed away and the POSE LIMIT reference to "cue fusion (section 2)" dangled). v4 restores the full "Per-shot cue fusion" section per Scott binding addendum (.team/review52/addendum_ref53_scott.txt, 2026-11-14). Nothing is built until Hermes/Muse/Cursor agree.
+│ +Status: v5 for team agreement (Hermes owns the rewrite; v4 applied MUSE AGREE (.team/review52/muse_spec53_v4.txt), CURSOR AGREE WITH CHANGES (.team/review52/cursor_spec53_v4.txt), and Scott's binding numbers (.team/review52/scott_numbers53.txt, 2026-11-14); MUSE AGREED on v4, CURSOR AGREED WITH CHANGES on v4, Scott binding). v5 applies Cursor's 4 changes (48b = clock/session/FT windows only, NOT a score reader; score-change cue via scoreboard_clock.py / scoreboard_pair_rises.py only where a readable score track exists, else omitted/never inferred; defer "ball handed to ref" and "throw-in restart" until a safe source exists; #22 travel / fist / thumbs / 3 fingers never claimed from pose; added cue -> source file table), Scott's binding numbers into the NUMBERS TABLE, and Muse's non-blocking combination-table request. Nothing is built until Hermes/Muse/Cursor agree.
+│
+│  FACTS:
+│  - Goal (Scott, binding, 2026-11-14, team request): referee calls during a shot attempt are detected from the referee's hands; find all referee calls/hand signals and include them in shot decisions based on hand motions. Nothing is built until the team agrees.
+
+────────────────────────────────────────
+☤ Hermes
+Status line updated to v5. Now the pose-limit change (#22 / fist / thumbs / 3 fingers never claimed from pose):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -25,7 +25,7 @@
+│  - #39 technical foul: T with hands
+│  - Report-type foul signals after the stop-clock fist: #31-#38 (illegal use of hands, hand check, holding, blocking, pushing/charging, player/team control, intentional, double, technical)
+│
+│ -POSE LIMIT (hard, not a tuning knob): COCO keypoints 0-15 (shoulders, elbows, wrists) have no finger or thumb joints. Closed fist / thumbs-up / 3-finger cues are NOT directly detectable. Directly measurable proxies only: arm raised (wrist above shoulder/head height) and both arms up. Fist/thumbs/3-finger cues are resolved only through Per-shot cue fusion (section 2) or output "unknown" -> coach-review flag; never guessed.
+│ +POSE LIMIT (hard, not a tuning knob): COCO keypoints 0-15 (shoulders, elbows, wrists) have no finger or thumb joints. Closed fist / thumbs-up / 3-finger cues are NOT directly detectable. Directly measurable proxies only: arm raised (wrist above shoulder/head height) and both arms up. #22 travel / fist / thumbs / 3-finger cues are NEVER claimed from pose; they are resolved only through Per-shot cue fusion (section 2) or output "unknown" -> coach-review flag; never guessed.
+│
+│  DETECTABLE EVENTS (v1, from CURSOR audit): arm raised (one arm above head), both arms up, lateral wave/scissor (#16 no score), chop down (#1 start clock). Fist vs open hand, thumbs, fingers, T = NOT detectable by COCO pose at this size -> never claimed; only inferred through Per-shot cue fusion (section 2; arm raised + play stops + FT setup / throw-in next + score change) per Scott's addendum; otherwise category "unknown" -> coach flag (<=20 cap).
+│
+
+────────────────────────────────────────
+☤ Hermes
+Now the section 2 cue collection bullets, plus the new cue → source file table:
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -43,9 +43,23 @@
+│  Per candidate shot, collect the cue set within the moment window (section 1) and store the evidence list per shot:
+│  - Arm-event type and its time relative to release/rim time: pose emits arm events with frame + t_ms; the event time is compared to the shot release/rim time (t_release / t_rim); fist vs open hand, thumbs, 3-finger are resolved only where pose permits (arm raised + play stops + FT setup / throw-in next + score change).
+│  - Which referee (nearest / lead, distance to play): attribute cues to the nearest / lead BODD "r" referee; distance-to-play context where readable.
+│ -- Play stopping (players stop / ball handed to ref / clock overlay stops where readable): stop cue recorded.
+│ -- Next restart (free-throw lineup in lane vs throw-in vs play on): restart context recorded.
+│ -- Score overlay change or not (where readable): score-change cue recorded.
+│ +- Play stopping (players stop / clock overlay stops where readable): stop cue recorded; "ball handed to ref" dropped/deferred until a safe source exists (was the spec-36 false-fire proxy).
+│ +- Next restart (free-throw lineup in lane vs play on; "throw-in restart" deferred until a safe source exists / no detector): restart context recorded.
+│ +- Score overlay change or not (where readable): score-change cue recorded; 48b game_session = clock/session/FT windows only, NOT a score reader; score-change cue uses scoreboard_clock.py / scoreboard_pair_rises.py only where a readable score track exists, else the cue is omitted (never inferred).
+│ +
+│ +Cue -> source file table (CURSOR v4; builders must not invent proxies):
+│ +| Cue | Concrete source |
+│ +|---|---|
+│ +| Arm event + t_ms | New - pose on "r" crops (ref_signals.py proposed) |
+│ +| Time vs release/rim | Yes - moment t_ms / release_frame in finder |
+│ +| Nearest / lead ref | Yes - "r" geometry (distance logic new, boxes exist) |
+│ +| Players stop | Yes - ft.stillness in ft_half_circle.py |
+│ +| Clock overlay stops | Yes, where board exists - 48b samples.json clock holds; Rimrock has no 48b board |
+│ +| FT lineup next | Yes - free_throw_line / maybe_free_throw |
+│ +| Score overlay change / not | Not 48b - score API = scoreboard_clock.py + scoreboard_pair_rises.py; track on disk = Adrian only; else cue omitted (never inferred) |
+│ +| Ball handed to ref | No safe source - deferred (spec-36 false-fire proxy) |
+│ +| Throw-in restart | No detector - deferred |
+│ +| #22 travel fists | Not pose-detectable - stays fusion/unknown, not a claimed pose class |
+│
+│  How cues combine into one category per shot (fouled_miss, waved_off, violation, and_one, none, unknown):
+│  - Written rules or a simple scoring table; NO learned model in v1; deduction may use several factors (Scott addendum) because referees do not always follow the book or clearly indicate intent.
+
+────────────────────────────────────────
+☤ Hermes
+Now converting the v1 combination prose into the small written combination table (Muse's non-blocking item):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -62,8 +62,15 @@
+│  | #22 travel fists | Not pose-detectable - stays fusion/unknown, not a claimed pose class |
+│
+│  How cues combine into one category per shot (fouled_miss, waved_off, violation, and_one, none, unknown):
+│ -- Written rules or a simple scoring table; NO learned model in v1; deduction may use several factors (Scott addendum) because referees do not always follow the book or clearly indicate intent.
+│ -- v1 combination: waved_off = #16 lateral wave/scissor + score overlay not changed; fouled_miss = stop-clock fist (#4) within foul_ref_window_ms of release/rim + play stopped + missed (made -> and_one; make stays make, foul tagged); violation = stop clock (#2) then #22 travel etc. on the shot; none = cues present but no foul/wave on the shot.
+│ +- WRITTEN COMBINATION TABLE (v5; formalized from the v1 combination prose per MUSE's non-blocking v4 residual; NO learned model in v1; deduction may use several factors (Scott addendum) because referees do not always follow the book or clearly indicate intent):
+│ +| Category | Combination |
+│ +|---|---|
+│ +| fouled_miss | stop-clock fist (#4) within foul_ref_window_ms of release/rim + play stopped + missed (made -> and_one; make stays make, foul tagged) |
+│ +| waved_off | #16 lateral wave/scissor + score overlay not changed |
+│ +| violation | stop clock (#2) then #22 travel etc. on the shot |
+│ +| and_one | foul on made basket (#17 goal counts / #18 points plus #4 fist); make stays make, foul tagged |
+│ +| none | cues present but no foul/wave on the shot |
+│ +| unknown | unresolved -> coach-review flag, never guess |
+│  - One category per shot; evidence list stored per shot (cues, times, referee, stop/score context).
+│
+│  Unknown -> coach-review flag; never guess; no referee visible -> no change:
+
+────────────────────────────────────────
+☤ Hermes
+Now the NUMBERS TABLE — replacing every open "Scott decides" item with Scott's binding v5 numbers:
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -117,12 +117,12 @@
+│  - Step 2: YOLO pose on referee boxes; arm-event -> shot_decision mapping; prototype on 3 seen clips first (Cursor), before any full-film run.
+│  - Step 3: measure on SEEN films (section 5); before/after make/miss safety check (section 10).
+│
+│ -9. NUMBERS TABLE (Scott decides before the run; fixed, not retuned after results):
+│ -- foul_ref_window_ms: Scott's ~1.3 s -> 1500 ms (Scott confirms)
+│ -- waved_off window: Scott decides
+│ -- 3PT arm-up min height: Scott decides (NOT spec 38 S8; S8's 8 frames / 1.5 hoop widths = track-break gap / FT pass line, misattributed in v1)
+│ -- small-ref pose keypoint-found share: SCOTT DECIDES (MUSE C3; first gate, before anything else runs)
+│ -- labelled-true-shot false-fire pass bar: SCOTT DECIDES (MUSE C2; fixed number written now, left for Scott to fix)
+│ +9. NUMBERS TABLE (fixed, not retuned after results; v5 applies Scott's binding numbers from .team/review52/scott_numbers53.txt, 2026-11-14):
+│ +- fouled_ref_window_ms: 1500 ms (Scott confirms; stands).
+│ +- waved_off window: SCOTT'S RULE (2026-11-14, .team/review52/scott_numbers53.txt, verbatim: "pretty immediate and short lasting"): wave must start within 1000 ms after the ball reaches the rim (or release if rim time unknown) and last <= 1500 ms.
+│ +- 3PT arm-up min height: SCOTT'S RULE (2026-11-14, .team/review52/scott_numbers53.txt, verbatim: "his hand over his head"): wrist keypoint above the head (above nose/eye keypoints); NOT spec 38 S8 (S8's 8 frames / 1.5 hoop widths = track-break gap / FT pass line, misattributed in v1).
+│ +- small-ref pose keypoint-found share: >= 80% of referee-visible moments must have arm keypoints found; else the referee step stays OFF (SCOTT'S RULE, Scott chose "8 out of 10"; MUSE C3 first gate, before anything else runs).
+│ +- labelled-true-shot false-fire pass bar: 0 allowed (SCOTT'S RULE, Scott: "Never. It is very rare a referee gives a wrong shot signal."): any labelled real shot cancelled or changed = referee step OFF (MUSE C2; fixed before the run).
+│  - coach-review cap: <=20 (fixed)
+│  - no-referee-visible -> no cue (fixed)
+│
+
+────────────────────────────────────────
+☤ Hermes
+The NUMBERS Table landed. Now updating the remaining stale "Scott decides" markers for coherence (pass bar, pass protocol, Step 0, RULES):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -98,7 +98,7 @@
+│
+│  5. MEASUREMENT ON SEEN FILMS ONLY (labelled shots + Scott's examples) BEFORE ANY BLIND USE; fixed pass numbers; no new human review loops (Scott refused more clip reviews; any human role is one-time and bounded):
+│  - SEEN films: Rimrock, GVG, HSB, GV, Idaho, Adrian, Notus A1 (labelled sets .team/specs/36_extras_truth_labels.json, 44_gv_labels.json, 49_hsb_labels.json, 50_*_cand_labels.json, 51_hsb1_cand_labels.json, labels52_v2.json; Scott's examples rimrock:77, rimrock:253, gvg:149, hsb:91, gvg:349, rimrock:325).
+│ -- Pass bar (MUSE C2 / CURSOR, decided): pass = Scott's 6 examples detected as the expected category (rimrock:77 travel -> no shot; rimrock:253 waved off -> no shot; gvg:149 shooting foul -> fouled miss, no shot; hsb:91 fouled shot -> no shot; gvg:349 jump ball -> held-ball context, deduce or unknown; rimrock:325 fouled before clip -> no referee in clip -> no change), AND false fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now, marked SCOTT DECIDES (the number left for Scott to fix before the run). Warm-ups/breaks alone are not enough.
+│ +- Pass bar (MUSE C2 / CURSOR, decided; v5): pass = Scott's 6 examples detected as the expected category (rimrock:77 travel -> no shot; rimrock:253 waved off -> no shot; gvg:149 shooting foul -> fouled miss, no shot; hsb:91 fouled shot -> no shot; gvg:349 jump ball -> held-ball context, deduce or unknown; rimrock:325 fouled before clip -> no referee in clip -> no change), AND false fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now, marked SCOTT'S RULE (0 allowed; any labelled real shot cancelled or changed = referee step OFF, from .team/review52/scott_numbers53.txt, 2026-11-14). Warm-ups/breaks alone are not enough.
+│  - Pass protocol: run the referee cue chain on SEEN films only; check cue events against labelled not_a_shot / shot moments; Scott decides fixed pass numbers before the run (pattern: spec 36 K8, spec 38 S8, spec 41 L7).
+│  - No blind use: unseen films (Adrian Q4, HSB1 remaining, new films) only after Scott approves.
+│
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -99,7 +99,7 @@
+│  5. MEASUREMENT ON SEEN FILMS ONLY (labelled shots + Scott's examples) BEFORE ANY BLIND USE; fixed pass numbers; no new human review loops (Scott refused more clip reviews; any human role is one-time and bounded):
+│  - SEEN films: Rimrock, GVG, HSB, GV, Idaho, Adrian, Notus A1 (labelled sets .team/specs/36_extras_truth_labels.json, 44_gv_labels.json, 49_hsb_labels.json, 50_*_cand_labels.json, 51_hsb1_cand_labels.json, labels52_v2.json; Scott's examples rimrock:77, rimrock:253, gvg:149, hsb:91, gvg:349, rimrock:325).
+│  - Pass bar (MUSE C2 / CURSOR, decided; v5): pass = Scott's 6 examples detected as the expected category (rimrock:77 travel -> no shot; rimrock:253 waved off -> no shot; gvg:149 shooting foul -> fouled miss, no shot; hsb:91 fouled shot -> no shot; gvg:349 jump ball -> held-ball context, deduce or unknown; rimrock:325 fouled before clip -> no referee in clip -> no change), AND false fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now, marked SCOTT'S RULE (0 allowed; any labelled real shot cancelled or changed = referee step OFF, from .team/review52/scott_numbers53.txt, 2026-11-14). Warm-ups/breaks alone are not enough.
+│ -- Pass protocol: run the referee cue chain on SEEN films only; check cue events against labelled not_a_shot / shot moments; Scott decides fixed pass numbers before the run (pattern: spec 36 K8, spec 38 S8, spec 41 L7).
+│ +- Pass protocol: run the referee cue chain on SEEN films only; check cue events against labelled not_a_shot / shot moments; Scott's binding numbers from .team/review52/scott_numbers53.txt are fixed before the run (pattern: spec 36 K8, spec 38 S8, spec 41 L7).
+│  - No blind use: unseen films (Adrian Q4, HSB1 remaining, new films) only after Scott approves.
+│
+│  6. SHOT-CALL HOOK (Cursor audit target):
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -112,7 +112,7 @@
+│  - TEAM decision (spec 52 scoring, decided): fouled / waved-off / warm-up attempts are EXCLUDED from the auto e2e denominator; spec 53 output may later turn them into automatic not-shots, measured on seen films first. Spec 52 itself is unchanged.
+│
+│  8. BUILD ORDER (smallest prototype; nothing built until the team agrees):
+│ -- Step 0 (MUSE C3): small-referee pose test as an explicit FIRST gate: on gvg/hsb/notus (smallest refs, ~47-56 px wide) pad/upscale crop of the referee from the FULL frame; pose keypoints must be found on >= a fixed share of referee-visible frames before anything else runs (SCOTT DECIDES the share).
+│ +- Step 0 (MUSE C3): small-referee pose test as an explicit FIRST gate: on gvg/hsb/notus (smallest refs, ~47-56 px wide) pad/upscale crop of the referee from the FULL frame; pose keypoints must be found on >= 80% of referee-visible moments before anything else runs (SCOTT'S RULE from .team/review52/scott_numbers53.txt; else the referee step stays OFF).
+│  - Step 1: fixed referee box + frames.json "r" on ONE seen film; pure-function tests for cue gating (arm-raised timing window, fusion rules, unknown route).
+│  - Step 2: YOLO pose on referee boxes; arm-event -> shot_decision mapping; prototype on 3 seen clips first (Cursor), before any full-film run.
+│  - Step 3: measure on SEEN films (section 5); before/after make/miss safety check (section 10).
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.2s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -130,7 +130,7 @@
+│  - Before and after: run the spec-52 make/miss review-page comparison (gray/orange groups per TEAM_RECOVERY.md) on the seen films; require unchanged gray count / orange count / shot count and the same 3 combined groups. Any difference -> STOP for Scott. Exact gate command and pass counts are scoped by Cursor before the run (same fixed-numbers rule), not tuned after.
+│
+│  11. RULES:
+│ -- No core edits; no banned trials; no tuning after results; one try; Scott decides numbers; no blind peeking; unknown -> coach flag, never guess.
+│ +- No core edits; no banned trials; no tuning after results; one try; Scott's binding numbers fixed before the run; no blind peeking; unknown -> coach flag, never guess.
+│
+│  12. ROLES & GATES:
+│  - Cursor codes. Claude Code vets (no core edits, numbers fixed before run, finder takes only video + models + out dir). Muse checks AGREE or DISAGREE. Stop for Scott with the numbers table.
+
+────────────────────────────────────────
+☤ Hermes
+All edits applied. Now let me verify the final state of the file:
+────────────────────────────────────────
+
+💻 $ grep -n "Scott decides\|SCOTT DECIDES\|v5\|V5" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md
+💻 $ tail -c 400 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md | cat -A
+
+────────────────────────────────────────
+☤ Hermes
+No stale "Scott decides" markers remain and the file ends with the required line. Let me do a final full read to verify coherence:
+────────────────────────────────────────
+
+📖 Read 53_referee_signals_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+The spec is now fully updated. Let me confirm only this file was changed:
+────────────────────────────────────────
+
+💻 $ git status --porcelain + 1 command  93.7s
+
+────────────────────────────────────────
+☤ Hermes
+The working tree has many pre-existing modifications (not from me). Let me confirm the spec file diff is just my v5 edit:
+────────────────────────────────────────
+
+💻 $ git diff --stat -- .team/specs/53_referee_signals_spec.md + 1 command  0.1s
+💻 $ git status --porcelain -- .team/specs/53_referee_signals_spec.md + 2 commands  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+Spec 53 updated to v5 — all edits confined to .team/specs/53_referee_signals_spec.md (untracked file; only that path was written).
+
+What changed:
+- Status line bumped to v5, recording MUSE AGREE, CURSOR AGREE WITH CHANGES, and Scott's binding numbers; notes v5 applies Cursor's 4 changes, Scott's numbers, and Muse's combination-table request.
+- Cursor change (1): 48b = clock/session/FT windows only, NOT a score reader; score-change cue via scoreboard_clock.py / scoreboard_pair_rises.py only where a readable score track exists, else omitted (never inferred) — section 2 + cue→source table.
+- Cursor change (2): "ball handed to ref" dropped/deferred (spec-36 false-fire proxy); "throw-in restart" deferred (no detector).
+- Cursor change (3): #22 travel / fist / thumbs / 3-finger cues NEVER claimed from pose — POSE LIMIT updated.
+- Cursor change (4): added cue → source file table (Cursor's table) under section 2.
+- Scott's binding numbers now in NUMBERS TABLE: waved_off = SCOTT'S RULE, start within 1000 ms after rim (or release if unknown), ≤ 1500 ms, lasting; 3PT arm-up = SCOTT'S RULE, wrist keypoint above head (above nose/eye keypoints), not spec 38 S8; small-ref keypoint share ≥ 80% else step OFF; false-fire pass bar = 0 allowed (any labelled real shot cancelled/changed = step OFF); foul_ref_window_ms = 1500 stands. All former "Scott decides" markers replaced.
+- Muse non-blocking item: v1 combination prose replaced with the written combination table (fouled_miss / waved_off / violation / and_one / none / unknown).
+
+HERMES: SPEC WRITTEN
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-793618f6bd339ac8d560c708d84cb99241914eb979f722166ee1470c5f771b0a
+  hermes -c "You are HERMES, the architect. Update…"
+
+Session:        local-793618f6bd339ac8d560c708d84cb99241914eb979f722166ee1470c5f771b0a
+Title:          You are HERMES, the architect. Update…
+Duration:       6m 5s
+Messages:       50 (1 user, 48 tool calls)
+[hermes] exit 0 at 16:25:11

@@ -1,0 +1,27 @@
+## Cursor audit — logo52a binding re-gate
+
+**Proven (this session):** read `logo52a/{gate52_report.json,gate52a_stdout.txt,logo_report.json}` vs `logo52/gate52_report.json`; recomputed checks/silents from `logo_preds.npz` + `postproc52a.json`; re-ran `gate52.py` with truth kinds `tags`/`labels` (matches stdout). Brief note: an earlier re-run omitted `=labels` and briefly wrote a bad report; the correct re-run restored the identical FAIL numbers.
+
+### Q1 — numbers / FAIL reading
+**Right.** Binding **OVERALL FAIL** (Scott 'A'). Per-game:
+
+| game | auto | spread | review | checks | silent | verdict |
+|------|------|--------|--------|--------|--------|---------|
+| adrian | 94.5→94.5 | 0.8→0.0 | 94.5 | 5→5 | 0 | PASS |
+| notus | 90.3→90.3 | 3.2→0.0 | 93.5 | 4→3 | 1 | FAIL silent |
+| gvg | 95.9→95.9 | 1.8→4.1 | 96.8 | 200→150 | 0→1 | FAIL checks+silent |
+| hsb | 98.6→97.1 | 1.4→0.7 | 98.6 | 3→8 | 0 | PASS |
+| rimrock | 95.1→95.1 | 6.5→4.1 | 96.7 | 97→77 | 1 | FAIL checks+silent |
+
+False auto: 40→35, 4→4, 299→45, 5→0, 23→17. Pooled `nonshot_rejected` 269/390=**0.690** → 374/422=**0.886** (gvg **0.855**). Auto≥90 and spread≤5 on all five; fail is **checks** and/or **silent** only.
+
+### Q2 — D1 / D2 causes
+**D1 (checks):** R7 flags every in-session candidate with `0.2 ≤ P(shot) < 0.5` as an extra. Recomputed: gvg **150** = 46 auto-flags + **104** extras (97 label0 / 6 unclear / 1 miss); rimrock **77** = 11 + **66** extras (51/13/1/1). Class-0+session cut auto-falses hard, but left a large in-session floor band on high-volume label0 films (gvg 145 / rimrock 241). Cap 20 is structurally hard with floor 0.2 unchanged (spec52a Item 3).
+
+**D2 (silent):** labelled miss + ens P&lt;0.2 + all seeds &lt;0.5. **notus t=252520** (P≈0.083) and **rimrock t=274807** (P≈0.096) — same two as logo52; new **gvg t=1158600** (P≈0.181; seeds ~0.10/0.09/0.34). Both runs reject the first two confidently → label error or cue not in the clip (not eye-checked).
+
+### Q3 — smallest next step (Scott decides; pre-reg; no tuning on these numbers)
+**(a)** one-time bounded eye-check of the **3** silent timestamps only (label vs film). Do **not** retune floor/cap from 150/77. If silents are real misses the model can’t see, then a separate pre-reg for **(b)** first-principles R7 check definition (what “coach must see” means when nonshot candidates ≫20) — justified without peeking at these counts. **(c)** only after (a)/(b) scope is chosen.
+
+**CURSOR: AGREE FAIL READING | numbers match re-run + preds; propose (a) eye-check 3 silents once, then pre-reg (b) only if labels hold — no floor/cap tune from these checks.**
+[cursor_wsl] exit 0 at 18:24:28

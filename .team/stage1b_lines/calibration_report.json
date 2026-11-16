@@ -1,0 +1,220 @@
+{
+  "note": "Thresholds were fixed on these frames and then frozen in the YAML before measurement.",
+  "calibration_frames": {
+    "adrian": [
+      2436,
+      17055,
+      31674,
+      46293,
+      60912,
+      80404
+    ],
+    "notus_a1": [
+      2523,
+      17664,
+      32805,
+      47946,
+      63087,
+      83275
+    ],
+    "notus_a": [
+      2341,
+      16387,
+      30433,
+      44479,
+      58525,
+      77253
+    ]
+  },
+  "results": [
+    {
+      "game": "adrian",
+      "video_path": "uploads/nfhs_gam0a66d85e12.mp4",
+      "total_frames": 97475,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2436,
+        17055,
+        31674,
+        46293,
+        60912,
+        80404
+      ],
+      "success_count": 6,
+      "failure_count": 0,
+      "success_rate": 1.0,
+      "lines_found_per_frame": {
+        "mean": 4.0,
+        "median": 4.0,
+        "std": 0.0,
+        "min": 4.0,
+        "max": 4.0,
+        "p90": 4.0
+      },
+      "reprojection_error_px": {
+        "mean": 0.333,
+        "median": 0.0,
+        "std": 0.471,
+        "min": 0.0,
+        "max": 1.0,
+        "p90": 1.0
+      },
+      "half_court_y_ft": {
+        "mean": 32.4,
+        "median": 30.75,
+        "std": 4.052,
+        "min": 28.0,
+        "max": 39.5,
+        "p90": 37.3
+      },
+      "court_length_ft": {
+        "mean": 75.3,
+        "median": 72.0,
+        "std": 8.103,
+        "min": 66.5,
+        "max": 89.5,
+        "p90": 85.1
+      },
+      "court_half_width_ft": {
+        "mean": 29.625,
+        "median": 31.625,
+        "std": 6.081,
+        "min": 18.25,
+        "max": 35.0,
+        "p90": 34.875
+      },
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 6,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 0
+      }
+    },
+    {
+      "game": "notus_a1",
+      "video_path": "uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4",
+      "total_frames": 100950,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2523,
+        17664,
+        32805,
+        47946,
+        63087,
+        83275
+      ],
+      "success_count": 6,
+      "failure_count": 0,
+      "success_rate": 1.0,
+      "lines_found_per_frame": {
+        "mean": 4.0,
+        "median": 4.0,
+        "std": 0.0,
+        "min": 4.0,
+        "max": 4.0,
+        "p90": 4.0
+      },
+      "reprojection_error_px": {
+        "mean": 0.333,
+        "median": 0.0,
+        "std": 0.471,
+        "min": 0.0,
+        "max": 1.0,
+        "p90": 1.0
+      },
+      "half_court_y_ft": {
+        "mean": 34.5,
+        "median": 29.25,
+        "std": 7.602,
+        "min": 29.0,
+        "max": 45.25,
+        "p90": 42.05
+      },
+      "court_length_ft": {
+        "mean": 79.5,
+        "median": 69.0,
+        "std": 15.204,
+        "min": 68.5,
+        "max": 101.0,
+        "p90": 94.6
+      },
+      "court_half_width_ft": {
+        "mean": 23.5,
+        "median": 21.0,
+        "std": 8.168,
+        "min": 15.0,
+        "max": 35.0,
+        "p90": 34.375
+      },
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 6,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 0
+      }
+    },
+    {
+      "game": "notus_a",
+      "video_path": "uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4",
+      "total_frames": 93650,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2341,
+        16387,
+        30433,
+        44479,
+        58525,
+        77253
+      ],
+      "success_count": 6,
+      "failure_count": 0,
+      "success_rate": 1.0,
+      "lines_found_per_frame": {
+        "mean": 4.0,
+        "median": 4.0,
+        "std": 0.0,
+        "min": 4.0,
+        "max": 4.0,
+        "p90": 4.0
+      },
+      "reprojection_error_px": {
+        "mean": 0.333,
+        "median": 0.0,
+        "std": 0.471,
+        "min": 0.0,
+        "max": 1.0,
+        "p90": 1.0
+      },
+      "half_court_y_ft": {
+        "mean": 40.0,
+        "median": 40.0,
+        "std": 0.0,
+        "min": 40.0,
+        "max": 40.0,
+        "p90": 40.0
+      },
+      "court_length_ft": {
+        "mean": 90.5,
+        "median": 90.5,
+        "std": 0.0,
+        "min": 90.5,
+        "max": 90.5,
+        "p90": 90.5
+      },
+      "court_half_width_ft": {
+        "mean": 22.875,
+        "median": 18.375,
+        "std": 8.671,
+        "min": 15.25,
+        "max": 35.0,
+        "p90": 35.0
+      },
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 6,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 0
+      }
+    }
+  ]
+}

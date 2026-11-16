@@ -1,0 +1,34 @@
+Hermes, you are the Architect. This is an OPTIONS list for Scott, not a build plan. Nothing gets built from it until Scott picks an option. After you, Muse reviews your list and adds to it, then Claude Code reviews and adds, then Scott chooses.
+
+Write ONE file: .team/specs/17_missed_makes_options.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Create nothing else: no scratch scripts, no test runs that write files, no edits. If your write tool refuses, say so plainly. First line of the file: "OPTIONS v1 - Hermes - nothing built or measured". Plain markdown, no line-number prefixes, no literal "\n".
+
+READ FIRST: AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md (Golden Rules), OLLAMA.md, MUSE.md, DETECTOR_PROPOSAL_REJECTION.md, .team/drift_log.md, .team/specs/05_reliable_detector_architecture.md, .team/specs/13_shot_work_order_plan.md, .team/specs/15_net_check_plan.md, .team/specs/16_ball_in_net_plan.md, .team/shot_detectors/pixel_miss/README.md, and the v6 rule `run_saved_v6_rule` in ai_bridge.py (read only; quote the real names of its steps and reasons from the code).
+
+SCOTT'S GOAL: makes and misses 100% right, so he never tags a game by hand. A make is still `ball_through_rim` or `net_moved_after_shot`. Zero misses called makes is a hard gate.
+
+THE BUILD SET (140 tagged shots = Notus A1 Q1 31 + Adrian Q1-Q3 109): the v6 rule gets 19 makes wrong (called miss) out of 47 real makes; 28 makes right; 0 of 93 real misses called makes. Of the 19: in 12 a rim crossing WAS seen and a later test vetoed it; in 7 no crossing was seen. Reason tally over all 140 (real makes / real misses rejected by each reason; from C:\Users\scott\Documents\Liberty_Shot_Outputs\rejection_reason_tally_2026-10-29.txt):
+no_valid_crossing 7/41, column_ratio_low 4/13, short_net_depth 1/7, ball_starts_well_below 1/7, ball_box_jump 2/6, ball_went_up 2/4, short_track_left_net 0/5, ball_bounces_up 1/3, tracker_swap_bodd_ball 0/3, sideways_drift 1/1, short_combined_track 0/1, short_make_bodd_fail 0/1, x_at_180_outside_rim 0/1.
+Every reason rejects more real misses than makes, so no cutoff can simply be loosened.
+Scott's own view of the review page: the ball is detected on its way up, at the rim and after the rim, and the pictures can look like one make and two misses for one shot (it is one verdict per shot, but the tracker's boxes jump between objects).
+
+TRIED AND FAILED (do NOT propose these again, in any disguise):
+1. A window 2 s earlier (Notus 0 of 7).
+2. Dropping jumps over 60 px (Adrian 86/111, 3 misses called makes).
+3. Drawing the jumped segment through the hoop (Adrian 93/111, 1 false make).
+4. Straight-line interpolation between neighbours (Adrian 98/111; Notus 0/7). BANNED.
+5. ByteTrack (21/31, 1 false make). DeepSORT (22/31). BANNED.
+6. Wider column / looser column_ratio. BANNED. Any looser cutoff in ai_bridge.py. BANNED.
+7. Hoop recenter. BANNED.
+8. net_moved_after_shot as a rescue (step 1): recovers 6 of 19 missed makes but fires on 38 of 93 real misses.
+9. Plan 15 colour/orange pixels in the net box: 8/19 caught, 22/93 real misses fired.
+10. Plan 16 ball detector inside the net box: 5/19 caught, 27-28/93 fired. Crops show net_detector._net_box sits BELOW the real net (hoop_y in the tracks is below the rim).
+11. Scott CLOSED all net-region measurements on 2026-10-29: "No, I do not see how a net measurement would be beneficial." No option may measure anything in the net box or net region.
+12. The Notus scoreboard reader (plans 07/09) failed its gate and is SHELVED by Scott ("we can readdress the scoreboard later"). You may list it as a later option but say it is shelved.
+
+RULES: no looser cutoffs; no banned trial; no hard-coded results; applied_to_core stays false; models/ball_detector.pt and ball_confidence are Scott's gates (a NEW candidate weights file is allowed since 2026-10-20 and is scored by validate_ball_weights.py; it never overwrites the model); no edits to protected core files; the holdout answers are never opened; the repo is public, so images and DB copies stay outside it.
+
+WHAT TO WRITE:
+Part A - "Fixes to the v6 rule's own steps" (Scott asked for this): for the 12 crossing-then-veto shots and the 7 no-crossing shots, which steps of run_saved_v6_rule could be changed WITHOUT a looser cutoff and without any net-region measurement (for example a different order of tests, a test that uses evidence the rule already has but ignores, a stricter test elsewhere that pays for a change). For each: the step name as in the code, what changes, which of the 19 it could recover (by reason), and how it could create a false make.
+Part B - "Other possibilities": anything else that is not on the tried-and-failed list. Think wide: other signals in the film, other models, other ways to get the ball track, other evidence a basket was made, human-in-the-loop ways that still save Scott most of the tagging. For each give the same fields.
+For EVERY option (A and B), a short block with: Name; What it is (2-3 plain sentences); Why it could work where the tried ones failed; Risk to the zero-false-makes gate; How it would be measured on the 140 (and what number would count as a pass); Cost (time, money, new software or training); Rules check (which Golden Rule or Scott gate it touches, or "none").
+End with a short ranked table: option, expected gain, risk, cost. Say which you would try first and why. Mark every number you did not measure yourself as "from the files" with the file name.

@@ -1,0 +1,21 @@
+Spec 52 v3 code deliverables are in `.team/mm_clip/` only. No training, no label/clip edits.
+
+### Files changed/added
+
+| File | Change → R |
+|---|---|
+| `extract_clips.py` | **R1** — `labels_tagmatch` + `labels_tags`: unmatched → `-1` (near + far); never auto `0` |
+| `train_clip.py` | **R4** — bf16, no GradScaler; WeightedRandomSampler `w=1/max(cnt,1)`; plain CE + smoothing 0.05; softer aug; lr/bs/AdamW/OneCycle unchanged. **R5** — `choose_e` nested split → `choose_e.json`; logo `--epochs`/`--seeds` saves `PM`; fit per-seed saves. Legacy only via `--strong-aug` / `--permutation` / `--ce-class-weights` / `--use-scaler` |
+| `postproc52.json` | **R7** — pinned schema exactly |
+| `ensemble_predict.py` | **R7** reads `postproc52.json`, floor 0.2, seed-disagreement flag; **R8** honest review; **R6** e2e vs full truth + silent-reject |
+| `gate52.py` *(new)* | **R6** per-game auto / seed spread / honest review / checks / silent-reject + PASS/FAIL |
+| `test_mm52.py` *(new)* | Unit tests for R1/R6/R7/R8 |
+
+### Tests
+```
+python3 -m pytest .team/mm_clip/test_mm52.py -v
+→ 10 passed
+```
+
+CURSOR: BUILT
+[cursor_wsl] exit 0 at 21:51:20

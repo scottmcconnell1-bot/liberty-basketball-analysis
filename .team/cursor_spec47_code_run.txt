@@ -1,0 +1,51 @@
+Spec 47 coded in two new files only. Not committed.
+
+**Command + result**
+```
+python3 -m pytest .team/shot_detectors/test_mm_learned.py -q
+..................                                                       [100%]
+18 passed in 3.54s
+```
+(`.venv/bin/python` missing on WSL — Windows `.venv/Scripts` only — so `python3`.)
+
+### Functions
+`load_moment_times`, `label_moments_from_tags`, `label_moments_from_gv`, `find_crossing`, `_crossing_features`, `_f6_column_count`, `mean_abs_gray_diff`, `net_motion_ratio`, `open_video_reader`, `compute_features_for_track`, `build_features_doc`, `collect_freeze_files`, `check_frozen`, `band_call`, `normalize_rule_call`, `count_side`, `pass_bar`, `load_scored_xy`, `make_pipeline`, `predict_proba_make`, `run_logo`, plus CLI `cmd_labels` / `cmd_features` / `cmd_freeze` / `cmd_logo` / `cmd_final`.
+
+### F4 / F5 / F12 (exact)
+
+F4 (at crossing second point; else 3.0):
+```python
+f4 = abs(x_cross - hx) / hw
+```
+
+F5 (max depth after crossing, `|x-hx| < 0.6 hw`; else 0):
+```python
+for j in range(idx + 1, len(points)):
+    _f, x, y = points[j]
+    if abs(x - hx) < 0.6 * hw:
+        depths.append((y - hy) / hw)
+f5 = max(depths) if depths else 0.0
+```
+
+F12 (`net_motion_ratio(..., after=True)`; empty/denom0 → 0):
+```python
+frame_ids = list(range(center_frame, center_frame + n_frames + 1))
+# primary: hx±0.5hw, hy..hy+1.2hw; side: same size at hx+1.5hw
+num = mean_abs_gray_diff(frames, primary)
+den = mean_abs_gray_diff(frames, side)
+return 0.0 if den == 0.0 else float(num / den)
+```
+Crossing frame = `start_frame + offset` of crossing second point; no crossing → moment frame (V3).
+
+### Choices not spelled out
+- Tag time field from `load_shot_tags`: `"t"`.
+- F8 with hoop but no crossing (or no points in the 10-frame window) → `3.0` (same sentinel as F4).
+- F7 “upward” = `(y_prev - y_next) / hw` (screen y decreases).
+- F12/F13 window inclusive of `crossing` through `crossing+12` (13 frames); before = `crossing-12`..`crossing`.
+- Grayscale = mean of RGB channels; video fps fallback `25.0`.
+- GV real-shot vs non-shot for V5 split: `matched_tag_t_ms = moment_t_ms` if `shot==yes`, else `None`.
+- `--rules-make-miss` accepted on `features` CLI (contract) but unused; F14/F15 come from v6/d2v1 by track `"t"`.
+- `logo --out` writes reports there and mirrors into `--dir` so `final --dir` finds `logo_report.json`.
+- Missing GV label for a moment → excluded (`missing_gv_label`).
+- `hw==0` treated as `1.0` in distance features to avoid div0.Spec 47 is in place: `.team/shot_detectors/mm_learned.py` and `test_mm_learned.py` only. **18 passed** via `python3 -m pytest .team/shot_detectors/test_mm_learned.py -q`. Not committed.
+[cursor_wsl] exit 0 at 10:27:09

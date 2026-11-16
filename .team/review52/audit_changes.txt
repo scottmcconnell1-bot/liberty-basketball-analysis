@@ -1,0 +1,18 @@
+hsb 91 1 -1 no visible attempt in crop; ball low after #90 miss (rebound?) -> unclear
+hsb 111 1 -1 ball low/away from rim whole window, no attempt visible -> unclear
+rimrock 73 0 -1 hands+ball under rim 0.00-0.32, possible blocked/short layup -> unclear
+rimrock 205 2 1 jumper bounces off left rim at +0.48/0.64, rebounded; no ball through net -> miss (make/miss swap with 206)
+rimrock 206 1 2 putback from below at -0.32, ball onto rim 0.80 then down through net 0.96-1.12; score 2->4 Liberty, only one +2 in window -> make
+rimrock 245 1 2 ball drops straight down through net at 0.00-0.16 (centred under rim); Rimrock 1->4 next board update, no other candidate for that 3 -> make
+rimrock 350 0 -1 start of #351 attempt visible at +1.44..1.60 (same shot, 1.2 s apart) -> duplicate/unknown
+gvg 72 0 -1 start of #73 attempt visible +0.64..1.60 (same shot) -> duplicate/unknown
+gvg 76 0 -1 layup of #77 visible +0.80..1.60 (same shot) -> duplicate/unknown
+gvg 81 0 -1 ball enters from left and drops beside rim +0.16..0.32 (possible short attempt, origin unseen) -> unclear
+gvg 82 0 -1 start of #83 make (layup) visible +1.28..1.60 -> duplicate/unknown
+gvg 152 1 -1 only the falling ball of #151 (1.2 s earlier) at -0.32..-0.16, no own attempt -> duplicate/unknown
+gvg 166 0 -1 arrival of #167 shot at rim +1.12..1.60 (same shot) -> duplicate/unknown
+gvg 328 0 -1 arrival of #329 shot at rim +1.12..1.28 (same shot, 1.2 s apart) -> duplicate/unknown
+gvg 344 0 -1 player under basket throws ball up at 0.00, camera pans away (pass vs putback unclear) -> unclear
+gvg 362 0 -1 ball arrives at rim +1.44..1.60 (start of #363 event, itself unclear) -> duplicate/unknown
+gvg 502 0 -1 ball rises from players under basket +0.48..0.96, stops short of rim (blocked putback vs tip/pass unclear) -> unclear
+gvg 529 1 -1 ball already falling from right of rim at -0.32 = continuation of #528 miss (1.8 s earlier) -> duplicate/unknown

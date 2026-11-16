@@ -1,0 +1,106 @@
+## Stage A done
+
+**Identity:** `IDENTITY: 140/140 same`
+
+**Hard gate:** A7 / A8 / C4 alone = 0 misses called makes (PASS). **A4 alone and all_four = 1 miss called make (FAIL).** Nothing was tuned.
+
+### Files created
+- `.team/shot_detectors/small_fixes_v6_copy.py` (only source file; `ai_bridge.py` untouched)
+- `.team/shot_outputs_test/small_fixes/build_results.json`
+- `.team/shot_outputs_test/small_fixes/per_fix_report.md`
+
+Sandbox could not write `Liberty_Shot_Outputs/small_fixes` (permission denied). Default `--out` still points there for Windows. Re-run:
+
+`C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe .team/shot_detectors/small_fixes_v6_copy.py`
+
+### Command run
+
+```bash
+python3 .team/shot_detectors/small_fixes_v6_copy.py --out .team/shot_outputs_test/small_fixes
+```
+
+### Console (verbatim, after sandbox noise)
+
+```
+Running IDENTITY CHECK (all switches OFF vs run_saved_v6_rule)...
+Results: 2/31 makes
+SCORE: 24/111 right, 7 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** DOES NOT PASS 85-SCORE TARGET ***
+Results: 26/109 makes
+SCORE: 97/111 right, 12 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** PASSES 85-SCORE TARGET ***
+IDENTITY: 140/140 same
+
+=== baseline_all_off ===
+makes right: 28
+missed makes: 19
+misses called makes: 0
+missed makes recovered (t): []
+hard gate (0 misses called makes): PASS
+verdict changes (0):
+  (none)
+
+=== A7_alone ===
+makes right: 28
+missed makes: 19
+misses called makes: 0
+missed makes recovered (t): []
+hard gate (0 misses called makes): PASS
+verdict changes (2):
+  t=755400 film=adrian miss/short_net_depth -> miss/ball_box_jump
+  t=2529600 film=adrian miss/short_net_depth -> miss/ball_starts_well_below
+
+=== A8_alone ===
+makes right: 28
+missed makes: 19
+misses called makes: 0
+missed makes recovered (t): []
+hard gate (0 misses called makes): PASS
+verdict changes (1):
+  t=774600 film=notus_a1 miss/ball_went_up -> miss/ball_box_jump
+
+=== A4_alone ===
+makes right: 25
+missed makes: 22
+misses called makes: 1
+missed makes recovered (t): []
+hard gate (0 misses called makes): FAIL
+verdict changes (4):
+  t=338700 film=adrian miss/sideways_drift -> make/None
+  t=590900 film=adrian make/None -> miss/sideways_drift
+  t=2607300 film=adrian make/None -> miss/sideways_drift
+  t=2914500 film=adrian make/None -> miss/sideways_drift
+
+=== C4_alone ===
+makes right: 28
+missed makes: 19
+misses called makes: 0
+missed makes recovered (t): []
+hard gate (0 misses called makes): PASS
+verdict changes (0):
+  (none)
+
+=== all_four ===
+makes right: 25
+missed makes: 22
+misses called makes: 1
+missed makes recovered (t): []
+hard gate (0 misses called makes): FAIL
+verdict changes (7):
+  t=774600 film=notus_a1 miss/ball_went_up -> miss/ball_box_jump
+  t=338700 film=adrian miss/sideways_drift -> make/None
+  t=590900 film=adrian make/None -> miss/sideways_drift
+  t=755400 film=adrian miss/short_net_depth -> miss/tracker_swap_bodd_ball
+  t=2529600 film=adrian miss/short_net_depth -> miss/ball_starts_well_below
+  t=2607300 film=adrian make/None -> miss/sideways_drift
+  t=2914500 film=adrian make/None -> miss/sideways_drift
+Wrote .team/shot_outputs_test/small_fixes/build_results.json
+Wrote .team/shot_outputs_test/small_fixes/per_fix_report.md
+```
+
+No commits. Stages B/C/D not started. Stopped for Scott on the A4 / all_four hard-gate fail.The background check confirmed the same state: sandbox outputs are in `.team/shot_outputs_test/small_fixes/`; `Liberty_Shot_Outputs/small_fixes/` was never created (write blocked outside the workspace). Stage A results are unchanged — identity 140/140, A4/all_four fail the hard gate with 1 miss called a make.
+[cursor_wsl] exit 0 at 19:55:47

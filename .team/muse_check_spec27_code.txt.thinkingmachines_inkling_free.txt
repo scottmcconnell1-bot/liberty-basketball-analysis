@@ -1,0 +1,34 @@
+Query: Muse, check Cursor's code for .team/specs/27_flagged_clip_length_spec.md 
+(VETTED, you AGREEd the plan). Files: .team/shot_detectors/clip_moment_fix.py, 
+make_review_queue_page.py, test_clip_moment_fix.py (compare with spec 26 
+version: git is untracked, so read the files and the spec). Claude Code ran this
+session: pytest .team/shot_detectors -q -> 96 passed; one run to 
+Liberty_Shot_Outputs/review_queue/page_v3: flagged 39400 71 frames, 2417100 63, 
+2753100 16 with the 'same shot tagged twice' note; 0 other jpgs changed vs 
+page_v2; gray 31 orange 9; storage key coach_review_page_v3. Check code matches 
+spec, no dead code, nothing else touched. Reasons, then exactly one line: "MUSE:
+AGREE" or "MUSE: DISAGREE".
+📖 Read 27_flagged_clip_length_spec.md  0.2s
+📖 Read clip_moment_fix.py  0.1s
+📖 Read make_review_queue_page.py
+📖 Read test_clip_moment_fix.py
+📖 Read 26_clip_moment_fix_spec.md
+💻 $ ls -la .team/shot_detectors/ + 2 commands  0.2s
+💻 $ echo "=== page_v3 ===" + 8 commands
+💻 $ git status --short + 1 command  91.5s
+💻 $ echo "=== clip_moment_fix diff ===" + 4 commands  0.2s
+💻 $ git status --short -- .team/shot_detectors/clip_moment_fix.py .team/shot_detectors/make_review_queue_page.py .team/shot_detectors/test_clip_moment_fix.py .team/specs/27_flagged_clip_length_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Matches spec 27 exactly: clip_end = next_anchor - 1, too-short note added, storage key folder-based, flagged-only, no dead code (no adjusted_anchors), result files untouched, tests cover case. Claude's run details consistent. Only these 4 untracked files touched; 96 tests passed reported. MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-54913f5c3192003b4e307d9ae51272214d9342ce678ee3dfb39dea989f395025
+  hermes -c "Verify clip fix matches spec 27"
+
+Session:        local-54913f5c3192003b4e307d9ae51272214d9342ce678ee3dfb39dea989f395025
+Title:          Verify clip fix matches spec 27
+Duration:       2m 10s
+Messages:       22 (1 user, 20 tool calls)

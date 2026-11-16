@@ -1,0 +1,15 @@
+﻿You are Muse, the checker.
+CHECK spec .team/specs/23_d2_train_job_spec.md v3 (Hermes wrote it; Claude Code VETTED it, line 1) AND Claude Code's code for its "Small fix". Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto. Do not edit any file. Run nothing that writes outside /tmp.
+
+Scott 2026-11-02 chose: "Fix name, rerun test" and, if the 90% gate stopped it again, "Hermes plans a small fix first, Hermes and Muse check it." It stopped: agreement with v6 ball points 3279/3800 = 0.8629. Facts in .team/drift_log.md (last entry) and the spec.
+
+Code: the diff of .team/shot_detectors/keep_ball_detections.py is in .team/review_d2_proof_flag.diff (30 lines added, none removed). New tests at the end of .team/shot_detectors/test_keep_ball_detections.py (5 tests after the "spec 23 v3" comment). Claude Code ran (repo venv): "26 passed" for test_keep_ball_detections.py + test_d2_build_dataset.py. Claude Code also read both real files: D1 ball_arc/candidates.json and d2_train/test2/candidates.json have identical constants {BALL_CONFIDENCE 0.28, ZONE_HOOP_WIDTHS_H 3.0, ZONE_ABOVE_HOOP_WIDTHS 4.0, ZONE_BELOW_PX 300, CANDIDATE_CAP 3}, n_shots 140 both, same (film, t) set.
+
+Check:
+1. Without --mapping-proof-json the behaviour is exactly as before (gate on the file's own rate).
+2. With it: gate uses the proof file's rate (>= 0.90), proof and new file must match constants, n_shots and shot set, agreement_with_v6 written; no cutoff, zone, confidence, cap, arc or rule number changed; applied_to_core still False.
+3. This does not loosen any make/miss rule (Golden Rule 1) and cannot make a wrong result look like a pass (pass = makes_right > 29 AND misses_called_makes == 0 from the results JSON, unchanged).
+4. The spec v3 run plan: step 1 not rerun; step 0 with the flag must give 29 / 0; one valid try; then Scott (gate 3).
+5. Any bug or missing test.
+
+End with ONE line that starts with "MUSE: AGREE" or "MUSE: DISAGREE: <reason, file and line>".

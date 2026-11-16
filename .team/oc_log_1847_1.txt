@@ -1,0 +1,528 @@
+timestamp=2026-10-27T18:30:54.198Z level=INFO run=19308937 message="creating instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:30:54.199Z level=INFO run=19308937 message=fromDirectory directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:30:54.336Z level=INFO run=19308937 message=bootstrapping directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:30:54.341Z level=INFO run=19308937 message=loading path="C:\\Users\\scott\\.config\\opencode\\config.json"
+timestamp=2026-10-27T18:30:54.341Z level=INFO run=19308937 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.json"
+timestamp=2026-10-27T18:30:54.342Z level=INFO run=19308937 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.jsonc"
+timestamp=2026-10-27T18:30:54.403Z level=INFO run=19308937 message="all LSPs are disabled"
+timestamp=2026-10-27T18:30:54.403Z level=INFO run=19308937 message="all formatters are disabled"
+timestamp=2026-10-27T18:30:54.403Z level=INFO run=19308937 message=init
+timestamp=2026-10-27T18:30:54.513Z level=INFO run=19308937 message=created id=ses_e815ed2cfffemD1v83VpvEsjoX slug=silent-moon version=1.19.4 projectID=c30576cc07b2b528a2eede275372519a4312e3b4 directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" path="" workspaceID=undefined parentID=undefined title="New session - 2026-10-27T18:30:54.513Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1793125854513 time.updated=1793125854513
+timestamp=2026-10-27T18:30:54.520Z level=INFO run=19308937 message="event connected"
+timestamp=2026-10-27T18:30:54.549Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=0
+timestamp=2026-10-27T18:30:54.882Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=true agent=title mode=primary
+timestamp=2026-10-27T18:30:54.885Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m
+> build · gemma4:cloud
+[0m
+timestamp=2026-10-27T18:30:55.170Z level=INFO run=19308937 message=tracking hash=c52b4a1ba21899ba36cd8db6d0f96b65b5215430 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:30:55.174Z level=INFO run=19308937 message="shell tool using shell" shell="C:\\Program Files\\Git\\usr\\bin\\bash.exe"
+timestamp=2026-10-27T18:30:55.178Z level=INFO run=19308937 message=init count=1
+timestamp=2026-10-27T18:30:55.331Z level=INFO run=19308937 message="watcher backend" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" platform=win32 backend=windows
+timestamp=2026-10-27T18:30:55.335Z level=INFO run=19308937 message="project copy refresh started" projectID=c30576cc07b2b528a2eede275372519a4312e3b4
+timestamp=2026-10-27T18:30:55.726Z level=INFO run=19308937 message="project copy refresh done" projectID=c30576cc07b2b528a2eede275372519a4312e3b4 updated=[] removed=[]
+timestamp=2026-10-27T18:30:55.789Z level=INFO run=19308937 message="booting location services" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" workspaceID=undefined
+timestamp=2026-10-27T18:30:55.791Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea12e9e001IGbxpulIfIeTwh
+timestamp=2026-10-27T18:30:55.792Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:30:55.793Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:30:56.515Z level=INFO run=19308937 message=evaluated permission=read pattern=TEAM_RECOVERY.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:30:56.523Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\TEAM_RECOVERY.md"
+[0m→ [0mRead TEAM_RECOVERY.md
+timestamp=2026-10-27T18:30:56.677Z level=INFO run=19308937 message=evaluated permission=read pattern=AGENTS.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:30:56.680Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\AGENTS.md"
+[0m→ [0mRead AGENTS.md
+timestamp=2026-10-27T18:30:56.840Z level=INFO run=19308937 message=evaluated permission=read pattern=NEXT_TASK.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:30:56.844Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\NEXT_TASK.md"
+[0m→ [0mRead NEXT_TASK.md
+timestamp=2026-10-27T18:30:57.190Z level=INFO run=19308937 message=tracking hash=8b697efe8bc8ba1037e9d9f82a21db4790dec3b6 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:30:57.407Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=1
+timestamp=2026-10-27T18:30:57.645Z level=INFO run=19308937 message=tracking hash=4aa616be18d744623dda51975e35a9c53e49d459 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:30:57.656Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea138800014HdotAD8ZeOpQa
+timestamp=2026-10-27T18:30:57.657Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:30:57.658Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:30:58.747Z level=INFO run=19308937 message="resolved path" arg=data/roi/notus_scoreboard_rois.json resolved="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\data\\roi\\notus_scoreboard_rois.json"
+timestamp=2026-10-27T18:30:58.747Z level=INFO run=19308937 message="resolved path" arg=data/roi/notus_scoreboard_rois_approved_2026-10-26.json resolved="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\data\\roi\\notus_scoreboard_rois_approved_2026-10-26.json"
+timestamp=2026-10-27T18:30:58.748Z level=INFO run=19308937 message=evaluated permission=bash pattern="cp data/roi/notus_scoreboard_rois.json data/roi/notus_scoreboard_rois_approved_2026-10-26.json" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0mcp data/roi/notus_scoreboard_rois.json data/roi/notus_scoreboard_rois_approved_2026-10-26.json
+(no output)
+[0m
+timestamp=2026-10-27T18:30:58.920Z level=INFO run=19308937 message="resolved path" arg=.team/notus_fit_crops resolved="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\notus_fit_crops"
+timestamp=2026-10-27T18:30:58.921Z level=INFO run=19308937 message=evaluated permission=bash pattern="mkdir -p .team/notus_fit_crops" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mmkdir -p .team/notus_fit_crops
+(no output)
+[0m
+timestamp=2026-10-27T18:31:08.755Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:31:08.756Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:31:08.757Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m← [0mWrite scripts/extract_notus_fit_crops.py
+Wrote file successfully.
+[0m
+timestamp=2026-10-27T18:31:08.945Z level=INFO run=19308937 message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe scripts\extract_notus_fit_crops.py
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T18:31:09.277Z level=INFO run=19308937 message=tracking hash=92715b8f25628a6aa0658c01c60ef17c2d384687 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:09.497Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=2
+timestamp=2026-10-27T18:31:09.738Z level=INFO run=19308937 message=tracking hash=b9b27f4a47679e60d3d3948e4c77cb89987cd444 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:09.746Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea167ba0013kD3D1hymq3GrE
+timestamp=2026-10-27T18:31:09.747Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:09.748Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:10.469Z level=INFO run=19308937 message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe scripts\extract_notus_fit_crops.py
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T18:31:10.760Z level=INFO run=19308937 message=tracking hash=6783b2d08e210800c6e0ccd71b3e645cadada4ec cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:11.008Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=3
+timestamp=2026-10-27T18:31:11.230Z level=INFO run=19308937 message=tracking hash=a0764c569b36d3fdd16c9f105fedcf5d90a79a89 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:11.238Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea16da2001EW99cdfEJilYsZ
+timestamp=2026-10-27T18:31:11.238Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:11.239Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:11.918Z level=INFO run=19308937 message=evaluated permission=bash pattern="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.venv\\Scripts\\python.exe scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mC:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe scripts\extract_notus_fit_crops.py
+/usr/bin/bash: line 1: C:UsersscottDocumentsliberty-basketball-analysis.venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T18:31:12.197Z level=INFO run=19308937 message=tracking hash=7daad73c38ace0db94ec2c9cbdf0d74d6e580e87 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:12.406Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=4
+timestamp=2026-10-27T18:31:12.634Z level=INFO run=19308937 message=tracking hash=dd0b566fc92074984865bf2d03f2c729ad2ca33a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:12.642Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea173170019SSS3B19ynK5rh
+timestamp=2026-10-27T18:31:12.643Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:12.644Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:13.684Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Video directory data\video not found.
+Total crops saved: None
+[0m
+timestamp=2026-10-27T18:31:14.073Z level=INFO run=19308937 message=tracking hash=0f7b21dde0d5777cc43e171579ee04d000a55e83 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:14.278Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=5
+timestamp=2026-10-27T18:31:14.504Z level=INFO run=19308937 message=tracking hash=9e013143e7559d92ea85a0805c28b02c37d20e44 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:14.512Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea17a68001qJ5Vq19vY7nUIa
+timestamp=2026-10-27T18:31:14.513Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:14.514Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:15.693Z level=INFO run=19308937 message=evaluated permission=glob pattern=**/video/** action.permission=* action.action=allow action.pattern=*
+[0m✱ [0mGlob "**/video/**"[90m 0 matches[0m
+timestamp=2026-10-27T18:31:15.801Z level=INFO run=19308937 message=evaluated permission=glob pattern=**/*.mp4 action.permission=* action.action=allow action.pattern=*
+[0m✱ [0mGlob "**/*.mp4"[90m 2 matches[0m
+timestamp=2026-10-27T18:31:16.096Z level=INFO run=19308937 message=tracking hash=3cc5b8b35ffe3ce218a53918b024a391d7fd52ba cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:16.301Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=6
+timestamp=2026-10-27T18:31:16.528Z level=INFO run=19308937 message=tracking hash=b1b7f55aea60cc4e6e7355ea6941713bdc09ff7d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:16.536Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1824e001DIexmWgArA6R30
+timestamp=2026-10-27T18:31:16.536Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:16.537Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:17.564Z level=INFO run=19308937 message=evaluated permission=bash pattern="ls -R videos/" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0mls -R videos/
+videos/:
+Q1.mp4
+[0m
+timestamp=2026-10-27T18:31:17.721Z level=INFO run=19308937 message=evaluated permission=bash pattern="ls -R data/videos/" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mls -R data/videos/
+data/videos/:
+Q1_snippet.mp4
+[0m
+timestamp=2026-10-27T18:31:18.002Z level=INFO run=19308937 message=tracking hash=e092df26da289ec70bb2c936b37459509ae5da2f cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:18.244Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=7
+timestamp=2026-10-27T18:31:18.470Z level=INFO run=19308937 message=tracking hash=ecddb5d151dae4f4fb45ce9b6724d03b821187cb cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:18.479Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea189e6001RSCvL6881K5gtj
+timestamp=2026-10-27T18:31:18.479Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:18.480Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:20.756Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:31:20.756Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:31:20.758Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -32,14 +32,14 @@
+ with open(ROI_FILE, 'r') as f:
+     rois = json.load(f)
+ 
+ # Find video files for Notus games
+-# Assuming they are named like data/video/notus_A1.mp4 or similar
+-# I'll search the directory
+-video_dir = Path("data/video")
++video_dir = Path("videos")
+ if not video_dir.exists():
+-    print(f"Video directory {video_dir} not found.")
+-    return
++    video_dir = Path("data/videos")
++    if not video_dir.exists():
++        print(f"Video directory not found.")
++        return
+ 
+ slots = ["home_tens", "home_ones", "away_tens", "away_ones"]
+ crops_per_slot = 0
+ 
+
+[0m
+timestamp=2026-10-27T18:31:22.620Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:31:22.621Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:31:22.622Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -43,12 +43,14 @@
+ slots = ["home_tens", "home_ones", "away_tens", "away_ones"]
+ crops_per_slot = 0
+ 
+ for game_id in GAMES:
+-    # Search for video file matching game_id
++    # Search for video file matching game_id (e.g., Q1.mp4 for A1)
+     video_path = None
+     for v in video_dir.glob("*.mp4"):
+-        if game_id in v.name:
++        # Mapping A1 -> Q1 as a guess based on file names found
++        search_term = "Q1" if game_id == "A1" else game_id
++        if search_term in v.name:
+             video_path = str(v)
+             break
+     
+     if not video_path:
+
+[0m
+timestamp=2026-10-27T18:31:22.891Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Video for A not found.
+Total crops saved: 0
+[0m
+timestamp=2026-10-27T18:31:27.798Z level=INFO run=19308937 message=tracking hash=bfafdf8e2b232a9524d3226cfc412df2b87acaf2 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:28.043Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=8
+timestamp=2026-10-27T18:31:28.268Z level=INFO run=19308937 message=tracking hash=1e897aac06709a2ce2ee2d09a80a98e5853cb752 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:28.275Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1b02c001pm7Rc2InxOyYnn
+timestamp=2026-10-27T18:31:28.276Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:28.277Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:28.878Z level=INFO run=19308937 message=evaluated permission=bash pattern="ls videos/" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mls videos/
+Q1.mp4
+[0m
+timestamp=2026-10-27T18:31:28.993Z level=INFO run=19308937 message=evaluated permission=bash pattern="ls data/videos/" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mls data/videos/
+Q1_snippet.mp4
+[0m
+timestamp=2026-10-27T18:31:29.266Z level=INFO run=19308937 message=tracking hash=c6b5882a477d31754038b562cde81c5ed06fb2b3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:29.512Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=9
+timestamp=2026-10-27T18:31:29.739Z level=INFO run=19308937 message=tracking hash=aed04f439f6d6b971fc234b12d74dc9ccc89a46b cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:29.746Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1b5e9001Hi8uCop9TvHa2Y
+timestamp=2026-10-27T18:31:29.747Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:29.747Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:30.498Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Video for A not found.
+Total crops saved: 0
+[0m
+timestamp=2026-10-27T18:31:35.429Z level=INFO run=19308937 message=tracking hash=74b2e12157f43212f458e4cf1c5ba3176f28cf52 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:35.669Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=10
+timestamp=2026-10-27T18:31:35.889Z level=INFO run=19308937 message=tracking hash=f14fbedf4e50493aebb07b4bff067ef31dbab4c7 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:35.897Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1cdf6001jAmAUVtia5UbBh
+timestamp=2026-10-27T18:31:35.897Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:35.898Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:36.685Z level=INFO run=19308937 message=evaluated permission=read pattern="data\\roi\\notus_scoreboard_rois.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:31:36.691Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\data\\roi\\notus_scoreboard_rois.json"
+[0m→ [0mRead data/roi/notus_scoreboard_rois.json
+timestamp=2026-10-27T18:31:36.968Z level=INFO run=19308937 message=tracking hash=a7a7701dfa92d6627c43020c0b341f87deb8d503 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:37.216Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=11
+timestamp=2026-10-27T18:31:37.403Z level=INFO run=19308937 message=tracking hash=7015f08bfb33aa03baa6aa0e5731aa2e8c5124ec cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:37.413Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1d402001qmZU2yzvaXAK81
+timestamp=2026-10-27T18:31:37.413Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:37.414Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:45.845Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:31:45.846Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:31:45.847Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -5,19 +5,28 @@
+ 
+ # Configuration
+ ROI_FILE = "data/roi/notus_scoreboard_rois.json"
+ OUTPUT_DIR = ".team/notus_fit_crops/"
+-# Use paths from Notus games if available, otherwise default
+-# Based on NEXT_TASK.md, Notus games are A1 and A
+-GAMES = ["A1", "A"] 
+-# Video files are likely in data/video/ or similar; need to find them.
+-# I will look for Notus videos.
++# Use keys from ROI file
++GAMES = [
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334",
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334"
++]
++# Mapping game keys to likely video files based on observed filenames
++VIDEO_MAP = {
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": "Q1.mp4",
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": "Q1.mp4" # Fallback to Q1 if A is missing
++}
+ 
+ GATE_TIMES = {
+-    "A1": [202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836],
+-    "A": [187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559]
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": [202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836],
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": [187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559]
+ }
+ HOLDOUT_TIMES = {
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": [246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1],
++    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": [232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9]
++}
++HOLDOUT_TIMES = {
+     "A1": [246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1],
+     "A": [232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9]
+ }
+ 
+
+[0m
+timestamp=2026-10-27T18:31:46.121Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Video for jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334 not found.
+Video for jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334 not found.
+Total crops saved: 0
+[0m
+timestamp=2026-10-27T18:31:46.522Z level=INFO run=19308937 message=tracking hash=f626b5c8222baa64c6060b3477eddd8bb107af04 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:46.774Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=12
+timestamp=2026-10-27T18:31:47.003Z level=INFO run=19308937 message=tracking hash=4810da8ae639ab500b49b8ce534a54b1f0074e3a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:47.012Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea1f9580010c5FFHvrdGDJCl
+timestamp=2026-10-27T18:31:47.012Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:47.013Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:49.740Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:31:49.740Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:31:49.742Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -52,20 +52,27 @@
+ slots = ["home_tens", "home_ones", "away_tens", "away_ones"]
+ crops_per_slot = 0
+ 
+ for game_id in GAMES:
+-    # Search for video file matching game_id (e.g., Q1.mp4 for A1)
++    # Search for video file matching game_id
+     video_path = None
+-    for v in video_dir.glob("*.mp4"):
+-        # Mapping A1 -> Q1 as a guess based on file names found
+-        search_term = "Q1" if game_id == "A1" else game_id
+-        if search_term in v.name:
+-            video_path = str(v)
+-            break
++    # Try mapping from VIDEO_MAP
++    video_filename = VIDEO_MAP.get(game_id)
++    if video_filename:
++        # Search in all potential video dirs
++        for v_dir in [Path("videos"), Path("data/videos")]:
++            v_path = v_dir / video_filename
++            if v_path.exists():
++                video_path = str(v_path)
++                break
+     
+     if not video_path:
+         print(f"Video for {game_id} not found.")
+         continue
++    
++    if not video_path:
++        print(f"Video for {game_id} not found.")
++        continue
+ 
+     cap = cv2.VideoCapture(video_path)
+     fps = cap.get(cv2.CAP_PROP_FPS)
+     
+
+[0m
+timestamp=2026-10-27T18:31:50.059Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 128, in <module>
+    total = extract_crops()
+            ^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 105, in extract_crops
+    if not is_fitting_frame(ts, game_id):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 34, in is_fitting_frame
+    all_excluded = GATE_TIMES[game_id] + HOLDOUT_TIMES[game_id]
+                                         ~~~~~~~~~~~~~^^^^^^^^^
+KeyError: 'jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334'
+[0m
+timestamp=2026-10-27T18:31:50.506Z level=INFO run=19308937 message=tracking hash=dd128a86cc369a39f40d9b0681afe17822ac7b8a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:50.753Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=13
+timestamp=2026-10-27T18:31:50.984Z level=INFO run=19308937 message=tracking hash=dde5607179f7ce0772bff70f8ff03fbe74def51e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:50.990Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea208e20014HtjHmDxhKF536
+timestamp=2026-10-27T18:31:50.991Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:50.992Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:55.323Z level=INFO run=19308937 message=cleanup prune=7.days
+[0m✗ [0mEdit scripts/extract_notus_fit_crops.py failed
+[91m[1mError: [0mNo changes to apply: oldString and newString are identical.
+timestamp=2026-10-27T18:31:57.458Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 128, in <module>
+    total = extract_crops()
+            ^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 105, in extract_crops
+    if not is_fitting_frame(ts, game_id):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 34, in is_fitting_frame
+    all_excluded = GATE_TIMES[game_id] + HOLDOUT_TIMES[game_id]
+                                         ~~~~~~~~~~~~~^^^^^^^^^
+KeyError: 'jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334'
+[0m
+timestamp=2026-10-27T18:31:57.892Z level=INFO run=19308937 message=tracking hash=7c4d9b56ef2943dd4f9b7b79afc2f79fa35b91f9 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:58.132Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=14
+timestamp=2026-10-27T18:31:58.314Z level=INFO run=19308937 message=tracking hash=999ed0ee2d231e535f00800f477f8a7d3375d532 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:58.324Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea225b6001PQ4JiSh202fPzp
+timestamp=2026-10-27T18:31:58.324Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:58.325Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:31:59.177Z level=INFO run=19308937 message=evaluated permission=read pattern="scripts\\extract_notus_fit_crops.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:31:59.180Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m→ [0mRead scripts/extract_notus_fit_crops.py
+timestamp=2026-10-27T18:31:59.489Z level=INFO run=19308937 message=tracking hash=eabb346334cce633551e30e68e112db9711c2509 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:59.735Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=15
+timestamp=2026-10-27T18:31:59.960Z level=INFO run=19308937 message=tracking hash=f6a64335488061980361e742900e02778366ddd1 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:31:59.968Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea22bf9001eD636vmCgD0vHz
+timestamp=2026-10-27T18:31:59.969Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:31:59.970Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:06.489Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:32:06.490Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:32:06.491Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -24,12 +24,8 @@
+ HOLDOUT_TIMES = {
+     "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": [246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1],
+     "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": [232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9]
+ }
+-HOLDOUT_TIMES = {
+-    "A1": [246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1],
+-    "A": [232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9]
+-}
+ 
+ def is_fitting_frame(ts, game_id):
+     all_excluded = GATE_TIMES[game_id] + HOLDOUT_TIMES[game_id]
+     for ex in all_excluded:
+
+[0m
+timestamp=2026-10-27T18:32:06.761Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Total crops saved: 0
+[0m
+timestamp=2026-10-27T18:32:16.122Z level=INFO run=19308937 message=tracking hash=9abca002b83843afe794cd3a215457410f7a56ef cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:16.337Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=16
+timestamp=2026-10-27T18:32:16.568Z level=INFO run=19308937 message=tracking hash=7a1306b706b562d89b613da45432a6500e9c99f4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:16.579Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea26cd3001toyKFwh9SrMAZf
+timestamp=2026-10-27T18:32:16.580Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:32:16.581Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:17.306Z level=INFO run=19308937 message=evaluated permission=read pattern="scripts\\extract_notus_fit_crops.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:32:17.311Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m→ [0mRead scripts/extract_notus_fit_crops.py
+timestamp=2026-10-27T18:32:17.578Z level=INFO run=19308937 message=tracking hash=e33e5d7bc656197f1d48d4f9d89d494537887255 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:17.824Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=17
+timestamp=2026-10-27T18:32:18.056Z level=INFO run=19308937 message=tracking hash=0f91a9f472a66a98606c8b21db0f0845fef7f1a8 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:18.063Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea272a10015PiDg6iA8E5P1N
+timestamp=2026-10-27T18:32:18.064Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:32:18.064Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:21.155Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:32:21.155Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:32:21.157Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m
+[0m← [0mEdit scripts/extract_notus_fit_crops.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py
+@@ -44,31 +44,18 @@
+     if not video_dir.exists():
+         print(f"Video directory not found.")
+         return
+ 
+-slots = ["home_tens", "home_ones", "away_tens", "away_ones"]
+-crops_per_slot = 0
+-
+-for game_id in GAMES:
+-    # Search for video file matching game_id
+-    video_path = None
+-    # Try mapping from VIDEO_MAP
+-    video_filename = VIDEO_MAP.get(game_id)
+-    if video_filename:
+-        # Search in all potential video dirs
+-        for v_dir in [Path("videos"), Path("data/videos")]:
+-            v_path = v_dir / video_filename
+-            if v_path.exists():
+-                video_path = str(v_path)
+-                break
+-    
+-    if not video_path:
+-        print(f"Video for {game_id} not found.")
+-        continue
+-    
+-    if not video_path:
+-        print(f"Video for {game_id} not found.")
+-        continue
++slots = ["home", "home_tens", "home_ones", "away", "away_tens", "away_ones"]
++# Map the requested slots to the ROI keys
++slot_map = {
++    "home_tens": "home",
++    "home_ones": "home",
++    "away_tens": "away",
++    "away_ones": "away"
++}
++# Actually, the ROI file has scores -> home -> tens, scores -> home -> ones
++# Let's rewrite the extraction loop to handle the nested structure
+ 
+     cap = cv2.VideoCapture(video_path)
+     fps = cap.get(cv2.CAP_PROP_FPS)
+     
+
+[0m
+[0m✗ [0mEdit scripts/extract_notus_fit_crops.py failed
+[91m[1mError: [0mCould not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.
+timestamp=2026-10-27T18:32:30.223Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\extract_notus_fit_crops.py", line 59
+    cap = cv2.VideoCapture(video_path)
+IndentationError: unexpected indent
+[0m
+timestamp=2026-10-27T18:32:30.519Z level=INFO run=19308937 message=tracking hash=a0e1ae04ad755e57590d54c5e0fd5bc58872015d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:30.771Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=18
+timestamp=2026-10-27T18:32:31.000Z level=INFO run=19308937 message=tracking hash=092196c94717cd76a61c53d8abf33666f6e434aa cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:31.008Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea2a536001G25s1oYyTCEyt4
+timestamp=2026-10-27T18:32:31.009Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:32:31.009Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:31.725Z level=INFO run=19308937 message=evaluated permission=read pattern="scripts\\extract_notus_fit_crops.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:32:31.729Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m→ [0mRead scripts/extract_notus_fit_crops.py
+timestamp=2026-10-27T18:32:32.041Z level=INFO run=19308937 message=tracking hash=9f1a13512051eb3a517b4d639003c1667c786217 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:32.246Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=19
+timestamp=2026-10-27T18:32:32.474Z level=INFO run=19308937 message=tracking hash=97a9e12d0c6301a2a7c1a92fc99e2c3b65be713b cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:32.481Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea2aaf7001I2dmu5sJn4OEIw
+timestamp=2026-10-27T18:32:32.482Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:32:32.483Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:41.999Z level=INFO run=19308937 message=evaluated permission=edit pattern="scripts\\extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:32:42.000Z level=INFO run=19308937 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+timestamp=2026-10-27T18:32:42.000Z level=INFO run=19308937 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\extract_notus_fit_crops.py"
+[0m
+[0m← [0mWrite scripts/extract_notus_fit_crops.py
+Wrote file successfully.
+[0m
+timestamp=2026-10-27T18:32:42.301Z level=INFO run=19308937 message=evaluated permission=bash pattern="\"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe\" scripts/extract_notus_fit_crops.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe" scripts/extract_notus_fit_crops.py
+Total crops saved: 80
+[0m
+timestamp=2026-10-27T18:32:43.800Z level=INFO run=19308937 message=tracking hash=b7263a9edb1eea3a939e8eb9ae803a56ef817777 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:44.051Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=20
+timestamp=2026-10-27T18:32:44.285Z level=INFO run=19308937 message=tracking hash=7bbe5d58366fc33e8cc27566d7e49bb3544196bc cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:44.293Z level=INFO run=19308937 message=process session.id=ses_e815ed2cfffemD1v83VpvEsjoX messageID=msg_17ea2d915001eCwzWe4y3AR0Ys
+timestamp=2026-10-27T18:32:44.293Z level=INFO run=19308937 message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e815ed2cfffemD1v83VpvEsjoX small=false agent=build mode=primary
+timestamp=2026-10-27T18:32:44.294Z level=INFO run=19308937 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:32:45.426Z level=INFO run=19308937 message=tracking hash=4f6afc83819a7e969441256b1abf14f0c7c4ba3a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:32:45.631Z level=INFO run=19308937 message=loop session.id=ses_e815ed2cfffemD1v83VpvEsjoX step=21
+timestamp=2026-10-27T18:32:45.633Z level=INFO run=19308937 message="exiting loop" session.id=ses_e815ed2cfffemD1v83VpvEsjoX
+timestamp=2026-10-27T18:32:45.638Z level=INFO run=19308937 message="disposing instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"

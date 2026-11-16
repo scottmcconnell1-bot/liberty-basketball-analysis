@@ -1,0 +1,7 @@
+**52a v3:** Recomputed with `in_session(..., is_ft=True)` + coach shot tags. Counts match: adrian unique class-0 **26** (oos 6 ⊂ far 26), notus **6**, pool **277**; oos definition pinned; remaining −1 = 19/3. Build order, R7 amendment (`session_filter` false→true for logo52a only), and same-5 dissent / R10-available note are all present. Sha matches `spec52a_v3_sha.txt`.
+
+**53 v9:** Pass bar gated on Step 0 enablement is in status + §5. Violation path uses `violation_travel` (status, fusion table, §3); no stale “no violation predicate / unknown OK for 77” left. Sha matches `spec53_v9_sha.txt`.
+
+CURSOR 52a: AGREE
+CURSOR: AGREEThat background search finished: Adrian/Notus film tags and `game_session_48b/` (adrian, notus, gv, etc.) are on disk. Those are what the 52a count check used. No change to the earlier verdict — both specs still AGREE.
+[cursor_wsl] exit 0 at 17:23:40

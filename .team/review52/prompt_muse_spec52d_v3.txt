@@ -1,0 +1,4 @@
+You are MUSE, the REVIEWER. READ-ONLY, no file edits. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Final check of .team/specs/52d_context_clip_prereg.md v3 (sha in review52/spec52d_v3_sha.txt). v3 applies your v1 changes (G1-G6, v2) and the coordinator GPU probe (review52/gpu_probe52d.txt: N=87 bs8 does not fit 8 GB, spills at 21 s/step; N=44 bs8 5176 MiB 0.53 s/step). v3 pins STEP 0.16 / N=44 / bs 8, K_TRIG 6, time-shift +-1 frame, speed guard replacing OOM stop. Verify: arithmetic (N, K_TRIG with python round), extract_clips/train_clip parameterisation, that the speed guard is implementable, honesty of the make/miss trade-off text (frame rate on the shot halves), anything left stale from v1/v2 (e.g. ~107 min budget, N=87 text, tests). Short answer.
+End with ONE line starting exactly: MUSE: AGREE | MUSE: AGREE WITH CHANGES: <list> | MUSE: DISAGREE: <why>

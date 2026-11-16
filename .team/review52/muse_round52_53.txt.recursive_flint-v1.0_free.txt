@@ -1,0 +1,120 @@
+Query: You are MUSE, the REVIEWER on the Liberty basketball team (not Hermes, 
+not the architect). READ-ONLY: do not edit,
+create or rewrite ANY file. Your only output is this review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner) wants every AI's input. Your last three requests ended without a 
+Muse verdict, so answer all three here.
+
+ITEM A - retrain decision. Read .team/review52/prompt_team_retrain52.txt 
+(questions Q1-Q4) and the answers already
+given: .team/review52/hermes_retrain52.txt and 
+.team/review52/cursor_retrain52.txt (they disagree on Q2: Hermes =
+score fouled/waved-off as not-shots, Cursor = exclude them from the auto e2e 
+denominator). Give your answers to
+Q1-Q4 and pick a side on Q2 with a reason.
+
+ITEM B - epoch choice. Read .team/review52/prompt_team_choose_e52.txt, 
+choose_e52_curves.txt, and the replies
+hermes_choose_e52.txt and cursor_choose_e52.txt (both AGREE E=5, rule change 
+only pre-registered for a future run).
+Protocol integrity check: is carrying E=5 into the 3-seed LOGO gate valid? Any 
+peeking?
+
+ITEM C - spec 53 referee signals. Read .team/specs/53_referee_signals_spec.md 
+(v2), .team/review52/
+nfhs_signals_reference.md (official chart), addendum_ref53_scott.txt (Scott: "Go
+with the book, but some wiggle
+room ... deduced with several factors"), and cursor_ref53.txt (Cursor's audit of
+v1: fix the spec-36 cause, v1 =
+arm-raised / both-arms / wave / chop only, moment-window pose on referee boxes, 
+pass bar on Scott's 6 examples plus
+false fires on labelled true shots). Note: spec 53 v2 was written by a model run
+in the Muse slot that edited the
+file by mistake; judge it on content. Review feasibility (ref size 47-93 px 
+wide, panning, occlusion), protocol
+(seen films only, no blind peeking, no new human review loops), and whether v2 
+covers Cursor's v1 changes.
+
+Answer briefly and concretely. End with exactly these three lines (each line 
+starts with MUSE:):
+MUSE: A AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: B AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (this last line = ITEM 
+C, spec 53 v2)
+
+────────────────────────────────────────
+☤ Hermes
+I'll read all the relevant files for all three items.
+────────────────────────────────────────
+
+📖 Read prompt_team_retrain52.txt  0.2s
+📖 Read hermes_retrain52.txt  0.2s
+📖 Read cursor_retrain52.txt  0.2s
+📖 Read prompt_team_choose_e52.txt  0.2s
+📖 Read choose_e52_curves.txt  0.2s
+📖 Read hermes_choose_e52.txt  0.2s
+📖 Read cursor_choose_e52.txt  0.2s
+📖 Read 53_referee_signals_spec.md  0.3s
+📖 Read nfhs_signals_reference.md  0.1s
+📖 Read addendum_ref53_scott.txt  0.1s
+📖 Read cursor_ref53.txt  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me ground the review in the supporting context: spec 52, the drift log, and any other referee-related artifacts.
+────────────────────────────────────────
+
+📖 Read 52_label_audit_stable_ensemble_spec.md
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team -iname '*ref53*' -o -iname '*refsignal*' -o -iname '*referee*' -o -iname '*ref_*' 2>/dev/null | grep -v Liberty_Shot_Outputs  0.7s
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md
+💻 $ grep -ril 'ref53\|referee\|refsignal\|ref signal' /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include='*.py' --include='*.md' --include='*.txt' --include='*.json' -l 2>/dev/null | grep -v Liberty_Shot_Outputs | grep -v node_modules  55.3s
+
+────────────────────────────────────────
+☤ Hermes
+More context surfaced. Let me read the referee-round artifacts and Muse's prior inputs.
+────────────────────────────────────────
+
+📖 Read hermes_ref53.txt
+📖 Read muse_ref53.txt  0.1s
+📖 Read prompt_muse_round52_53.txt  0.1s
+📖 Read prompt_team_refsignals53.txt  0.1s
+📖 Read spec53_v2_sha.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read Muse's prior retrain verdicts, the drift log tail, and the spot-check answers.
+────────────────────────────────────────
+
+📖 Read muse_retrain52.txt
+📖 Read muse_round52_53.txt.recursive_flint-v1.0_free.txt
+📖 Read drift_log.md L380-399
+📖 Read spot_check_52_answers.json
+
+────────────────────────────────────────
+☤ Hermes
+All inputs read (spec 52 v3, drift log 380-395, Hermes/Cursor/Muse replies, choose_e curves, NFHS chart, Scott addendum, Cursor audit, spec 53 v2 + its diff history). No files touched.
+
+ITEM A - retrain decision (labels52_v2, Scott waiver, spec 52 v3):
+Q1: Retrain now is acceptable - Scott's waiver is binding - but the second check never ran (R3 sample failed at 58/71 = 81.7%). Read the gate/blind conditionally: pass = first post-waiver evidence on frozen labels; fail = ambiguous (label error vs model error) -> bounded diagnosis, not re-litigation.
+Q2: I side with Cursor on the auto e2e denominator: EXCLUDE fouled/waved-off/warm-up from the all-shots denominator (Scott's binding rule makes them not-shots; putbacks separate, airballs count, warm-ups -1). Hermit's "score as not-shots" is the right training-label truth but the wrong auto-denominator treatment, since the clip cannot see whistles and >=90% is over ALL SHOTS. Residual model firings -> locked coach-flag band (<=20 checks).
+Q3: Minimum bounded human role: Scott, one pass - blind-run results + flagged coach items only; fail -> failing subset once, label, retrain; loop now failure-driven.
+Q4: Must-change now: final blind needs >=2 genuinely new unseen films (>=1 new gym; HSB1 consumed); Q2 exclusion explicit in blind protocol; honest review uses real flag answers; <=20 checks hard cap + silent-reject hard gate failure; per-seed reporting, no seed-picking.
+
+ITEM B - epoch choice: VALID to carry E=5 into the 3-seed LOGO gate as written. Nested LOGO design (inner-val = next film in FILM_ORDER), miss_recall tie-break, epochs 1..18, seed 0, E = median of 5 fold bests = 5; no held-out game used in choosing E; no peeking. O1-O3 are pre-registered-rule behavior, not run errors; a rule change now would be a protocol change (O4), not permitted without Scott re-registering. Keep E=5; let the gate judge.
+
+ITEM C - spec 53 v2: Content judged on merits - substantially the right design (NFHS 2024-25 chart numbers, hard pose limit, cue fusion, unknown->coach, numbers table, make/miss safety re-scope, output->spec-52 scoring). Coverage of Cursor's v1 changes: PARTIAL - moment-window pose on BODD "r" boxes, fist/thumbs/3-finger deferral via unknown route, no-ref->no change, spec 52 untouched all covered; spec-36 cause fix (weak ball-in-ref proxies, NOT is_referee_player) not cleanly applied - v2 retains that blame; pass bar (six examples + false fires on labelled true shots) only weakly covered.
+
+Feasibility: refs ~47-93 px on smaller films, YOLO pose validity on small refs UNVERIFIED (pad/upscale test needed); panning + moment windows +/-2s x 1-2 refs; occlusion (rimrock:325 no ref in clip). Protocol: seen-films-only, no blind peeking, no new human loops - respected.
+
+MUSE: A AGREE | AGREE WITH CHANGES: retrain now acceptable; gate/blind conditional on frozen labels52_v2; fouled/waved-off/warm-up excluded from auto e2e all-shots denominator + coach-flag safety net; final blind needs >=2 genuinely new unseen films (one new gym) | DISAGREE: noneMUSE: B AGREE | AGREE WITH CHANGES: keep E=5; no change now; future choose_e re-run tie-break amendment pre-registered before rerun | DISAGREE: noneMUSE: AGREE | AGREE WITH CHANGES: clean spec-36 cause wording; tighten pass bar; formalize fist/thumbs/3-finger deferral; pad/upscale small refs; lock waved_off window + 3PT arm-up min height before run | DISAGREE: v2 status line over-claims Muse-slot authorship of the rewrite
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b6efa4299d21d0ba6c16f1049ff5ee191fc884c4fa63a284456388dca580acf1
+  hermes -c "You are MUSE, the REVIEWER on the Liberty…"
+
+Session:        local-b6efa4299d21d0ba6c16f1049ff5ee191fc884c4fa63a284456388dca580acf1
+Title:          You are MUSE, the REVIEWER on the Liberty…
+Duration:       4m 42s
+Messages:       30 (1 user, 28 tool calls)

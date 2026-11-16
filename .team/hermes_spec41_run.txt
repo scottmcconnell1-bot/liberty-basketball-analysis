@@ -1,0 +1,217 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/41_free_throw_line_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "FREE THROW 
+LINE SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing else, 
+run nothing that writes. One to two pages.
+
+Read first: .team/specs/40_free_throw_half_circle_spec.md (Q1-Q9 block at top), 
+.team/shot_detectors/ft_half_circle.py (stillness, is_still, still_frame_index, 
+candidates, _cleaned_players, paint_in_region, decide_ft, debug_image), 
+.team/specs/41_ftline_calibration_proto.py (Claude Code's calibration prototype 
+- the method to spec), last 8 lines of .team/drift_log.md.
+
+SCOTT 2026-11-08 (binding): "Use the line." The half-circle ellipse fit (spec 
+40) is dropped. FT = players still AND exactly one player standing just behind 
+the straight painted FT line (the flat side of the half circle), between the 
+lane lines; that player is the shooter. Claude Code picks every setting before 
+the run; Scott: "aim for higher results".
+
+FACTS (Claude Code, Proven, on the 6 spec-40 calibration FTs only: adrian 
+250600, 950760, 2587840; notus 144920, 371600, 763760):
+- Spec 40 ellipse: wrong on most frames (player bodies, 3PT arc, big loops). Not
+used.
+- The FT line is painted in the half-circle colour: Adrian black, Notus red. 
+Each gym also has lines from another court: Adrian white lines, Notus blue 
+lines; one runs almost parallel to and close to the FT line in both gyms. 
+build_paint_mask already keeps only red (liberty, use_blue false) and only dark 
+(adrian, use_white_tophat false).
+- Shooter feet (box bottom-centre) sit 0.07-0.10 player heights from the FT 
+line, on the side away from the hoop.
+- Angle between a segment and the feet->hoop-box-centre direction: FT line 75-81
+deg; lane lines 25-35 deg.
+- Adrian false match found and fixed in calibration: a lane player matched the 
+dark floor strip beside a white other-court line. Fix: Adrian segment must be 
+darker than BOTH sides (8 px x W/1280 off the line, 20 samples) by 10+ grey 
+levels.
+- Prototype result: 6/6 FTs give exactly one player in the band, and it is the 
+shooter; no lane player picked. Lane-player candidates that find the FT line 
+give the same shooter.
+- Adrian FT line comes out in short Hough pieces (union 0.41-0.95 player 
+heights), Notus 1.1-1.5; so NO length minimum (it would fail Adrian). Paint 
+coverage along the line did not separate cases; not used.
+- Calibration only: 6 moments, settings chosen after seeing them -> the measured
+run must use a fresh hand-check sample.
+
+SETTINGS FIXED BY CLAUDE CODE BEFORE CODE AND RUN (copy into a SETTINGS FIXED 
+block; do not change):
+- Stillness, still frame, candidates: unchanged from spec 40 Q1/Q2 code (median 
+0.15 player heights/s over  ms; candidates via ball release 0.6; spec-39 merge +
+referee drop).
+- Paint: build_paint_mask (stage1b yaml, read-only) on the still frame; erase 
+every cleaned player box (pad 3 px) to 0.
+- Segments: HoughLinesP on the full-frame paint mask, rho 1, theta 1 deg, yaml 
+hough_threshold, minLineLength max(12, yaml min_line_length_at_1280 x W/1280), 
+maxLineGap max(4, yaml max_gap_at_1280 x W/1280).
+- Keep a segment for candidate c (feet f, height h) when: perpendicular distance
+f->segment line <= LINE_NEAR 0.25 h; projection of f within [-0.5 h, length + 
+0.5 h]; angle to the f->hoop-centre direction >= ANGLE_MIN 60 deg; Adrian only: 
+darker than both sides by >= DARK_MIN 10 (as above).
+- FT line: median angle of kept segments; group = kept segments within 5 deg of 
+it; line through the mean of the group endpoints; extent = min..max projection 
+of group endpoints on that direction.
+- Band: a cleaned player p is behind the line when signed distance from the line
+(positive = away from hoop) is in [-0.15 p.h, +1.2 p.h] and its projection is 
+within extent +- 0.5 c.h.
+- Decision per moment: not still -> untouched. Candidates tried in spec-40 
+order; the first candidate whose FT line has exactly one player in the band AND 
+that player is a candidate -> free_throw true, shooter = that player (overrides 
+the trace), reason "free_throw_line". Still but no FT line for any candidate -> 
+orange "ft_line_not_found" (never guess). Line found but 0 or 2+ in band -> 
+free_throw false, trace unchanged.
+
+WRITE:
+A. Detector steps exactly as the SETTINGS block (plain words), plus the gates 
+below.
+B. Code plan: Cursor edits .team/shot_detectors/ft_half_circle.py (replace the 
+ellipse step with the line step; remove remove_straight/ransac_ellipse/ellipse 
+code or leave it unused - say which and why), rim_first_finder.py only if the 
+reason names change, the debug image draws the kept segments + band, and tests 
+in test_ft_half_circle.py (synthetic masks: FT line found, lane line rejected by
+angle, Adrian light line rejected by darkness, 0/1/2 players in band). No other 
+file.
+C. Gate before the measured run: run_ft_debug on the 6 calibration FTs must 
+reproduce the prototype (exactly one in band = the shooter, all 6); Claude Code 
+looks at the images. Miss -> stop for Scott, no tuning.
+D. Measure: same as spec 40 Q8 (free_throw flags vs FT tags found/missed/false; 
+non-FT moments flagged free_throw, target 0; orange ft_line_not_found count; FT 
+shooter right/wrong). Hand-check seed 41: up to 10 flagged FT moments per film, 
+excluding the 6 calibration moments and spec-38/39/40 samples; frozen rule file 
+.team/specs/41_handcheck_rule.json written before the run; verdicts written 
+before reading numbers. Q4 blind only after Scott sees numbers.
+E. Numbers table: each number above with "fixed by Claude Code before the run" +
+the calibration fact behind it.
+Rules: no core edits (court_homography.py, stage1b files read only), no 
+training, no tracker, no interpolation, no banned trials (linear interpolation, 
+ByteTrack, DeepSORT, early windows = OLLAMA.md:31-39, wider column, hoop 
+recenter); finder reads no tags/scoreboard/DB; one try then stop for Scott. 
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading the four reference files in parallel.
+────────────────────────────────────────
+
+📖 Read 40_free_throw_half_circle_spec.md  0.2s
+📖 Read ft_half_circle.py  0.2s
+📖 Read 41_ftline_calibration_proto.py  0.2s
+📖 Read drift_log.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+All four references read. Now I'll write the single new spec file, exactly per the constraints: line 1 fixed, plain markdown, no pipes, no literal "\n", one to two pages, nothing else touched, nothing run.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/41_free_throw_line_spec.md  0.1s
+│ .team/specs/41_free_throw_line_spec.md
+│ @@ -0,0 +1,77 @@
+│ +FREE THROW LINE SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +Branch: team/auto
+│ +File: .team/specs/41_free_throw_line_spec.md (new file only; nothing else edited)
+│ +Read first: .team/specs/40_free_throw_half_circle_spec.md Q1-Q9 block, .team/shot_detectors/ft_half_circle.py, .team/specs/41_ftline_calibration_proto.py, last 8 lines of .team/drift_log.md (2026-11-08 Scott: "Use the line").
+│ +
+│ +1. GOAL (Scott 2026-11-08, binding)
+│ +"Use the line." The half-circle ellipse fit of spec 40 is dropped. FT = players still AND exactly one player standing just behind the straight painted FT line (the flat side of the half circle), between the lane lines; that player is the shooter. Claude Code picks every setting before the run; Scott: aim for higher results. No tuning after results; one try, then stop for Scott.
+│ +
+│ +Calibration FT moments (drift_log.md last 8 lines): adrian 250600, 950760, 2587840; notus 144920, 371600, 763760.
+│ +
+│ +2. SETTINGS FIXED BY CLAUDE CODE BEFORE CODE AND RUN (do not change)
+│ +
+│ +Stillness: median over players of per-player move per second over [trigger-3000 ms, trigger-1000 ms] <= STILL_MOVE_MAX 0.15 player heights; spec 40 Q1 code unchanged.
+│ +Still frame: frame nearest trigger-1000 ms; spec 40 Q1/Q2 code unchanged.
+│ +Candidates: players the ball was inside (release 0.6) at least once in [trigger-3000 ms, trigger], after spec-39 merge and referee drop; tried in spec-40 order.
+│ +Paint: build_paint_mask from stage1b_court_lines.py with its yaml, read-only, on the still frame; gym per film from CLI --gym (adrian or liberty); erase every cleaned player box (pad 3 px) to 0.
+│ +Segments: HoughLinesP on the full-frame paint mask, rho 1, theta 1 deg, yaml hough_threshold, minLineLength max(12, yaml min_line_length_at_1280 x W/1280), maxLineGap max(4, yaml max_gap_at_1280 x W/1280).
+│ +Keep a segment for candidate c (feet f = box bottom-centre, height h) when all hold: perpendicular distance f to the segment line <= LINE_NEAR 0.25 h; projection of f on the segment within [-0.5 h, length + 0.5 h]; angle between the segment and the f-to-hoop-box-centre direction >= ANGLE_MIN 60 deg; Adrian only: segment darker than BOTH sides by >= DARK_MIN 10 grey levels (8 px x W/1280 off the line, 20 samples).
+│ +FT line: median angle of kept segments; group = kept segments within 5 deg of the median angle; line through the mean of the group endpoints; extent = min..max projection of the group endpoints on that direction.
+│ +Band: a cleaned player p is behind the line when its signed distance from the line (positive away from the hoop) is in [-0.15 p.h, +1.2 p.h] and its projection is within extent +- 0.5 c.h.
+│ +Decision per moment: not still -> untouched. Candidates tried in spec-40 order; the first candidate whose FT line has exactly one player in the band AND that player is a candidate -> free_throw true, shooter = that player (overrides the trace), reason "free_throw_line". Still but no FT line for any candidate -> orange "ft_line_not_found" (never guess). Line found but 0 or 2+ players in band -> free_throw false, trace unchanged.
+│ +
+│ +3. FACTS (each from a file read this session or above; otherwise NOT FOUND - Claude Code to check)
+│ +- Spec 40 ellipse fit: wrong on most frames (player bodies, 3PT arc, big loops). Not used.
+│ +- FT line colour: painted in the half-circle colour; Adrian black, Notus red. Each gym also has lines from another court: Adrian white, Notus blue; one runs almost parallel to and close to the FT line in both gyms. build_paint_mask keeps only red for liberty (use_blue false) and only dark for adrian (use_white_tophat false).
+│ +- Shooter feet (box bottom-centre) sit 0.07-0.10 player heights from the FT line, on the side away from the hoop.
+│ +- Angle between a segment and the feet-to-hoop-box-centre direction: FT line 75-81 deg; lane lines 25-35 deg.
+│ +- Adrian false match fixed in calibration: a lane player matched the dark floor strip beside a white other-court line. Fix: the Adrian segment must be darker than BOTH sides (8 px x W/1280 off the line, 20 samples) by 10+ grey levels.
+│ +- Prototype result: 6/6 FTs give exactly one player in the band, and it is the shooter; no lane player picked. Lane-player candidates that find the FT line give the same shooter.
+│ +- Adrian FT line comes out in short Hough pieces (union 0.41-0.95 player heights), Notus 1.1-1.5; so NO length minimum (it would fail Adrian). Paint coverage along the line did not separate cases; not used.
+│ +- Calibration only: 6 moments, settings chosen after seeing them, so the measured run needs a fresh hand-check sample.
+│ +- Hoop centre per series from the saved hoop box (frames.json / rim_first_finder series hoop); how the line finder receives it NOT FOUND - Claude Code to check.
+│ +
+│ +4. SECTION A - DETECTOR STEPS (plain words, exactly the SETTINGS block) plus gates
+│ +Per moment, after the trace, only when still:
+│ +1. Stillness: median move per second over [trigger-3000 ms, trigger-1000 ms] <= 0.15 player heights; not still -> untouched, no FT test.
+│ +2. Candidates: ball-held players in [trigger-3000 ms, trigger] after spec-39 merge and referee drop, tried in spec-40 order.
+│ +3. Still frame: nearest trigger-1000 ms.
+│ +4. Paint: build_paint_mask on the still frame; erase cleaned player boxes (pad 3 px).
+│ +5. Segments: HoughLinesP on the full-frame paint mask with the yaml thresholds scaled by W/1280.
+│ +6. Keep per candidate: distance <= 0.25 h, projection within [-0.5 h, length + 0.5 h], angle >= 60 deg to feet-to-hoop direction, Adrian darkness >= 10 vs both sides.
+│ +7. FT line: median angle of kept segments, group within 5 deg, line through mean endpoints, extent min..max projection.
+│ +8. Band: every cleaned player behind the line when signed distance in [-0.15 p.h, +1.2 p.h] and projection within extent +- 0.5 c.h.
+│ +9. Decision: first candidate with exactly one in-band player who is a candidate -> free_throw true, reason free_throw_line; still but no line for any candidate -> orange ft_line_not_found; line found but 0 or 2+ in band -> free_throw false, trace unchanged. No length minimum on segments.
+│ +
+│ +5. SECTION B - CODE PLAN (Cursor edits; Hermes writes no code)
+│ +- .team/shot_detectors/ft_half_circle.py: replace the ellipse step with the line step. Remove remove_straight, ransac_ellipse, feet_inside, the ellipse helpers (_ellipse_axes, _local_points, ellipse_distance, _point_in_ellipse) and the Ellipse type alias: nothing outside this module imports them and they are dead after the swap, so dead code stays out under one-try-stop discipline. Keep stillness, is_still, still_frame_index, candidates, _cleaned_players, paint_in_region, region_for unchanged. Rewrite decide_ft to the line step (reason free_throw_line, orange ft_line_not_found, no feet_not_one). debug_image draws the kept segments and the band. Hoop centre plumbing NOT FOUND - Claude Code to check.
+│ +- rim_first_finder.py: edit only where it string-matches old reason names (free_throw_half_circle, ft_circle_not_found, feet_not_one); otherwise no edit. Names become free_throw_line and ft_line_not_found.
+│ +- test_ft_half_circle.py: synthetic mask tests - FT line found with the shooter in the band; lane line rejected by angle (25-35 deg vs 60 deg minimum); Adrian light floor strip beside a white line rejected by darker-than-both-sides; 0 and 2+ players in band -> not FT, exactly one candidate in band -> FT.
+│ +- No other file touched.
+│ +
+│ +6. SECTION C - GATE BEFORE THE MEASURED RUN
+│ +run_ft_debug on the 6 calibration FTs must reproduce the prototype: exactly one player in the band on all 6, and that player is the shooter; no lane player picked. Claude Code looks at the images. Miss on any -> stop for Scott; no tuning.
+│ +
+│ +7. SECTION D - MEASURE
+│ +Same as spec 40 Q8: free_throw flags vs FT tags (found / missed / false); non-FT moments flagged free_throw (target 0); orange ft_line_not_found count; FT shooter right/wrong.
+│ +Hand-check seed 41: up to 10 flagged FT moments per film, excluding the 6 calibration moments and the spec-38/39/40 samples. Frozen rule file .team/specs/41_handcheck_rule.json written before the run; verdicts written before any numbers are read. Q4 blind only after Scott sees these numbers.
+│ +
+│ +8. SECTION E - NUMBERS (each: fixed by Claude Code before the run + calibration fact behind it)
+│ +- STILL_MOVE_MAX 0.15 player heights/s: drift_log.md:179 FT median 0.11, Q3 0.13, max 0.55 vs 2PT Q1 0.42 / 3PT Q1 0.38; still FT preparation.
+│ +- LINE_NEAR 0.25 h: shooter feet sit 0.07-0.10 h from the FT line; 0.25 h catches the shooter and keeps lane players out.
+│ +- ANGLE_MIN 60 deg: FT line 75-81 deg vs lane lines 25-35 deg to the feet-to-hoop direction.
+│ +- DARK_MIN 10 grey levels, Adrian only: Adrian lane player matched the dark floor strip beside a white other-court line; darker than both sides removes it.
+│ +- Band [-0.15 p.h, +1.2 p.h]: feet 0.07-0.10 h from the line on the away-from-hoop side; band starts just in front of the line and reaches 1.2 h behind it.
+│ +- Segment projection [-0.5 h, length + 0.5 h]: feet may sit just short of or past the short Adrian Hough pieces.
+│ +- Group within 5 deg of the median angle: keeps the near-parallel other-court line out when its angle differs.
+│ +- NO segment length minimum: Adrian FT line unions 0.41-0.95 h (Notus 1.1-1.5 h); a minimum fails Adrian.
+│ +- Paint coverage along the line: NOT used; calibration fact - it did not separate cases.
+│ +- ft_line_not_found: orange, never guess; still-but-no-line stays orange.
+│ +- Non-FT free_throw false flags: target 0 (spec 40 Q8 near-0 rule).
+│ +- Hand-check seed 41: up to 10 flagged FT moments per film; excludes the 6 calibration moments and spec-38/39/40 samples.
+│ +- .team/specs/41_handcheck_rule.json frozen before the run; verdicts before numbers.
+│ +
+│ +9. SECTION F - RULES
+│ +No core edits (court_homography.py and stage1b files read only). No training, no tracker, no interpolation. No banned trials: linear interpolation, ByteTrack, DeepSORT, early windows (OLLAMA.md:31-39), wider column, hoop recenter. Finder reads video frames, boxes and hoop only - no tags, no scoreboard, no database. One try, then stop for Scott. Every fact from a file read this session or above; otherwise "NOT FOUND - Claude Code to check". New file only; nothing else edited; nothing run that writes.
+
+────────────────────────────────────────
+☤ Hermes
+Done. The file is written and verified on disk.
+
+What changed: One new file created — /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/41_free_throw_line_spec.md (nothing else touched, nothing run that writes).
+
+Verified against constraints:
+- Line 1 is exactly FREE THROW LINE SPEC v1 - not run
+- Plain markdown, no pipe characters anywhere (no tables/||), no literal \n
+- About two pages- Contains all required sections: binding goal (Scott 2026-11-08 "Use the line"; ellipse fit dropped), SETTINGS FIXED block copied unchanged (stillness 0.15 h/s over [trigger-3000, trigger-1000], release-0.6 candidates, build_paint_mask with player boxes erased pad 3 px, full-frame HoughLinesP rho 1 / theta 1 deg with scaled thresholds, keep gates LINE_NEAR 0.25 h / projection [-0.5 h, length + 0.5 h] / ANGLE_MIN 60 deg / Adrian DARK_MIN 10 vs both sides, FT line via median angle + 5 deg group + mean-endpoint line + extent, band [-0.15 p.h, +1.2 p.h] within extent +- 0.5 c.h, decision gates with reason "free_throw_line" / orange "ft_line_not_found"), calibration facts, Section A detector steps, Section B code plan (remove remove_straight/ransac_ellipse/ellipse code — dead after the swap, nothing else imports them; rim_first_finder.py only for old reason-name string matches; debug image draws kept segments + band; synthetic tests for line found / lane-line angle reject / Adrian darkness reject / 0-1-2 in band), Section C gate (run_ft_debug on the 6 calibration FTs must reproduce 6/6 exactly-one-in-band = shooter; miss → stop for Scott, no tuning), Section D measure (spec 40 Q8 format, seed 41 up to 10 per film excluding calibration and spec-38/39/40 samples, 41_handcheck_rule.json frozen before the run, verdicts before numbers, Q4 blind only after Scott sees numbers), Section E numbers table (list form, no pipes — each with "fixed by Claude Code before the run" + calibration fact), Section F rules (no core edits, no training/tracker/interpolation, no banned trials, no tags/scoreboard/DB, one try then stop, NOT FOUND convention).
+
+Left: Nothing — this was a write-only spec task. Code edits, the calibration gate run, and the measured run belong to Cursor/Claude Code per the plan.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4cd44479abf8971724ef0e16b03ead494eec53febe118276c98703aa4b999d27
+  hermes -c "Write free throw line spec file"
+
+Session:        local-4cd44479abf8971724ef0e16b03ead494eec53febe118276c98703aa4b999d27
+Title:          Write free throw line spec file
+Duration:       2m 30s
+Messages:       9 (1 user, 7 tool calls)

@@ -1,0 +1,60 @@
+[muse] model recursive/flint-v1.0:free 08:42:52
+Query: Muse, you check the Vetter. Read-only: do not change any file.
+You said MUSE: DISAGREE on spec 46 (.team/muse_spec46_run.txt). Claude Code's 
+answer is now in the block at the top of .team/specs/46_scaled_crop_spec.md (V6 
+replaced, V9 and V10 added). Note: the spec is checked BEFORE code is written; 
+"not coded yet" is the normal state, not a defect.
+Your Q3: keep_ball_detections.py ~1143-1172 compares the proof file's 
+"constants" with the d2v1 payload's. In this plan the proof file IS the scaled 
+v6 run's candidates.json on the same tracks and same s, so both carry the same 
+scaled ZONE_BELOW_PX. V9 also requires the tracker crop and the extract crop to 
+be the same expressions, with the unchanged v6 mapping gate (>= 0.90) as the 
+real check. Is that right and complete?
+Your Q5: V10 removes the BODD re-run: --reuse-hoops-from takes hoop and bodd 
+from the existing track file, so scaled vs control (spec 45 runs) differ only in
+the ball series; v6 run-to-run noise is measured. Is that clean?
+Anything else that would stop the gates or mislead the report?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: 
+<reason>.
+📖 Read muse_spec46_run.txt  0.1s
+📖 Read 46_scaled_crop_spec.md  0.1s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "keep_ball_detections.py" -not -path "*/node_modules/*" 2>/dev/null  11.8s
+📖 Read keep_ball_detections.py
+💻 $ grep -n "CROP_LEFT_RIGHT\|CROP_ABOVE\|CROP_BELOW\|ZONE_BELOW_PX\|MAPPING\|mapping" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/keep_ball_detections.py
+✗ Read collect_q4_bodd.py  0.1s [File not found: collect_q4_bodd.py]
+💻 $ grep -n "CROP\|ZONE\|RESIDUAL\|MAPPING\|mapping\|film_scale\|scale\|v6_ball\|def cmd_\|def v6_ball\|argparse\|add_argument" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_make_miss.py
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "collect_q4_bodd*" -not -path "*/.git/*" 2>/dev/null + 1 command  23.2s
+📖 Read rim_first_make_miss.py
+📖 Read collect_q4_bodd.py
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ + 1 command
+💻 $ grep -n "CROP\|ZONE\|RESIDUAL\|MAPPING\|WINDOW\|RANSAC\|MIN_POINTS\|CANDIDATE_CAP\|BALL_CONF\|FPS_FALLBACK\|BUILD_QUARTERS\|EXPECTED_BUILD\|BASELINE\|FILMS\|_court_scale\|def decide_shot\|def reason_of\|def apply\|def peak\|scale" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ | grep -i "45\|46\|44" + 1 command
+💻 $ grep -n "^CROP\|^ZONE\|^RESIDUAL\|^MAPPING\|^WINDOW\|^RANSAC\|^MIN_POINTS\|^CANDIDATE\|^BALL\|^FPS\|^BUILD\|^EXPECTED\|^BASELINE\|^DIAGNOSTIC\|^PREDICT\|^FPS_FALLBACK\|^# ---" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+💻 $ sed -n '1,120p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -i "muse\|spec46\|cursor46\|prompt_46\|46" + 1 command  0.8s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/prompt_muse_spec46b.txt 2>/dev/null + 2 commands
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "candidates.json" -not -path "*/.git/*" -not -path "*__pycache__*" 2>/dev/null + 2 commands  23.3s
+💻 $ grep -rn "mapping_proof_json\|mapping-proof-json\|mapping_proof" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py -l | grep -v __pycache__  42.6s
+💻 $ find /mnt/c/Users/scott/Documents -maxdepth 2 -name "*Liberty*" 2>/dev/null + 2 commands  69.0s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/muse_check_d2_proof_flag_run.txt
+
+────────────────────────────────────────
+☤ Hermes
+Q3: right and complete — proof = scaled v6 candidates.json on the same tracks and s, so both carry scaled ZONE_BELOW_PX (300*s); V9's identical tracker/extract crop expressions plus the unchanged mapping gate >= 0.90 is the real check, and a v6 mapping stop stops for Scott.
+
+Q5: clean — --reuse-hoops-from takes hoop/bodd from the existing track file, so scaled vs control (spec 45) differ only in the ball series; v6 run-to-run noise is measured.
+
+Anything else: no blocker found — G1/G2/G3 at s=1.0 stand (G3 must assert kbd try/finally restore); mapping-proof consistency checks constants/n_shots/shot-set, frames ride on the >= 0.90 rate.
+
+MUSE: AGREE: V9 closes Q3 correctly and completely; V10 clean; no blocker remains.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-34bb69159bddcfa044ab93efb853aac1b1d04d1e0ac65dd5f4a2db84fb4b227c
+  hermes -c "Muse, you check the Vetter. Read-only: do not… #4"
+
+Session:        local-34bb69159bddcfa044ab93efb853aac1b1d04d1e0ac65dd5f4a2db84fb4b227c
+Title:          Muse, you check the Vetter. Read-only: do not… #4
+Duration:       8m 58s
+Messages:       33 (1 user, 31 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE: V9 closes Q3 correctly and completely; V10 clean; no blocker remains.

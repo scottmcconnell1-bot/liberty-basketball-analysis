@@ -1,0 +1,36 @@
+## Cursor review 52 (mm_clip) — REVIEW ONLY
+
+Symptom fit: seed variance is almost entirely miss↔not-a-shot. Makes stay high. Crop/colour path for HSB1 matches training (BGR→RGB, Kinetics mean/std, 96×112, same extract). Failure is the miss/non-shot boundary plus a review band that cannot see confident rejects.
+
+1. **CONFIRMED** `extract_clips.py:133-148` / `extract_clips.py:61-64` — `labels_tagmatch` and `labels_tags` mark every unmatched candidate farther than 4 s from a coach tag as class `0` (not a shot). Drift log already notes many Adrian “false shots” are real rim scrambles/tips the coach never tagged; those clips are trained as non-shots. That directly poisons the miss vs not-a-shot margin. Rimrock then adds 263 more class-0 rows. Seeds that fit “reject ambiguous rim traffic” hard will assign P(shot)<0.1 to real HSB1 misses; seeds that don’t look fine. Matches the evidence pattern.
+
+2. **CONFIRMED** `postproc_locked51.json:2-4` + `ensemble_predict.py:45` — coach review only flags (a) auto shots with P(shot)<0.65 or unsure make/miss, and (b) below-thr candidates with P(shot)≥0.35. Seed0 has 22/70 labelled misses with P(shot)<0.1; those never enter `shots` or `extra_checks`. That is why review only moves 65.4%→70.1%: the dominant error mode is invisible to the locked review band.
+
+3. **CONFIRMED** `ensemble_predict.py:58-63` — “WITH REVIEW” scoring is an oracle: for each check/extra time it injects the nearest true tag’s gold make/miss within 2 s. It does not model a coach confirming the model’s call. `used` also ignores tags already covered by non-check auto shots, so review can double-insert the same tag. Inflates the review metric and hides how little the band actually covers.
+
+4. **CONFIRMED** `train_clip.py:99-111` — training uses `torch.autocast(..., bfloat16)` with `torch.amp.GradScaler()`. GradScaler is for fp16, not bf16. `scaler.step(opt)` may skip an optimizer update on inf/nan while `sched.step()` still advances OneCycleLR, so LR and updates can desync. Wrong AMP pairing on a small, imbalanced 3-class fine-tune is a real instability source across seeds.
+
+5. **CONFIRMED** `train_clip.py:89-114` — `train()` always returns the last of 18 epochs; no held-out fold / miss-vs-nonshot checkpoint. With Dropout(0.5), BatchNorm3d at `bs=8`, strong photometric aug (`train_clip.py:42-80`), and ~1061 labelled clips, different seeds can land on opposite miss/non-shot basins by the final epoch. Explains 65% vs 94% with identical data. (BN+aug+last-epoch are the mechanism; the missing checkpoint is the controllable bug.)
+
+6. **CONFIRMED** `extract_clips.py:170-184` — clip frames are taken from `t_ms` via `CAP_PROP_POS_FRAMES` with no check that the seek landed on `f_start`. On failed `cap.read()`, the previous `frame` is reused. HSB1 fps=30 `frame`↔`t_ms` round-trips are clean and sheets use the same `extract()`, so this is unlikely the HSB1 seed split, but it can silently time-shift clips on other codecs/films and mis-time labels relative to the ball.
+
+7. **CONFIRMED** `postproc.py:34-37` vs `ensemble_predict.py:42-44` — locked path (`ensemble_predict`) calls make/miss only from the highest-P(shot) member of a dedup group; `postproc.py` (used for earlier design sweeps) lets any group member’s make vote win. Logic bug / contract drift. On HSB1 ens5 with dedup 800 ms this disagreed 0 times, so it is not the present 65–94% miss collapse, but putbacks can be scored differently between tools.
+
+8. **SUSPECTED** `train_clip.py:54-60,63-72,85` — crop/scale/shift plus brightness/contrast/sat 0.6–1.4 / 0.5–1.5, grayscale 15%, blur 30%, and fc Dropout(0.5) can erase the weak ball/net cues that separate rim-out misses from non-shots, while makes (net motion) survive. Amplifies finding 5; not a logic error by itself.
+
+9. **SUSPECTED** class balance path `train_clip.py:94-95` + clips6 counts — inverse-freq weights leave miss≈0.88 and non-shot≈0.76 nearly equal while Rimrock contributes 263/465 non-shots. Loss does not specially protect miss recall; seeds can sacrifice misses to fit Rimrock rejects. Consistent with “4-game model (no Rimrock) 84% on HSB1” vs final51 seed0 65%.
+
+10. **SUSPECTED** `moving_ball.py:73-74` — if no non-clutter ball points exist in the window, the candidate is kept (`return not had_static`). Empty/weak clips can still be labelled and trained, adding noise to class 0/1.
+
+11. **Not found (for this symptom)** train/eval colour or resize mismatch; flip TTA axis is correct (`dims=[4]` on `B,3,T,H,W`); `predict()` uses `model.eval()`; HSB1/`clips6` `t_ms` align with label keys; GV “mismatches” vs `44_gv_labels` are warmup→`-1` masks, not flipped make/miss.
+
+### Recommendations (stability)
+
+1. Stop auto-labelling untagged candidates as `0`; use `-1` unless a written miss/non-shot rule is confirmed on the sheet. Re-audit Rimrock/HSB/GV class-0 and miss rows against that rule before any retrain.
+
+2. Fix training loop: drop GradScaler under bf16 (or use fp16+scaler consistently); keep a checkpoint from LOGO/holdout that maximises miss recall + non-shot precision (not last epoch); use class-balanced batches and/or freeze BN after a short warmup (or lower backbone LR).
+
+3. Fix the locked review contract: flag confident non-shots that look like shots (e.g. P(shot) in a grey band, or seed disagreement), and score “with review” only on flags a human actually answers—never gold injection. Refuse to lock a single seed when LOGO miss recall seed-std is large; require multi-seed agreement before a blind film.
+
+CURSOR: FINDINGS 7
+[cursor_wsl] exit 0 at 21:14:05

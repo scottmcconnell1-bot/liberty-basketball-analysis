@@ -1,0 +1,57 @@
+Done. Created `scripts/stage1_measure_keypoints.py` and ran it with `.\.venv\Scripts\python.exe scripts/stage1_measure_keypoints.py`. Outputs are under `.team/stage1_keypoints/` (60 overlays, 60 frame JSONs, 3 summaries, 1 report = 124 files). JSON/schema checks passed. No existing files were edited and nothing was committed.
+
+## Per-game summaries
+
+| Game | Video | Total frames | Analyzed | Stride | Frame indices |
+|---|---|---|---:|---:|---|
+| adrian | `uploads/nfhs_gam0a66d85e12.mp4` | 97,475 | 20 | 4,873 | 0, 4873, 9746, 14619, 19492, 24365, 29238, 34111, 38984, 43857, 48730, 53603, 58476, 63349, 68222, 73095, 77968, 82841, 87714, 92587 |
+| notus_a1 | `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` | 100,950 | 20 | 5,047 | 0, 5047, 10094, 15141, 20188, 25235, 30282, 35329, 40376, 45423, 50470, 55517, 60564, 65611, 70658, 75705, 80752, 85799, 90846, 95893 |
+| notus_a | `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4` | 93,650 | 20 | 4,682 | 0, 4682, 9364, 14046, 18728, 23410, 28092, 32774, 37456, 42138, 46820, 51502, 56184, 60866, 65548, 70230, 74912, 79594, 84276, 88958 |
+
+Detection frequency (frames out of 20 with conf ≥ 0.3):
+
+| Index | adrian | notus_a1 | notus_a |
+|---:|---:|---:|---:|
+| 0 | 1 | 0 | 0 |
+| 1 | 1 | 0 | 0 |
+| 2 | 1 | 0 | 0 |
+| 3 | 0 | 0 | 0 |
+| 4 | 0 | 0 | 0 |
+| 5 | 0 | 0 | 0 |
+| 6 | 12 | 6 | 8 |
+| 7 | 12 | 7 | 10 |
+| 8 | 8 | 5 | 6 |
+| 9 | 8 | 5 | 5 |
+| 10 | 1 | 0 | 0 |
+| 11 | 4 | 1 | 0 |
+| 12 | 8 | 2 | 4 |
+| 13 | 8 | 2 | 5 |
+| 14 | 8 | 3 | 5 |
+| 15 | 8 | 2 | 5 |
+| 16 | 15 | 8 | 13 |
+| 17 | 15 | 8 | 10 |
+
+## Keypoint index table
+
+| Index | Detection Rate (all games) | Likely Landmark | Evidence Frames (game: frame_idx (image_xy)) |
+|---:|---:|---|---|
+| 0 | 2% | UNCLEAR | adrian: 92587 (331,364) |
+| 1 | 2% | UNCLEAR | adrian: 92587 (319,384) |
+| 2 | 2% | UNCLEAR | adrian: 92587 (201,495) |
+| 3 | 0% | UNCLEAR | none |
+| 4 | 0% | UNCLEAR | none |
+| 5 | 0% | UNCLEAR | none |
+| 6 | 43% | center line at one sideline | adrian: 68222 (867,894), 34111 (1446,1073), 0 (876,907); notus_a1: 75705 (611,607), 45423 (608,607), 65611 (610,607); notus_a: 42138 (613,614), 46820 (617,612), 74912 (617,618) |
+| 7 | 48% | center line at the other sideline | adrian: 0 (882,352), 58476 (871,373), 53603 (881,356); notus_a1: 45423 (606,248), 75705 (609,256), 65611 (608,254); notus_a: 42138 (606,258), 0 (608,255), 70230 (607,260) |
+| 8 | 32% | 3-pt line junction (same landmark as 16) | adrian: 0 (164,483), 53603 (157,485), 68222 (208,494); notus_a1: 75705 (130,332), 95893 (123,337), 45423 (123,327); notus_a: 46820 (144,335), 42138 (121,334), 0 (115,333) |
+| 9 | 30% | 3-pt line junction, opposite side (same as 17) | adrian: 92587 (403,701), 0 (35,642), 53603 (30,641); notus_a1: 75705 (35,437), 95893 (29,444), 0 (28,445); notus_a: 46820 (52,441), 42138 (27,440), 74912 (27,443) |
+| 10 | 2% | UNCLEAR | adrian: 63349 (1333,979) |
+| 11 | 8% | UNCLEAR | adrian: 63349 (40,1032), 4873 (213,851), 19492 (234,816); notus_a1: 20188 (261,545) |
+| 12 | 23% | lane corner at FT line (hypothesis) | adrian: 63349 (153,837), 19492 (531,658), 4873 (416,652); notus_a1: 20188 (412,403), 50470 (234,479); notus_a: 23410 (427,383), 84276 (433,398), 4682 (550,379) |
+| 13 | 25% | lane corner at FT line (hypothesis) | adrian: 19492 (776,502), 63349 (775,656), 4873 (1162,481); notus_a1: 20188 (924,291), 50470 (433,368); notus_a: 23410 (940,269), 84276 (929,290), 4682 (1123,276) |
+| 14 | 27% | baseline lane corner near basket (same as 15) | adrian: 19492 (937,406), 4873 (995,381), 63349 (618,540); notus_a1: 20188 (816,216), 50470 (519,300), 30282 (189,241); notus_a: 23410 (829,193), 4682 (1024,191), 84276 (825,214) |
+| 15 | 25% | baseline lane corner near basket (same as 14) | adrian: 19492 (977,396), 4873 (979,368), 63349 (591,544); notus_a1: 20188 (800,208), 50470 (544,284); notus_a: 23410 (810,188), 4682 (1009,182), 84276 (810,208) |
+| 16 | 60% | 3-pt line junction (same landmark as 8) | adrian: 19492 (1140,535), 4873 (647,533), 63349 (282,700); notus_a1: 20188 (625,323), 50470 (627,390), 75705 (130,328); notus_a: 23410 (631,301), 4682 (819,300), 84276 (641,320) |
+| 17 | 55% | 3-pt line junction, opposite side (same as 9) | adrian: 19492 (961,703), 4873 (825,706), 63349 (468,872); notus_a1: 20188 (749,450), 50470 (534,513), 75705 (26,442); notus_a: 23410 (766,428), 4682 (928,437), 84276 (762,444) |
+
+Notable measurement finding: indices `8`/`16`, `9`/`17`, and `14`/`15` repeatedly land on the same painted landmarks (within ~20 px), so they appear to be duplicate detections. `6`/`7` are the clearest stable landmarks (center-line endpoints). Full report: `.team/stage1_keypoints/measurement_report.md`.

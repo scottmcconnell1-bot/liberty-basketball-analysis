@@ -1,0 +1,154 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/22_d2_label_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "D2 LABEL JOB SPEC v1 - nothing built". Plain markdown, no line-number 
+prefixes, no literal "\n". Create nothing else, run nothing. If your write tool 
+refuses, say so plainly.
+
+WHY: Scott approved D2 decision 1 on 2026-10-31 ("Decision 1 - approved"): build
+the labelling page and pull the frames. Frame count: 600 (Claude Code's 
+suggestion in .team/specs/21_d2_plan.md section 2; Scott approved without 
+changing it). Read .team/specs/21_d2_plan.md (VETTED, Muse AGREE) first, then 
+collect_q4_bodd.py (collect_samples: BODD model models/ball_detector.pt gives 
+'hoop' and 'basketball' boxes; v6_ball: the v6 ball model 
+C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt, class 
+'basketball', crop hoop_x+-260 / hoop_y-200..+240, imgsz 640, conf 0.28), 
+.team/shot_detectors/keep_ball_detections.py (near-hoop zone numbers), 
+.team/specs/holdout_names.json.
+
+The spec must fix, before anything runs:
+1. Script .team/shot_detectors/d2_pick_frames.py (+ tests). Films: exactly the 7
+in 21_d2_plan.md section 1; Notus A frames never within 125 frames of its 10 
+holdout times. Nothing from the build set, holdout or Adrian Q4 / Notus A1.
+2. How the hoop is found in untagged, panning film (BODD 'hoop' boxes, as 
+collect_q4_bodd.py does) and how often the film is scanned (a fixed stride, 
+stated), so the run fits in hours, not days.
+3. The pick rule, fixed: moments where v6 puts a ball inside the D1 near-hoop 
+zone; from each, frames where it sees the ball there and the frames just after 
+it loses it there. The 600 split across the 7 films evenly (state the per-film 
+number and what happens if a film gives fewer). A fixed random seed. No truth 
+used.
+4. Saved output OUTSIDE the repo (repo is PUBLIC; film shows minors): 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_frames/ - each frame a JPEG of 
+the D1 crop, plus frames.json (film, frame number, time, crop box). Never 
+committed, never uploaded or published anywhere.
+5. The labelling page: one local HTML file opened from that folder (no server, 
+no internet, no artifact publish). Shows one crop at a time; Scott drags a box 
+on the ball or taps "No ball"; Back / Next; progress "n of 600"; labels kept in 
+the browser and saved by an "Export labels" button to labels.json in YOLO-ready 
+form (class basketball, box in crop pixels). Big buttons, works on a laptop.
+6. Tests that prove: no frame from an excluded film or within 125 frames of a 
+holdout time; exactly 600 frames; seed gives the same list twice.
+7. Stop rule: after the frames and page are made, stop for Scott to label. No 
+training (that is decision 2).
+Every fact from a file you read; otherwise "NOT FOUND - Claude Code to check". 
+Mark estimates as "estimate".
+📖 Read 21_d2_plan.md  0.2s
+📖 Read collect_q4_bodd.py  0.2s
+📖 Read keep_ball_detections.py  0.2s
+📖 Read holdout_names.json  0.2s
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/22_d2_label_job_spec.md
+│ .team/specs/22_d2_label_job_spec.md
+│ @@ -0,0 +1,156 @@
+│ +D2 LABEL JOB SPEC v1 - nothing built
+│ +
+│ +# Stage D2 Label Job: Frame Picking, Labelling Page, Export
+│ +
+│ +From: `.team/specs/21_d2_plan.md` (VETTED, Muse AGREE), `collect_q4_bodd.py`, `.team/shot_detectors/keep_ball_detections.py` (D1 near-hoop zone), `.team/specs/holdout_names.json`, `AUTHORITY.md`, `AGENT_OPERATIONAL_PROTOCOL.md`.
+│ +
+│ +---
+│ +
+│ +## 1. Source Films — exactly the 7 from 21_d2_plan.md §1
+│ +
+│ +- `uploads/LIBERTY_A_v_HSB_H1_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_A_v_HSB_H_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_A_v_RIMROCK_H_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_H_v_GARDEN_VALLEY_A_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_H_v_IDAHO_CITY_A_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_H_v_RIVERSTONE_A_20260809_221334.mp4`
+│ +- `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4` — **only frames at least 125 frames (5 seconds at 25 fps) away from any of its 10 holdout timestamps**
+│ +
+│ +**Excluded entirely (no frames from these):**
+│ +- Build set: Notus A1 Q1 (`uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4`), Adrian Q1–Q3 (`uploads/nfhs_gam0a66d85e12.mp4`)
+│ +- Holdout: 10 frames each from Notus A1 and Notus A (see holdout_names.json)
+│ +- Tagged unseen check: Adrian Q4 (18 shots), Notus A1 Q2–Q4
+│ +
+│ +**Notus A holdout timestamps (from holdout_names.json, ms):**
+│ +232300, 606900, 981500, 1356100, 1730700, 2105300, 2479900, 2854500, 3229100, 3603700
+│ +
+│ +At 25 fps → frame numbers: 5808, 15173, 24538, 33903, 43268, 52633, 62000, 71363, 80728, 90093.
+│ +Exclusion window: ±125 frames around each.
+│ +
+│ +---
+│ +
+│ +## 2. Hoop Detection in Untagged, Panning Film
+│ +
+│ +**Model:** BODD `models/ball_detector.pt` (path in collect_q4_bodd.py line 22: `C:\Users\scott\AppData\Local\Temp\BODD_yolov8n_0001.pt`), classes `basketball` and `hoop` (collect_q4_bodd.py lines 90–92, 172–174).
+│ +
+│ +**Scan stride (fixed):** every **25 frames** (1 second at 25 fps). This keeps total decode time in hours, not days. Estimate: 7 films × ~40 min each × 25 fps = ~420k frames; stride 25 → ~16.8k BODD inferences. At ~50 ms/frame on CPU → ~14 minutes; GPU faster. Estimate.
+│ +
+│ +**Per-stride step:**
+│ +1. Decode frame at stride position.
+│ +2. Run BODD at `conf=0.12, imgsz=960` (collect_q4_bodd.py line 83).
+│ +3. If any `hoop` box found: take median x,y,w,h of all hoop boxes in that frame as the hoop for that moment (collect_q4_bodd.py lines 36–46 grouping logic).
+│ +4. Record hoop (x, y, w, h) + frame number + timestamp.
+│ +5. If no hoop: skip, continue striding.
+│ +
+│ +**Hoop smoothing (optional, fixed):** consecutive stride hoops within 20 px of each other are merged by median; a new hoop position starts a new segment. This handles panning without tracking.
+│ +
+│ +---
+│ +
+│ +## 3. Frame Pick Rule — fixed, no truth used
+│ +
+│ +**Detector for picking:** v6 ball model at `C:\Users\scott\AppData\Local\Temp\ball_net_runs\v6\weights\best.pt` (collect_q4_bodd.py line 23), class `basketball`.
+│ +
+│ +**Crop:** `hoop_x ± 260`, `hoop_y - 200 .. hoop_y + 240` (collect_q4_bodd.py lines 121–124; keep_ball_detections.py lines 25–27, 195–198). `imgsz=640`, `conf=0.28` (keep_ball_detections.py line 24).
+│ +
+│ +**D1 near-hoop zone (from keep_ball_detections.py lines 29–31, 166–173):**
+│ +- Horizontal: `abs(x_center - hoop_x) <= 3.0 * hoop_w`
+│ +- Vertical: `hoop_y - 4.0 * hoop_w <= y_center <= hoop_y + 300`
+│ +
+│ +**Pick algorithm per film:**
+│ +1. Stride through film at the same 25-frame stride used for hoop detection.
+│ +2. At each stride where a hoop was found, run v6 on the D1 crop.
+│ +3. Collect **moments** where v6 puts a ball detection **inside the D1 near-hoop zone**.
+│ +4. From each moment, take:
+│ +   - All consecutive frames where v6 sees the ball inside the zone.
+│ +   - Plus the **next 5 frames after it loses the ball** there (where v6 fails — the "just after it loses it" frames).
+│ +5. Each such frame becomes a candidate: save the D1 crop (520×440 px JPEG) and metadata (film, frame number, time, crop box [x0,y0,x1,y1] in full-frame coords).
+│ +
+│ +**Target total: 600 frames** (fixed by Scott at gate 1; 21_d2_plan.md §2 binding note).
+│ +**Split across 7 films:** 600 ÷ 7 = **85 frames per film** (85 × 7 = 595), remainder 5 → first 5 films get 86 frames each.
+│ +- If a film yields **fewer** than its quota: take all it has, distribute the shortfall evenly to the other films (recompute quotas from remaining pool).
+│ +- If a film yields **more**: take a uniform random sample (seeded) to hit its quota.
+│ +
+│ +**Fixed random seed:** `42` (matches RANSAC_SEED in keep_ball_detections.py line 36).
+│ +
+│ +**No ground truth used at any point.**
+│ +
+│ +---
+│ +
+│ … omitted 78 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Created .team/specs/22_d2_label_job_spec.md with all 7 required sections, pulling every fact from the four source files you specified. Key points fixed:
+
+- 7 films from 21_d2_plan.md §1, Notus A holdout ±125 frames at 25 fps- Hoop detection: BODD model, stride 25 (fixed), median grouping per collect_q4_bodd.py
+- Pick rule: v6 on D1 crop (hoop±260, -200..+240, imgsz 640, conf 0.28), D1 zone (3.0×hoop_w horizontal, -4.0×hoop_w to +300 vertical), moments where ball in zone + 5 frames after loss- 600 frames: 85/film (86 for first 5), shortfall redistribution, seed 42
+- Output: C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_frames/ — JPEGs + frames.json + label.html, never committed
+- Labelling page: local HTML, drag box / "No ball", Back/Next, progress, Export → YOLO labels.json in crop pixels
+- Tests: 6 assertions (excluded films, holdout distance, count 600, seed reproducibility, quota, zone membership)
+- Stop rule: after frames + page, stop for Scott; no training
+
+Estimates marked "estimate", one "NOT FOUND - Claude Code to check" for shortfall exact numbers.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-3483484e1a0e2375c4d1f5134cfcfb5f519e49a1bc8520af25d2f27b66e43f67
+  hermes -c "Create D2 label job spec file"
+
+Session:        local-3483484e1a0e2375c4d1f5134cfcfb5f519e49a1bc8520af25d2f27b66e43f67
+Title:          Create D2 label job spec file
+Duration:       2m 54s
+Messages:       9 (1 user, 7 tool calls)

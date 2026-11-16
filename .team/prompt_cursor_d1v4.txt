@@ -1,0 +1,9 @@
+You are the Coder for the Liberty basketball project (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). You run inside a sandbox. Read .team/specs/19_d1_job_spec.md (now v4: VETTED by Claude Code, Muse AGREE). Only the detection setup and the shot-count stop changed since v3; you already built v3 in .team/shot_detectors/keep_ball_detections.py.
+
+Make ONLY these changes, in .team/shot_detectors/keep_ball_detections.py and .team/shot_detectors/test_keep_ball_detections.py (no other file):
+1. step_extract: detect exactly as v6_ball() in collect_q4_bodd.py (lines 110-145): per shot, cap.set(CAP_PROP_POS_FRAMES, earliest needed frame) ONCE, then read frames in order with cap.read() up to the last needed frame (no per-frame seeking); for each needed frame crop x hoop_x-260 .. hoop_x+260, y hoop_y-200 .. hoop_y+240 (int, clamped to the frame exactly as v6_ball does), model.predict(crop, conf=0.28, imgsz=640, verbose=False)[0], and add x0, y0 back to every box centre and corner. Keep EVERY box (no single-pick, no 220 px filter, no continuity weight).
+2. BALL_CONFIDENCE = 0.28 (used by the zone filter, the mapping check and the arc step). Add constants CROP_LEFT_RIGHT = 260, CROP_ABOVE = 200, CROP_BELOW = 240, PREDICT_IMGSZ = 640 at the top.
+3. load_build_shot_list: if the count is not exactly 140, raise SystemExit with a clear message (it only warned).
+4. Update the tests only as needed for 0.28 and the count stop; add one test that the crop offset is added back (a fake model box at crop (10, 20) comes out at (x0+10, y0+20)).
+Run the tests with python3 -m pytest .team/shot_detectors/test_keep_ball_detections.py -q. Do not run --step extract (no torch here). Tune nothing. Do not commit. STOP when done.
+Report the exact commands, their output verbatim (pytest summary line), and a short diff summary. Never report a result you did not see.

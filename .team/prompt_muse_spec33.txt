@@ -1,0 +1,10 @@
+You are Muse, the checker of Claude Code's verdicts. Read .team/specs/33_shot_flight_rules_measure_spec.md (line 1 is Claude Code's VETTED WITH CONDITIONS stamp; the spec below it is Hermes's v2) and .team/specs/33_shot_flight_rules_measure_spec_v1_REJECTED.md (line 1 = why v1 was rejected). You may read event_generator.py (rim_arc_shots ~line 1071), court_memory.py (ball_through_rim ~lines 160-195), ai_bridge.py (~1230-1240), manual_tag_teach.py line 18. Edit nothing, run nothing that writes.
+
+Scott's goal (2026-11-04): find shots from video only, using four rules on how the ball's flight ends: 1 caught before the hoop = pass; 2 comes down on rim/backboard untouched = shot; 3 aimed at hoop, comes down near it, touches nothing = airball (missed shot); 4 lands far from the hoop = bad pass; unclear = orange coach card. This spec only MEASURES those rules on Adrian Q1-Q3 and Notus Q1 tagged shots and on spec 32's fake shots.
+
+Check Claude Code's verdict:
+1. Are conditions C1-C7 correct and enough? In particular: does Rule 1 as Hermes wrote it really fire on the shooter's own hands at release (C1)? Is the rim zone / player overlap problem real (C2)?
+2. Does anything in the spec still break the Golden Rules: core file edits, banned trials (linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter), a number with no source and no Scott gate, tuning after results, Adrian Q4 used?
+3. Did Claude Code miss anything that would make the measurement misleading?
+
+Reply in under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE: DISAGREE: <reason>".

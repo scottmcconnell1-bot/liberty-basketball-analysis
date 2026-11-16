@@ -1,0 +1,2 @@
+
+[cursor_wsl] exit 0 at 15:05:10

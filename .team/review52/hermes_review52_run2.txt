@@ -1,0 +1,131 @@
+Query: You are Hermes, the ARCHITECT on the Liberty basketball film project 
+(team: Hermes = architect, Muse = reviewer, Cursor = builder, Claude Code = 
+coordinator/verifier). Scott (owner) wants your input on the next plan after a 
+failed round.
+
+GOAL (Scott, binding): >= 90% of ALL shots in a game found AND called right 
+(make/miss), with minimal coach work.
+
+Read these files (repo root = 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis):
+- .team/review52/prompt_muse_review52.txt  (the situation, results, and Claude 
+Code's first plan)
+- .team/review52/evidence.txt              (training label counts; per-seed 
+P(shot) on HSB1 misses)
+- .team/review52/muse_review52.txt         (Muse's review; read from the line '☤
+Hermes' on)
+- .team/review52/cursor_review52.txt       (Cursor's code review: 7 confirmed 
+findings)
+- last 30 lines of .team/drift_log.md
+- code: .team/mm_clip/train_clip.py, extract_clips.py, ensemble_predict.py, 
+postproc_locked51.json
+
+Claude Code's REVISED plan after both reviews:
+1. Labels: written miss / not-a-shot rule; stop auto-labelling untagged 
+candidates as not-a-shot (use unknown/-1 unless confirmed); re-audit every 
+Claude-labelled not-a-shot and miss in rimrock, hsb, gvg, hsb1.
+2. Training fixes: remove GradScaler under bf16; class-balanced batches; softer 
+augmentation; best-epoch selection on a held-out game instead of last epoch.
+3. Gate: leave-one-game-out with 3 seeds per fold; lock only if the ensemble 
+reaches >= 90% auto AND seeds agree (low spread).
+4. Review rule: add flags for seed disagreement and a wider grey band (not 
+'check every candidate', which would be ~140 checks/game); fix the double-count 
+in review scoring; Cursor reviews code changes.
+5. Blind test once on new unseen films Scott supplies; labels made before any 
+model output; a human checks a random 20% of labels.
+
+YOUR TASK: as architect, write the spec for this round to the file 
+.team/specs/52_label_audit_stable_ensemble_spec.md. It must contain: numbered 
+requirements; the exact written rule for 'shot' / 'miss' / 'not a shot' / 
+'unclear' that labels must follow; the training changes with concrete values; 
+the gate with concrete numbers (what blocks locking); the coach-check rule with 
+concrete thresholds and a target max checks per game; what is frozen (sha256) 
+before the blind test; the pass bar for the blind test fixed in advance. Where 
+you disagree with Claude Code's revised plan or with Muse/Cursor, say so in a 
+'Disagreements' section with reasons. Keep it under 150 lines. Do not edit any 
+other file.
+
+When done, print one final line starting exactly with "HERMES: SPEC WRITTEN" or 
+"HERMES: NO SPEC:" and the reason.
+📖 Read prompt_muse_review52.txt  0.2s
+📖 Read evidence.txt  0.2s
+📖 Read muse_review52.txt  0.2s
+📖 Read cursor_review52.txt  0.2s
+💻 $ tail -n 30 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+📖 Read train_clip.py
+📖 Read ensemble_predict.py  0.1s
+📖 Read postproc_locked51.json  0.1s
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/extract_clips.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/postproc.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/prompt_hermes_review52.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md + 1 command  0.2s
+📖 Read prompt_hermes_review52.txt  0.1s
+📖 Read postproc.py  0.1s
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ | grep -E '^5[0-9]_' + 2 commands  45.3s
+📖 Read 47_learned_make_miss_spec.md
+📖 Read extract_clips.py
+
+────────────────────────────────────────
+☤ Hermes
+All context gathered. Key facts consolidated:
+
+- Round 52 failure: final51 seed0 on HSB1 → 65.4% auto / 70.1% w/ checks (FAIL); 5-seed mean 78.5% auto / 86.9% w/ checks; huge seed variance; failing seeds rejected real misses (P(shot) ~0.01–0.1); silent review zone P(shot) ∈ [0, 0.35).
+- Roots: unverified Claude labels (rimrock 263 not-a-shot vs ~85 misses); tagmatch auto-labelling unmatched >4s as not-a-shot; training bugs (GradScaler under bf16, last-epoch ckpt, BN+strong aug, pooled classes); review scoring oracle/double-insert.
+- Claude Code's revised plan, Muse's verdict (DISAGREE: plan skips postproc floor fix → must fix before retraining), Cursor's 7 confirmed findings — all absorbed into Claude's revised plan, plus my architect-level disagreements to record.
+
+Now writing the spec file (only this file):
+────────────────────────────────────────
+
+✍️ Write .team/specs/52_label_audit_stable_ensemble_spec.md  0.1s
+│ .team/specs/52_label_audit_stable_ensemble_spec.md
+│ @@ -0,0 +1,35 @@
+│ +SPEC 52 - LABEL AUDIT + STABLE ENSEMBLE
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +File: .team/specs/52_label_audit_stable_ensemble_spec.md (this file only; nothing else edited by this spec)
+│ +
+│ +FACTS: Goal (Scott, binding): >= 90% of ALL shots in a game found AND called right (make/miss), minimal coach work.
+│ +Round 52 failed: final51 seed0 HSB1 65.4% auto / 70.1% w/ checks (FAIL); 5-seed mean 78.5% auto / 86.9% w/ checks; huge seed variance; failing seeds rejected real misses (P(shot) ~0.01-0.1); silent review zone P(shot) in [0, 0.35).
+│ +
+│ +1. REQUIREMENTS - LABELS
+│ +R1. WRITTEN LABEL RULE (round 52): shot := legal basket/FT attempt, ball crosses rim cylinder within hoop window; miss := shot with known outcome, no make; not a shot := near-rim moment with no attempt (pass/rebound/dribble), frame-sheet confirmed; unclear := warmup/halftime/FT-retrace/unknown -> label -1 (excluded from training + real-shot denominator). Encodings: -1 unknown, 0 not-a-shot, 1 miss, 2 make. Unmatched candidates -> -1, never auto 0.
+│ +R2. Re-audit every Claude-labelled not-a-shot AND miss in rimrock, hsb, gvg, hsb1 vs R1; coach tags govern adrian/notus; freeze corrected labels sha256 in drift_log before retraining.
+│ +
+│ +2. REQUIREMENTS - TRAINING
+│ +R3. train_clip.py: (a) drop GradScaler under bf16 (autocast bf16, direct opt.step); (b) class-balanced batches (per-epoch WeightedRandomSampler, w = 1/max(cnt,1)); (c) softer aug (bright/contr 0.7-1.3, sat 0.6-1.4, gray 10%, blur 20%, flip 20%); (d) best-epoch ckpt on held-out game hsb (miss-recall val), not last epoch; 18 ep, lr 2e-4, bs 8.
+│ +R4. Retrain 5-seed ensemble (seeds 0-4) on corrected clips6; save ens52/seed{k}.pt.
+│ +
+│ +3. REQUIREMENTS - GATE
+│ +R5. LOGO: 5 folds, 3 seeds per fold (0,1,2) trained on other 4 films; locked postproc thr 0.5, dedup 800 ms.
+│ +R6. LOCK BLOCKS: lock only if ensemble auto >= 90% on EVERY held-out game AND 3-seed spread <= 5 pts AND coach-checked score >= 90%; else stop for Scott, no blind test.
+│ +
+│ +4. REQUIREMENTS - COACH CHECK
+│ +R7. Coach rule: auto if mean P(shot) = mean(Pmiss+Pmake) >= 0.5; call make if mean Pmake > mean Pmiss; flags: auto shots w/ mean P(shot) < 0.65 or |mean Pmake-0.5| < 0.3; below-thr candidates w/ mean P(shot) >= 0.2 (floor 0.35->0.2); seed-disagreement flags (>=2 seeds disagree -> flag).
+│ +R8. Target max coach checks per game: <= 20 (last round mean 15.4, worst 25).
+│ +
+│ +5. REQUIREMENTS - FREEZE + BLIND
+│ +R9. Before blind: freeze sha256 of corrected labels (50_rimrock 61906f67..., 51_hsb1 3e265e99..., 50_gv, 50_hsb, re-audits), clips6, postproc52.json (thr 0.5, dedup 800, floor 0.2), ens52 models in drift_log. Blind: Scott-supplied unseen films, labels before any model output, random 20% human label check.
+│ +R10. BLIND PASS BAR (fixed in advance): locked ensemble found AND called right >= 90% on blind real shots (coach checks applied); coach checks <= 20/game; random-20% human label check passed.
+│ +
+│ +DISAGREEMENTS
+│ +- Claude Code revised plan: DISAGREE that class-balanced batches alone fixes balance (require sampler + inverse-freq). DISAGREE that revised plan left the new below-threshold floor undecided; fixed here at 0.2.
+│ +- Muse: DISAGREE primary driver = pooled cross-gym training; architect reads label consistency + single-run seed instability as primary, pooled training secondary. AGREE: fix 0.35 floor before retraining.
+│ +- Cursor: AGREE with all 7 confirmed findings; downgrade suspected (aug strength, class weights, moving_ball) to watch items.
+│ +
+│ +Next: Claude Code implements this spec; Muse + Cursor review code changes; gate then blind.
+│ +
+│ +HERMES: SPEC WRITTEN - spec at .team/specs/52_label_audit_stable_ensemble_spec.md
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md + 2 commands  0.4s
+
+────────────────────────────────────────
+☤ Hermes
+Spec written and verified: 35 lines (under the 150-line cap), created at .team/specs/52_label_audit_stable_ensemble_spec.md with all required sections — numbered requirements (R1–R10), the written shot/miss/not-a-shot/unclear label rule, concrete training fixes, lock-blocking gate numbers, coach-check thresholds (thr 0.5 / dedup 800 ms / weak 0.65 / make-band 0.3 / below-thr floor 0.2, max 20 checks/game), freeze list with sha256s, fixed blind pass bar, and a Disagreements section. No other file was edited by me.
+
+HERMES: SPEC WRITTEN - spec at .team/specs/52_label_audit_stable_ensemble_spec.md
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-5549ceae2d1ed223e1410d13a9288f889a56da439442702a3aadef36be9226b9
+  hermes -c "You are Hermes, the ARCHITECT on the Liberty…"
+
+Session:        local-5549ceae2d1ed223e1410d13a9288f889a56da439442702a3aadef36be9226b9
+Title:          You are Hermes, the ARCHITECT on the Liberty…
+Duration:       3m 52s
+Messages:       24 (1 user, 22 tool calls)
+[hermes] exit 0 at 21:19:24

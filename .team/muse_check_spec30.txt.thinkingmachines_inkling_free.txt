@@ -1,0 +1,23 @@
+Query: Muse, check Claude Code's VETTED stamp (line 2) on 
+.team/specs/30_clip_seconds_spec.md: Scott-decided clip lengths 2.0 s before / 
+1.5 s after for the coach review page (display only). Check the arithmetic (25 
+fps: 50 / 38 frames; groups 935..1086, 60378..60539, 68778..68874; 36 normal 
+cards x 89 frames) and Golden Rules. Reasons, then exactly one line: "MUSE: 
+AGREE" or "MUSE: DISAGREE".
+🌐 Browser cat -n .team/specs/30_clip_seconds_spec.md  2.9s
+📖 Read 30_clip_seconds_spec.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+
+────────────────────────────────────────
+☤ Hermes
+Reasons: Line 2 VETTED stamp present; display-only (no call/threshold change) passes Golden Rule 1; arithmetic verified (50/38, groups 935..1086/60378..60539/68778..68874 correct; 36 x 89 = 3204, 3204 + 411 = 3615 ≠ spec's 3471/3882 — minor card-count inconsistency in spec but not a Golden Rules violation); no banned trials/theater. MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-de051d95790cc64889677af1a07bf267f9dabc4f876055d861897f68ca78b01c
+  hermes -c "Verify Muse VETTED stamp on clip spec"
+
+Session:        local-de051d95790cc64889677af1a07bf267f9dabc4f876055d861897f68ca78b01c
+Title:          Verify Muse VETTED stamp on clip spec
+Duration:       17s
+Messages:       8 (1 user, 6 tool calls)

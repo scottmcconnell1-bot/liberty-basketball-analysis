@@ -1,0 +1,1129 @@
+timestamp=2026-10-27T20:15:09.597Z level=INFO run=821f7e9f message="creating instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T20:15:09.598Z level=INFO run=821f7e9f message=fromDirectory directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T20:15:09.744Z level=INFO run=821f7e9f message=bootstrapping directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T20:15:09.749Z level=INFO run=821f7e9f message=loading path="C:\\Users\\scott\\.config\\opencode\\config.json"
+timestamp=2026-10-27T20:15:09.749Z level=INFO run=821f7e9f message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.json"
+timestamp=2026-10-27T20:15:09.750Z level=INFO run=821f7e9f message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.jsonc"
+timestamp=2026-10-27T20:15:09.804Z level=INFO run=821f7e9f message="all LSPs are disabled"
+timestamp=2026-10-27T20:15:09.805Z level=INFO run=821f7e9f message="all formatters are disabled"
+timestamp=2026-10-27T20:15:09.805Z level=INFO run=821f7e9f message=init
+timestamp=2026-10-27T20:15:09.917Z level=INFO run=821f7e9f message=created id=ses_e80ff5fa2ffe4DqP2APzfbBPtK slug=calm-garden version=1.19.4 projectID=c30576cc07b2b528a2eede275372519a4312e3b4 directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" path="" workspaceID=undefined parentID=undefined title="New session - 2026-10-27T20:15:09.917Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1793132109917 time.updated=1793132109917
+timestamp=2026-10-27T20:15:09.927Z level=INFO run=821f7e9f message="event connected"
+timestamp=2026-10-27T20:15:09.957Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=0
+timestamp=2026-10-27T20:15:10.292Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=true agent=title mode=primary
+timestamp=2026-10-27T20:15:10.295Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m
+> build · gemma4:cloud
+[0m
+timestamp=2026-10-27T20:15:10.550Z level=INFO run=821f7e9f message=tracking hash=907c70f0d205167078c33d5785dff5193cf7f074 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:10.554Z level=INFO run=821f7e9f message="shell tool using shell" shell="C:\\Program Files\\Git\\usr\\bin\\bash.exe"
+timestamp=2026-10-27T20:15:10.558Z level=INFO run=821f7e9f message=init count=1
+timestamp=2026-10-27T20:15:10.715Z level=INFO run=821f7e9f message="watcher backend" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" platform=win32 backend=windows
+timestamp=2026-10-27T20:15:10.722Z level=INFO run=821f7e9f message="project copy refresh started" projectID=c30576cc07b2b528a2eede275372519a4312e3b4
+timestamp=2026-10-27T20:15:11.125Z level=INFO run=821f7e9f message="project copy refresh done" projectID=c30576cc07b2b528a2eede275372519a4312e3b4 updated=[] removed=[]
+timestamp=2026-10-27T20:15:11.145Z level=INFO run=821f7e9f message="booting location services" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" workspaceID=undefined
+timestamp=2026-10-27T20:15:11.147Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00a1d00015B5pFPt01dBt9z
+timestamp=2026-10-27T20:15:11.148Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:11.150Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:11.603Z level=INFO run=821f7e9f message=evaluated permission=read pattern=TEAM_RECOVERY.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:11.609Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\TEAM_RECOVERY.md"
+[0m→ [0mRead TEAM_RECOVERY.md
+timestamp=2026-10-27T20:15:11.669Z level=INFO run=821f7e9f message=evaluated permission=read pattern=AGENTS.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:11.672Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\AGENTS.md"
+[0m→ [0mRead AGENTS.md
+timestamp=2026-10-27T20:15:11.745Z level=INFO run=821f7e9f message=evaluated permission=read pattern=NEXT_TASK.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:11.750Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\NEXT_TASK.md"
+[0m→ [0mRead NEXT_TASK.md
+timestamp=2026-10-27T20:15:12.062Z level=INFO run=821f7e9f message=tracking hash=c6061afd8a85273b184e4d662f749670e5b6aaee cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:12.284Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=1
+timestamp=2026-10-27T20:15:12.513Z level=INFO run=821f7e9f message=tracking hash=98b114b7bbe34a39482aa177a25753319e46fb7a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:12.522Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00a99d001y6Ju7z2euT9Hj7
+timestamp=2026-10-27T20:15:12.522Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:12.523Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:14.085Z level=INFO run=821f7e9f message=evaluated permission=todowrite pattern=* action.permission=* action.action=allow action.pattern=*
+[0m
+[0m# [0mTodos
+[•] Measure per-game Notus red-digit colour on fitting frames (Step 1)
+[ ] Fit per-game segment geometry on fitting frames (Step 2)
+[ ] Implement per-game Notus mask and reader in scoreboard_clock_720p.py (Step 3)
+[ ] Compute per-game dead-band thresholds (T_on, T_off) and add to thresholds (Step 5)
+[ ] Run the 20-crop gate once: .\.venv\Scripts\python.exe -m pytest tests/test_notus_digit_gate.py -q (Step 6)
+[0m
+timestamp=2026-10-27T20:15:14.221Z level=INFO run=821f7e9f message=evaluated permission=read pattern="data\\roi\\notus_scoreboard_rois.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:14.225Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\data\\roi\\notus_scoreboard_rois.json"
+[0m→ [0mRead data/roi/notus_scoreboard_rois.json
+timestamp=2026-10-27T20:15:14.340Z level=INFO run=821f7e9f message=evaluated permission=read pattern="data\\roi\\notus_segment_geometry.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:14.345Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\data\\roi\\notus_segment_geometry.json"
+[0m→ [0mRead data/roi/notus_segment_geometry.json
+timestamp=2026-10-27T20:15:14.470Z level=INFO run=821f7e9f message=evaluated permission=read pattern=".team\\notus_fit_crops\\eye_read_values.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:14.475Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\notus_fit_crops\\eye_read_values.json"
+[0m→ [0mRead .team/notus_fit_crops/eye_read_values.json
+timestamp=2026-10-27T20:15:14.596Z level=INFO run=821f7e9f message=evaluated permission=read pattern=scoreboard_clock_720p.py action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:15:14.601Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+[0m→ [0mRead scoreboard_clock_720p.py
+timestamp=2026-10-27T20:15:14.923Z level=INFO run=821f7e9f message=tracking hash=d899d281676f4fbbd25bf33d0a5495179037b721 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:15.179Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=2
+timestamp=2026-10-27T20:15:15.365Z level=INFO run=821f7e9f message=tracking hash=77d69dc5a80487c8bb31cac976b03aa0c1d83f76 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:15.373Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00b4ec001g6poxJ9rYmp4Gy
+timestamp=2026-10-27T20:15:15.373Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:15.374Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:23.219Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv\\Scripts\\python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nEYE_READ_FILE = ROOT / \".team\" / \"notus_fit_crops\" / \"eye_read_values.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\neye_reads = load_json(EYE_READ_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\ndef get_on_segments(digit):\n    # Patterns based on _SEVEN_SEGMENT from scoreboard_clock.py logic\n    # 0: abcefg, 1: bc, 2: abdeg, 3: abcdg, 4: bcfg, 5: acdfg, 6: acdefg, 7: abc, 8: abcdefg, 9: abcfg\n    patterns = {\n        0: \"abcefg\", 1: \"bc\", 2: \"abdeg\", 3: \"abcdg\", 4: \"bcfg\",\n        5: \"acdfg\", 6: \"acdefg\", 7: \"abc\", 8: \"abcdefg\", 9: \"abcfg\"\n    }\n    return patterns.get(digit, \"\")\n\ndef measure_game(game_key):\n    game_id = [k for k, v in rois[\"games\"].items() if game_key in k][0]\n    video_path = ROOT / rois[\"games\"][game_id][\"video\"]\n    \n    pooled_lit_pixels = []\n    \n    # Find entries for this game\n    entries = [e for e in eye_reads[\"entries\"] if e[\"game\"] == game_key]\n    \n    cap = cv2.VideoCapture(str(video_path))\n    \n    for e in entries:\n        digit = e[\"digit\"]\n        if digit is None: continue\n        \n        # Extract crop from video at timestamp\n        # The crop was originally cut to the box. \n        # We need the box for the slot.\n        slot = e[\"slot\"]\n        # Slot keys in ROI file: \"home_tens\", \"home_ones\", \"away_tens\", \"away_ones\"\n        # Simplified: use the 'scores' map\n        score_side = \"home\" if \"home\" in slot else \"away\"\n        slot_type = \"tens\" if \"tens\" in slot else \"ones\"\n        box = rois[\"games\"][game_id][\"scores\"][score_side][slot_type]\n        \n        cap.set(cv2.CAP_PROP_POS_MSEC, e[\"timestamp_s\"] * 1000)\n        ret, frame = cap.read()\n        if not ret: continue\n        \n        x, y, w, h = box\n        crop = frame[y:y+h, x:x+w]\n        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n        \n        # Determine ON segments for this digit\n        on_segs_str = get_on_segments(digit)\n        on_pixels_mask = np.zeros((h, w), dtype=bool)\n        \n        for seg in on_segs_str:\n            fx0, fy0, fx1, fy1 = geometry[seg]\n            px0, py0 = int(fx0 * w), int(fy0 * h)\n            px1, py1 = int(fx1 * w), int(fy1 * h)\n            on_pixels_mask[py0:py1, px0:px1] = True\n        \n        on_region_v = hsv[on_pixels_mask, 2]\n        if on_region_v.size == 0: continue\n        \n        median_v = np.median(on_region_v)\n        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask\n        pooled_lit_pixels.append(hsv[lit_mask])\n        \n    cap.release()\n    \n    if not pooled_lit_pixels:\n        return None\n        \n    all_lit = np.vstack(pooled_lit_pixels)\n    hues = all_lit[:, 0]\n    sats = all_lit[:, 1]\n    vals = all_lit[:, 2]\n    \n    # Hue handling: map >165 to hue-180\n    hues_shifted = np.where(hues > 165, hues - 180, hues)\n    h_min = np.percentile(hues_shifted, 1)\n    h_max = np.percentile(hues_shifted, 99)\n    \n    # Map back\n    if h_min < 0: h_min += 180\n    if h_max < 0: h_max += 180\n    \n    # Actually, the plan says map hues > 165 to hue-180, compute percentiles, then map back.\n    # If we map hues > 165 to hue-180, the red cluster (around 0) becomes contiguous (around 0).\n    # Example: 175 -> -5, 5 -> 5. Cluster is [-5, 5].\n    # Percentiles of [-5, 5] might be -4, 4.\n    # Map back: -4 -> 176, 4 -> 4. Range [176, 180) U [0, 4].\n    \n    # Recalculate properly:\n    h_shifted = np.where(hues > 165, hues - 180, hues)\n    p1, p99 = np.percentile(h_shifted, [1, 99])\n    \n    final_h_min = p1 if p1 >= 0 else p1 + 180\n    final_h_max = p99 if p99 >= 0 else p99 + 180\n    \n    # S and V 10th percentiles\n    s_min = np.percentile(sats, 10)\n    v_min = np.percentile(vals, 10)\n    \n    return {\"h_min\": float(final_h_min), \"h_max\": float(final_h_max), \"s_min\": float(s_min), \"v_min\": float(v_min)}\n\nres_A1 = measure_game(\"A1\")\nres_A = measure_game(\"A\")\n\nprint(f\"A1: {res_A1}\")\nprint(f\"A: {res_A}\")\n\nif res_A1:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A1.json\").write_text(json.dumps(res_A1), encoding=\"utf-8\")\nif res_A:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A.json\").write_text(json.dumps(res_A), encoding=\"utf-8\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m.venv\Scripts\python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+EYE_READ_FILE = ROOT / ".team" / "notus_fit_crops" / "eye_read_values.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+eye_reads = load_json(EYE_READ_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+def get_on_segments(digit):
+    # Patterns based on _SEVEN_SEGMENT from scoreboard_clock.py logic
+    # 0: abcefg, 1: bc, 2: abdeg, 3: abcdg, 4: bcfg, 5: acdfg, 6: acdefg, 7: abc, 8: abcdefg, 9: abcfg
+    patterns = {
+        0: "abcefg", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+        5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcfg"
+    }
+    return patterns.get(digit, "")
+
+def measure_game(game_key):
+    game_id = [k for k, v in rois["games"].items() if game_key in k][0]
+    video_path = ROOT / rois["games"][game_id]["video"]
+    
+    pooled_lit_pixels = []
+    
+    # Find entries for this game
+    entries = [e for e in eye_reads["entries"] if e["game"] == game_key]
+    
+    cap = cv2.VideoCapture(str(video_path))
+    
+    for e in entries:
+        digit = e["digit"]
+        if digit is None: continue
+        
+        # Extract crop from video at timestamp
+        # The crop was originally cut to the box. 
+        # We need the box for the slot.
+        slot = e["slot"]
+        # Slot keys in ROI file: "home_tens", "home_ones", "away_tens", "away_ones"
+        # Simplified: use the 'scores' map
+        score_side = "home" if "home" in slot else "away"
+        slot_type = "tens" if "tens" in slot else "ones"
+        box = rois["games"][game_id]["scores"][score_side][slot_type]
+        
+        cap.set(cv2.CAP_PROP_POS_MSEC, e["timestamp_s"] * 1000)
+        ret, frame = cap.read()
+        if not ret: continue
+        
+        x, y, w, h = box
+        crop = frame[y:y+h, x:x+w]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        
+        # Determine ON segments for this digit
+        on_segs_str = get_on_segments(digit)
+        on_pixels_mask = np.zeros((h, w), dtype=bool)
+        
+        for seg in on_segs_str:
+            fx0, fy0, fx1, fy1 = geometry[seg]
+            px0, py0 = int(fx0 * w), int(fy0 * h)
+            px1, py1 = int(fx1 * w), int(fy1 * h)
+            on_pixels_mask[py0:py1, px0:px1] = True
+        
+        on_region_v = hsv[on_pixels_mask, 2]
+        if on_region_v.size == 0: continue
+        
+        median_v = np.median(on_region_v)
+        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask
+        pooled_lit_pixels.append(hsv[lit_mask])
+        
+    cap.release()
+    
+    if not pooled_lit_pixels:
+        return None
+        
+    all_lit = np.vstack(pooled_lit_pixels)
+    hues = all_lit[:, 0]
+    sats = all_lit[:, 1]
+    vals = all_lit[:, 2]
+    
+    # Hue handling: map >165 to hue-180
+    hues_shifted = np.where(hues > 165, hues - 180, hues)
+    h_min = np.percentile(hues_shifted, 1)
+    h_max = np.percentile(hues_shifted, 99)
+    
+    # Map back
+    if h_min < 0: h_min += 180
+    if h_max < 0: h_max += 180
+    
+    # Actually, the plan says map hues > 165 to hue-180, compute percentiles, then map back.
+    # If we map hues > 165 to hue-180, the red cluster (around 0) becomes contiguous (around 0).
+    # Example: 175 -> -5, 5 -> 5. Cluster is [-5, 5].
+    # Percentiles of [-5, 5] might be -4, 4.
+    # Map back: -4 -> 176, 4 -> 4. Range [176, 180) U [0, 4].
+    
+    # Recalculate properly:
+    h_shifted = np.where(hues > 165, hues - 180, hues)
+    p1, p99 = np.percentile(h_shifted, [1, 99])
+    
+    final_h_min = p1 if p1 >= 0 else p1 + 180
+    final_h_max = p99 if p99 >= 0 else p99 + 180
+    
+    # S and V 10th percentiles
+    s_min = np.percentile(sats, 10)
+    v_min = np.percentile(vals, 10)
+    
+    return {"h_min": float(final_h_min), "h_max": float(final_h_max), "s_min": float(s_min), "v_min": float(v_min)}
+
+res_A1 = measure_game("A1")
+res_A = measure_game("A")
+
+print(f"A1: {res_A1}")
+print(f"A: {res_A}")
+
+if res_A1:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A1.json").write_text(json.dumps(res_A1), encoding="utf-8")
+if res_A:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A.json").write_text(json.dumps(res_A), encoding="utf-8")
+PY
+
+/usr/bin/bash: line 1: .venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T20:15:23.522Z level=INFO run=821f7e9f message=tracking hash=18fcec4da5eea85dea68242549bebf3225492990 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:23.772Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=3
+timestamp=2026-10-27T20:15:24.000Z level=INFO run=821f7e9f message=tracking hash=e1ce9661f865c40cf99d351a07aa158b8fe22759 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:24.007Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00d67d001YqvkZ4mgCLiLKe
+timestamp=2026-10-27T20:15:24.008Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:24.009Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:28.315Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv\\Scripts\\python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nEYE_READ_FILE = ROOT / \".team\" / \"notus_fit_crops\" / \"eye_read_values.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\neye_reads = load_json(EYE_READ_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\ndef get_on_segments(digit):\n    patterns = {\n        0: \"abcefg\", 1: \"bc\", 2: \"abdeg\", 3: \"abcdg\", 4: \"bcfg\",\n        5: \"acdfg\", 6: \"acdefg\", 7: \"abc\", 8: \"abcdefg\", 9: \"abcfg\"\n    }\n    return patterns.get(digit, \"\")\n\ndef measure_game(game_key):\n    game_id = [k for k, v in rois[\"games\"].items() if game_key in k][0]\n    video_path = ROOT / rois[\"games\"][game_id][\"video\"]\n    \n    pooled_lit_pixels = []\n    entries = [e for e in eye_reads[\"entries\"] if e[\"game\"] == game_key]\n    \n    cap = cv2.VideoCapture(str(video_path))\n    \n    for e in entries:\n        digit = e[\"digit\"]\n        if digit is None: continue\n        \n        slot = e[\"slot\"]\n        score_side = \"home\" if \"home\" in slot else \"away\"\n        slot_type = \"tens\" if \"tens\" in slot else \"ones\"\n        box = rois[\"games\"][game_id][\"scores\"][score_side][slot_type]\n        \n        cap.set(cv2.CAP_PROP_POS_MSEC, e[\"timestamp_s\"] * 1000)\n        ret, frame = cap.read()\n        if not ret: continue\n        \n        x, y, w, h = box\n        crop = frame[y:y+h, x:x+w]\n        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n        \n        on_segs_str = get_on_segments(digit)\n        on_pixels_mask = np.zeros((h, w), dtype=bool)\n        \n        for seg in on_segs_str:\n            fx0, fy0, fx1, fy1 = geometry[seg]\n            px0, py0 = int(fx0 * w), int(fy0 * h)\n            px1, py1 = int(fx1 * w), int(fy1 * h)\n            on_pixels_mask[py0:py1, px0:px1] = True\n        \n        on_region_v = hsv[on_pixels_mask, 2]\n        if on_region_v.size == 0: continue\n        \n        median_v = np.median(on_region_v)\n        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask\n        pooled_lit_pixels.append(hsv[lit_mask])\n        \n    cap.release()\n    \n    if not pooled_lit_pixels:\n        return None\n        \n    all_lit = np.vstack(pooled_lit_pixels)\n    hues = all_lit[:, 0]\n    sats = all_lit[:, 1]\n    vals = all_lit[:, 2]\n    \n    h_shifted = np.where(hues > 165, hues - 180, hues)\n    p1, p99 = np.percentile(h_shifted, [1, 99])\n    \n    final_h_min = p1 if p1 >= 0 else p1 + 180\n    final_h_max = p99 if p99 >= 0 else p99 + 180\n    \n    s_min = np.percentile(sats, 10)\n    v_min = np.percentile(vals, 10)\n    \n    return {\"h_min\": float(final_h_min), \"h_max\": float(final_h_max), \"s_min\": float(s_min), \"v_min\": float(v_min)}\n\nres_A1 = measure_game(\"A1\")\nres_A = measure_game(\"A\")\n\nprint(f\"A1: {res_A1}\")\nprint(f\"A: {res_A}\")\n\nif res_A1:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A1.json\").write_text(json.dumps(res_A1), encoding=\"utf-8\")\nif res_A:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A.json\").write_text(json.dumps(res_A), encoding=\"utf-8\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv\Scripts\python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+EYE_READ_FILE = ROOT / ".team" / "notus_fit_crops" / "eye_read_values.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+eye_reads = load_json(EYE_READ_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+def get_on_segments(digit):
+    patterns = {
+        0: "abcefg", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+        5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcfg"
+    }
+    return patterns.get(digit, "")
+
+def measure_game(game_key):
+    game_id = [k for k, v in rois["games"].items() if game_key in k][0]
+    video_path = ROOT / rois["games"][game_id]["video"]
+    
+    pooled_lit_pixels = []
+    entries = [e for e in eye_reads["entries"] if e["game"] == game_key]
+    
+    cap = cv2.VideoCapture(str(video_path))
+    
+    for e in entries:
+        digit = e["digit"]
+        if digit is None: continue
+        
+        slot = e["slot"]
+        score_side = "home" if "home" in slot else "away"
+        slot_type = "tens" if "tens" in slot else "ones"
+        box = rois["games"][game_id]["scores"][score_side][slot_type]
+        
+        cap.set(cv2.CAP_PROP_POS_MSEC, e["timestamp_s"] * 1000)
+        ret, frame = cap.read()
+        if not ret: continue
+        
+        x, y, w, h = box
+        crop = frame[y:y+h, x:x+w]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        
+        on_segs_str = get_on_segments(digit)
+        on_pixels_mask = np.zeros((h, w), dtype=bool)
+        
+        for seg in on_segs_str:
+            fx0, fy0, fx1, fy1 = geometry[seg]
+            px0, py0 = int(fx0 * w), int(fy0 * h)
+            px1, py1 = int(fx1 * w), int(fy1 * h)
+            on_pixels_mask[py0:py1, px0:px1] = True
+        
+        on_region_v = hsv[on_pixels_mask, 2]
+        if on_region_v.size == 0: continue
+        
+        median_v = np.median(on_region_v)
+        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask
+        pooled_lit_pixels.append(hsv[lit_mask])
+        
+    cap.release()
+    
+    if not pooled_lit_pixels:
+        return None
+        
+    all_lit = np.vstack(pooled_lit_pixels)
+    hues = all_lit[:, 0]
+    sats = all_lit[:, 1]
+    vals = all_lit[:, 2]
+    
+    h_shifted = np.where(hues > 165, hues - 180, hues)
+    p1, p99 = np.percentile(h_shifted, [1, 99])
+    
+    final_h_min = p1 if p1 >= 0 else p1 + 180
+    final_h_max = p99 if p99 >= 0 else p99 + 180
+    
+    s_min = np.percentile(sats, 10)
+    v_min = np.percentile(vals, 10)
+    
+    return {"h_min": float(final_h_min), "h_max": float(final_h_max), "s_min": float(s_min), "v_min": float(v_min)}
+
+res_A1 = measure_game("A1")
+res_A = measure_game("A")
+
+print(f"A1: {res_A1}")
+print(f"A: {res_A}")
+
+if res_A1:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A1.json").write_text(json.dumps(res_A1), encoding="utf-8")
+if res_A:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A.json").write_text(json.dumps(res_A), encoding="utf-8")
+PY
+
+/usr/bin/bash: line 1: .venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T20:15:28.630Z level=INFO run=821f7e9f message=tracking hash=b6a2f5f01d4278529bfd5151a74a109226635262 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:28.886Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=4
+timestamp=2026-10-27T20:15:29.124Z level=INFO run=821f7e9f message=tracking hash=e95b5e153015f403c88de207374cc841407b0cf6 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:29.131Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00ea78001c7kPMzFKQrvjo0
+timestamp=2026-10-27T20:15:29.131Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:29.132Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:33.340Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nEYE_READ_FILE = ROOT / \".team\" / \"notus_fit_crops\" / \"eye_read_values.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\neye_reads = load_json(EYE_READ_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\ndef get_on_segments(digit):\n    patterns = {\n        0: \"abcefg\", 1: \"bc\", 2: \"abdeg\", 3: \"abcdg\", 4: \"bcfg\",\n        5: \"acdfg\", 6: \"acdefg\", 7: \"abc\", 8: \"abcdefg\", 9: \"abcfg\"\n    }\n    return patterns.get(digit, \"\")\n\ndef measure_game(game_key):\n    game_id = [k for k, v in rois[\"games\"].items() if game_key in k][0]\n    video_path = ROOT / rois[\"games\"][game_id][\"video\"]\n    \n    pooled_lit_pixels = []\n    entries = [e for e in eye_reads[\"entries\"] if e[\"game\"] == game_key]\n    \n    cap = cv2.VideoCapture(str(video_path))\n    \n    for e in entries:\n        digit = e[\"digit\"]\n        if digit is None: continue\n        \n        slot = e[\"slot\"]\n        score_side = \"home\" if \"home\" in slot else \"away\"\n        slot_type = \"tens\" if \"tens\" in slot else \"ones\"\n        box = rois[\"games\"][game_id][\"scores\"][score_side][slot_type]\n        \n        cap.set(cv2.CAP_PROP_POS_MSEC, e[\"timestamp_s\"] * 1000)\n        ret, frame = cap.read()\n        if not ret: continue\n        \n        x, y, w, h = box\n        crop = frame[y:y+h, x:x+w]\n        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n        \n        on_segs_str = get_on_segments(digit)\n        on_pixels_mask = np.zeros((h, w), dtype=bool)\n        \n        for seg in on_segs_str:\n            fx0, fy0, fx1, fy1 = geometry[seg]\n            px0, py0 = int(fx0 * w), int(fy0 * h)\n            px1, py1 = int(fx1 * w), int(fy1 * h)\n            on_pixels_mask[py0:py1, px0:px1] = True\n        \n        on_region_v = hsv[on_pixels_mask, 2]\n        if on_region_v.size == 0: continue\n        \n        median_v = np.median(on_region_v)\n        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask\n        pooled_lit_pixels.append(hsv[lit_mask])\n        \n    cap.release()\n    \n    if not pooled_lit_pixels:\n        return None\n        \n    all_lit = np.vstack(pooled_lit_pixels)\n    hues = all_lit[:, 0]\n    sats = all_lit[:, 1]\n    vals = all_lit[:, 2]\n    \n    h_shifted = np.where(hues > 165, hues - 180, hues)\n    p1, p99 = np.percentile(h_shifted, [1, 99])\n    \n    final_h_min = p1 if p1 >= 0 else p1 + 180\n    final_h_max = p99 if p99 >= 0 else p99 + 180\n    \n    s_min = np.percentile(sats, 10)\n    v_min = np.percentile(vals, 10)\n    \n    return {\"h_min\": float(final_h_min), \"h_max\": float(final_h_max), \"s_min\": float(s_min), \"v_min\": float(v_min)}\n\nres_A1 = measure_game(\"A1\")\nres_A = measure_game(\"A\")\n\nprint(f\"A1: {res_A1}\")\nprint(f\"A: {res_A}\")\n\nif res_A1:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A1.json\").write_text(json.dumps(res_A1), encoding=\"utf-8\")\nif res_A:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A.json\").write_text(json.dumps(res_A), encoding=\"utf-8\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+EYE_READ_FILE = ROOT / ".team" / "notus_fit_crops" / "eye_read_values.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+eye_reads = load_json(EYE_READ_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+def get_on_segments(digit):
+    patterns = {
+        0: "abcefg", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+        5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcfg"
+    }
+    return patterns.get(digit, "")
+
+def measure_game(game_key):
+    game_id = [k for k, v in rois["games"].items() if game_key in k][0]
+    video_path = ROOT / rois["games"][game_id]["video"]
+    
+    pooled_lit_pixels = []
+    entries = [e for e in eye_reads["entries"] if e["game"] == game_key]
+    
+    cap = cv2.VideoCapture(str(video_path))
+    
+    for e in entries:
+        digit = e["digit"]
+        if digit is None: continue
+        
+        slot = e["slot"]
+        score_side = "home" if "home" in slot else "away"
+        slot_type = "tens" if "tens" in slot else "ones"
+        box = rois["games"][game_id]["scores"][score_side][slot_type]
+        
+        cap.set(cv2.CAP_PROP_POS_MSEC, e["timestamp_s"] * 1000)
+        ret, frame = cap.read()
+        if not ret: continue
+        
+        x, y, w, h = box
+        crop = frame[y:y+h, x:x+w]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        
+        on_segs_str = get_on_segments(digit)
+        on_pixels_mask = np.zeros((h, w), dtype=bool)
+        
+        for seg in on_segs_str:
+            fx0, fy0, fx1, fy1 = geometry[seg]
+            px0, py0 = int(fx0 * w), int(fy0 * h)
+            px1, py1 = int(fx1 * w), int(fy1 * h)
+            on_pixels_mask[py0:py1, px0:px1] = True
+        
+        on_region_v = hsv[on_pixels_mask, 2]
+        if on_region_v.size == 0: continue
+        
+        median_v = np.median(on_region_v)
+        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask
+        pooled_lit_pixels.append(hsv[lit_mask])
+        
+    cap.release()
+    
+    if not pooled_lit_pixels:
+        return None
+        
+    all_lit = np.vstack(pooled_lit_pixels)
+    hues = all_lit[:, 0]
+    sats = all_lit[:, 1]
+    vals = all_lit[:, 2]
+    
+    h_shifted = np.where(hues > 165, hues - 180, hues)
+    p1, p99 = np.percentile(h_shifted, [1, 99])
+    
+    final_h_min = p1 if p1 >= 0 else p1 + 180
+    final_h_max = p99 if p99 >= 0 else p99 + 180
+    
+    s_min = np.percentile(sats, 10)
+    v_min = np.percentile(vals, 10)
+    
+    return {"h_min": float(final_h_min), "h_max": float(final_h_max), "s_min": float(s_min), "v_min": float(v_min)}
+
+res_A1 = measure_game("A1")
+res_A = measure_game("A")
+
+print(f"A1: {res_A1}")
+print(f"A: {res_A}")
+
+if res_A1:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A1.json").write_text(json.dumps(res_A1), encoding="utf-8")
+if res_A:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A.json").write_text(json.dumps(res_A), encoding="utf-8")
+PY
+
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T20:15:33.647Z level=INFO run=821f7e9f message=tracking hash=f9ed6e8354e07a063ce203ba6fc9c7267b868deb cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:33.904Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=5
+timestamp=2026-10-27T20:15:34.134Z level=INFO run=821f7e9f message=tracking hash=12714d1b04ca4574c2f8eef8c85cc289d52f50eb cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:34.141Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f00fe12001K17PMCDPIEZo7j
+timestamp=2026-10-27T20:15:34.142Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:34.143Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:34.880Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe -c \"import sys; print(sys.version)\"" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe -c "import sys; print(sys.version)"
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T20:15:35.168Z level=INFO run=821f7e9f message=tracking hash=2314a96175d4d416f5605af2431b092653872ef4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:35.383Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=6
+timestamp=2026-10-27T20:15:35.618Z level=INFO run=821f7e9f message=tracking hash=cd9a5616ecb08815189eeae5f282a83ab61892cc cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:35.625Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0103d8001qR52iOWfSzRM1C
+timestamp=2026-10-27T20:15:35.626Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:35.627Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:36.299Z level=INFO run=821f7e9f message=evaluated permission=bash pattern="ls .\\.venv\\Scripts\\python.exe" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mls .\.venv\Scripts\python.exe
+ls: cannot access '..venvScriptspython.exe': No such file or directory
+[0m
+timestamp=2026-10-27T20:15:36.618Z level=INFO run=821f7e9f message=tracking hash=089e04d1b5c9063893fbdcdacd806d7938098be3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:36.868Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=7
+timestamp=2026-10-27T20:15:37.104Z level=INFO run=821f7e9f message=tracking hash=a6a41994a77440099f51a76f2148a235e566b235 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:37.115Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0109a50018lE7SckxIwTxa7
+timestamp=2026-10-27T20:15:37.115Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:37.116Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:37.789Z level=INFO run=821f7e9f message=evaluated permission=bash pattern="ls .venv/Scripts/python.exe" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mls .venv/Scripts/python.exe
+.venv/Scripts/python.exe
+[0m
+timestamp=2026-10-27T20:15:38.073Z level=INFO run=821f7e9f message=tracking hash=0ef68370195ad270ad055a3e3aaf5150faa5cc3c cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:38.290Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=8
+timestamp=2026-10-27T20:15:38.529Z level=INFO run=821f7e9f message=tracking hash=4e0c8aa7cb9f618392617c0b8ccb658dd2e34392 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:38.537Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f010f34001PwLgft57vjeRUH
+timestamp=2026-10-27T20:15:38.538Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:38.539Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:43.714Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nEYE_READ_FILE = ROOT / \".team\" / \"notus_fit_crops\" / \"eye_read_values.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\neye_reads = load_json(EYE_READ_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\ndef get_on_segments(digit):\n    patterns = {\n        0: \"abcefg\", 1: \"bc\", 2: \"abdeg\", 3: \"abcdg\", 4: \"bcfg\",\n        5: \"acdfg\", 6: \"acdefg\", 7: \"abc\", 8: \"abcdefg\", 9: \"abcfg\"\n    }\n    return patterns.get(digit, \"\")\n\ndef measure_game(game_key):\n    game_id = [k for k, v in rois[\"games\"].items() if game_key in k][0]\n    video_path = ROOT / rois[\"games\"][game_id][\"video\"]\n    \n    pooled_lit_pixels = []\n    entries = [e for e in eye_reads[\"entries\"] if e[\"game\"] == game_key]\n    \n    cap = cv2.VideoCapture(str(video_path))\n    \n    for e in entries:\n        digit = e[\"digit\"]\n        if digit is None: continue\n        \n        slot = e[\"slot\"]\n        score_side = \"home\" if \"home\" in slot else \"away\"\n        slot_type = \"tens\" if \"tens\" in slot else \"ones\"\n        box = rois[\"games\"][game_id][\"scores\"][score_side][slot_type]\n        \n        cap.set(cv2.CAP_PROP_POS_MSEC, e[\"timestamp_s\"] * 1000)\n        ret, frame = cap.read()\n        if not ret: continue\n        \n        x, y, w, h = box\n        crop = frame[y:y+h, x:x+w]\n        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n        \n        on_segs_str = get_on_segments(digit)\n        on_pixels_mask = np.zeros((h, w), dtype=bool)\n        \n        for seg in on_segs_str:\n            fx0, fy0, fx1, fy1 = geometry[seg]\n            px0, py0 = int(fx0 * w), int(fy0 * h)\n            px1, py1 = int(fx1 * w), int(fy1 * h)\n            on_pixels_mask[py0:py1, px0:px1] = True\n        \n        on_region_v = hsv[on_pixels_mask, 2]\n        if on_region_v.size == 0: continue\n        \n        median_v = np.median(on_region_v)\n        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask\n        pooled_lit_pixels.append(hsv[lit_mask])\n        \n    cap.release()\n    \n    if not pooled_lit_pixels:\n        return None\n        \n    all_lit = np.vstack(pooled_lit_pixels)\n    hues = all_lit[:, 0]\n    sats = all_lit[:, 1]\n    vals = all_lit[:, 2]\n    \n    h_shifted = np.where(hues > 165, hues - 180, hues)\n    p1, p99 = np.percentile(h_shifted, [1, 99])\n    \n    final_h_min = p1 if p1 >= 0 else p1 + 180\n    final_h_max = p99 if p99 >= 0 else p99 + 180\n    \n    s_min = np.percentile(sats, 10)\n    v_min = np.percentile(vals, 10)\n    \n    return {\"h_min\": float(final_h_min), \"h_max\": float(final_h_max), \"s_min\": float(s_min), \"v_min\": float(v_min)}\n\nres_A1 = measure_game(\"A1\")\nres_A = measure_game(\"A\")\n\nprint(f\"A1: {res_A1}\")\nprint(f\"A: {res_A}\")\n\nif res_A1:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A1.json\").write_text(json.dumps(res_A1), encoding=\"utf-8\")\nif res_A:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A.json\").write_text(json.dumps(res_A), encoding=\"utf-8\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+EYE_READ_FILE = ROOT / ".team" / "notus_fit_crops" / "eye_read_values.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+eye_reads = load_json(EYE_READ_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+def get_on_segments(digit):
+    patterns = {
+        0: "abcefg", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+        5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcfg"
+    }
+    return patterns.get(digit, "")
+
+def measure_game(game_key):
+    game_id = [k for k, v in rois["games"].items() if game_key in k][0]
+    video_path = ROOT / rois["games"][game_id]["video"]
+    
+    pooled_lit_pixels = []
+    entries = [e for e in eye_reads["entries"] if e["game"] == game_key]
+    
+    cap = cv2.VideoCapture(str(video_path))
+    
+    for e in entries:
+        digit = e["digit"]
+        if digit is None: continue
+        
+        slot = e["slot"]
+        score_side = "home" if "home" in slot else "away"
+        slot_type = "tens" if "tens" in slot else "ones"
+        box = rois["games"][game_id]["scores"][score_side][slot_type]
+        
+        cap.set(cv2.CAP_PROP_POS_MSEC, e["timestamp_s"] * 1000)
+        ret, frame = cap.read()
+        if not ret: continue
+        
+        x, y, w, h = box
+        crop = frame[y:y+h, x:x+w]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        
+        on_segs_str = get_on_segments(digit)
+        on_pixels_mask = np.zeros((h, w), dtype=bool)
+        
+        for seg in on_segs_str:
+            fx0, fy0, fx1, fy1 = geometry[seg]
+            px0, py0 = int(fx0 * w), int(fy0 * h)
+            px1, py1 = int(fx1 * w), int(fy1 * h)
+            on_pixels_mask[py0:py1, px0:px1] = True
+        
+        on_region_v = hsv[on_pixels_mask, 2]
+        if on_region_v.size == 0: continue
+        
+        median_v = np.median(on_region_v)
+        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask
+        pooled_lit_pixels.append(hsv[lit_mask])
+        
+    cap.release()
+    
+    if not pooled_lit_pixels:
+        return None
+        
+    all_lit = np.vstack(pooled_lit_pixels)
+    hues = all_lit[:, 0]
+    sats = all_lit[:, 1]
+    vals = all_lit[:, 2]
+    
+    h_shifted = np.where(hues > 165, hues - 180, hues)
+    p1, p99 = np.percentile(h_shifted, [1, 99])
+    
+    final_h_min = p1 if p1 >= 0 else p1 + 180
+    final_h_max = p99 if p99 >= 0 else p99 + 180
+    
+    s_min = np.percentile(sats, 10)
+    v_min = np.percentile(vals, 10)
+    
+    return {"h_min": float(final_h_min), "h_max": float(final_h_max), "s_min": float(s_min), "v_min": float(v_min)}
+
+res_A1 = measure_game("A1")
+res_A = measure_game("A")
+
+print(f"A1: {res_A1}")
+print(f"A: {res_A}")
+
+if res_A1:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A1.json").write_text(json.dumps(res_A1), encoding="utf-8")
+if res_A:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A.json").write_text(json.dumps(res_A), encoding="utf-8")
+PY
+
+A1: {'h_min': 0.0, 'h_max': 255.0, 's_min': 85.0, 'v_min': 188.0}
+A: {'h_min': 0.0, 'h_max': 255.0, 's_min': 70.0, 'v_min': 13.0}
+[0m
+timestamp=2026-10-27T20:15:46.511Z level=INFO run=821f7e9f message=tracking hash=79e7469015b9e300be1265b52ce094a69121f86a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:46.763Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=9
+timestamp=2026-10-27T20:15:46.997Z level=INFO run=821f7e9f message=tracking hash=b89abf3fa337ab7e42cc7d39199282b7afdea3ef cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:47.004Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f01304e001t9O55COO64OupK
+timestamp=2026-10-27T20:15:47.005Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:47.006Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:15:52.108Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nEYE_READ_FILE = ROOT / \".team\" / \"notus_fit_crops\" / \"eye_read_values.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\neye_reads = load_json(EYE_READ_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\ndef get_on_segments(digit):\n    patterns = {\n        0: \"abcefg\", 1: \"bc\", 2: \"abdeg\", 3: \"abcdg\", 4: \"bcfg\",\n        5: \"acdfg\", 6: \"acdefg\", 7: \"abc\", 8: \"abcdefg\", 9: \"abcfg\"\n    }\n    return patterns.get(digit, \"\")\n\ndef measure_game(game_key):\n    game_id = [k for k, v in rois[\"games\"].items() if game_key in k][0]\n    video_path = ROOT / rois[\"games\"][game_id][\"video\"]\n    \n    pooled_lit_pixels = []\n    entries = [e for e in eye_reads[\"entries\"] if e[\"game\"] == game_key]\n    \n    cap = cv2.VideoCapture(str(video_path))\n    \n    for e in entries:\n        digit = e[\"digit\"]\n        if digit is None: continue\n        \n        slot = e[\"slot\"]\n        score_side = \"home\" if \"home\" in slot else \"away\"\n        slot_type = \"tens\" if \"tens\" in slot else \"ones\"\n        box = rois[\"games\"][game_id][\"scores\"][score_side][slot_type]\n        \n        cap.set(cv2.CAP_PROP_POS_MSEC, e[\"timestamp_s\"] * 1000)\n        ret, frame = cap.read()\n        if not ret: continue\n        \n        x, y, w, h = box\n        crop = frame[y:y+h, x:x+w]\n        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n        \n        on_segs_str = get_on_segments(digit)\n        on_pixels_mask = np.zeros((h, w), dtype=bool)\n        \n        for seg in on_segs_str:\n            fx0, fy0, fx1, fy1 = geometry[seg]\n            px0, py0 = int(fx0 * w), int(fy0 * h)\n            px1, py1 = int(fx1 * w), int(fy1 * h)\n            on_pixels_mask[py0:py1, px0:px1] = True\n        \n        on_region_v = hsv[on_pixels_mask, 2]\n        if on_region_v.size == 0: continue\n        \n        median_v = np.median(on_region_v)\n        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask\n        pooled_lit_pixels.append(hsv[lit_mask])\n        \n    cap.release()\n    \n    if not pooled_lit_pixels:\n        return None\n        \n    all_lit = np.vstack(pooled_lit_pixels)\n    hues = all_lit[:, 0]\n    sats = all_lit[:, 1]\n    vals = all_lit[:, 2]\n    \n    h_shifted = np.where(hues > 165, hues - 180, hues)\n    p1, p99 = np.percentile(h_shifted, [1, 99])\n    \n    final_h_min = p1 if p1 >= 0 else p1 + 180\n    final_h_max = p99 if p99 >= 0 else p99 + 180\n    \n    s_min = np.percentile(sats, 10)\n    v_min = np.percentile(vals, 10)\n    \n    return {\"h_min\": float(final_h_min), \"h_max\": float(final_h_max), \"s_min\": float(s_min), \"v_min\": float(v_min)}\n\nres_A1 = measure_game(\"A1\")\nres_A = measure_game(\"A\")\n\nprint(f\"A1: {res_A1}\")\nprint(f\"A: {res_A}\")\n\nif res_A1:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A1.json\").write_text(json.dumps(res_A1), encoding=\"utf-8\")\nif res_A:\n    (ROOT / \"data\" / \"roi\" / \"notus_red_thresholds_A.json\").write_text(json.dumps(res_A), encoding=\"utf-8\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+EYE_READ_FILE = ROOT / ".team" / "notus_fit_crops" / "eye_read_values.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+eye_reads = load_json(EYE_READ_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+def get_on_segments(digit):
+    patterns = {
+        0: "abcefg", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+        5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcfg"
+    }
+    return patterns.get(digit, "")
+
+def measure_game(game_key):
+    game_id = [k for k, v in rois["games"].items() if game_key in k][0]
+    video_path = ROOT / rois["games"][game_id]["video"]
+    
+    pooled_lit_pixels = []
+    entries = [e for e in eye_reads["entries"] if e["game"] == game_key]
+    
+    cap = cv2.VideoCapture(str(video_path))
+    
+    for e in entries:
+        digit = e["digit"]
+        if digit is None: continue
+        
+        slot = e["slot"]
+        score_side = "home" if "home" in slot else "away"
+        slot_type = "tens" if "tens" in slot else "ones"
+        box = rois["games"][game_id]["scores"][score_side][slot_type]
+        
+        cap.set(cv2.CAP_PROP_POS_MSEC, e["timestamp_s"] * 1000)
+        ret, frame = cap.read()
+        if not ret: continue
+        
+        x, y, w, h = box
+        crop = frame[y:y+h, x:x+w]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        
+        on_segs_str = get_on_segments(digit)
+        on_pixels_mask = np.zeros((h, w), dtype=bool)
+        
+        for seg in on_segs_str:
+            fx0, fy0, fx1, fy1 = geometry[seg]
+            px0, py0 = int(fx0 * w), int(fy0 * h)
+            px1, py1 = int(fx1 * w), int(fy1 * h)
+            on_pixels_mask[py0:py1, px0:px1] = True
+        
+        on_region_v = hsv[on_pixels_mask, 2]
+        if on_region_v.size == 0: continue
+        
+        median_v = np.median(on_region_v)
+        lit_mask = (hsv[:, :, 2] >= median_v) & on_pixels_mask
+        pooled_lit_pixels.append(hsv[lit_mask])
+        
+    cap.release()
+    
+    if not pooled_lit_pixels:
+        return None
+        
+    all_lit = np.vstack(pooled_lit_pixels)
+    hues = all_lit[:, 0]
+    sats = all_lit[:, 1]
+    vals = all_lit[:, 2]
+    
+    h_shifted = np.where(hues > 165, hues - 180, hues)
+    p1, p99 = np.percentile(h_shifted, [1, 99])
+    
+    final_h_min = p1 if p1 >= 0 else p1 + 180
+    final_h_max = p99 if p99 >= 0 else p99 + 180
+    
+    s_min = np.percentile(sats, 10)
+    v_min = np.percentile(vals, 10)
+    
+    return {"h_min": float(final_h_min), "h_max": float(final_h_max), "s_min": float(s_min), "v_min": float(v_min)}
+
+res_A1 = measure_game("A1")
+res_A = measure_game("A")
+
+print(f"A1: {res_A1}")
+print(f"A: {res_A}")
+
+if res_A1:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A1.json").write_text(json.dumps(res_A1), encoding="utf-8")
+if res_A:
+    (ROOT / "data" / "roi" / "notus_red_thresholds_A.json").write_text(json.dumps(res_A), encoding="utf-8")
+PY
+
+A1: {'h_min': 0.0, 'h_max': 255.0, 's_min': 85.0, 'v_min': 188.0}
+A: {'h_min': 0.0, 'h_max': 255.0, 's_min': 70.0, 'v_min': 13.0}
+[0m
+timestamp=2026-10-27T20:15:54.866Z level=INFO run=821f7e9f message=tracking hash=b921ebc2edcb97f3a917aa146a5bbf513f8f4e7b cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:55.117Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=10
+timestamp=2026-10-27T20:15:55.324Z level=INFO run=821f7e9f message=tracking hash=bc643fa52f8b0d5942779a86f84944b42ffed22d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:15:55.336Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0150ef001tzVKc6Na1bJ0v1
+timestamp=2026-10-27T20:15:55.336Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:15:55.337Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m✗ [0mEdit scripts/fit_notus_segments.py failed
+[91m[1mError: [0mCould not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.
+timestamp=2026-10-27T20:16:00.518Z level=INFO run=821f7e9f message=tracking hash=216c2d4f7b8e86dd8127101535b789144380260d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:00.766Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=11
+timestamp=2026-10-27T20:16:01.004Z level=INFO run=821f7e9f message=tracking hash=f66f906cda82ad1b3dd6d747a5218a6cd365cf6e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:01.013Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0166ff001i3u1u7mYTHHiTd
+timestamp=2026-10-27T20:16:01.013Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:01.014Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:01.710Z level=INFO run=821f7e9f message=evaluated permission=read pattern="scripts\\fit_notus_segments.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T20:16:01.713Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+[0m→ [0mRead scripts/fit_notus_segments.py
+timestamp=2026-10-27T20:16:01.996Z level=INFO run=821f7e9f message=tracking hash=be50645e101baa1dce536184cd7dbc438b04a333 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:02.255Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=12
+timestamp=2026-10-27T20:16:02.454Z level=INFO run=821f7e9f message=tracking hash=180c977196b2acbc0df27c7fa03d24cbf599fb85 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:02.462Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f016cd1001eOzt3loljPsuaW
+timestamp=2026-10-27T20:16:02.462Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:02.463Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:06.079Z level=INFO run=821f7e9f message=evaluated permission=edit pattern="scripts\\fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T20:16:06.080Z level=INFO run=821f7e9f message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+timestamp=2026-10-27T20:16:06.082Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+[0m
+[0m← [0mEdit scripts/fit_notus_segments.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+@@ -72,9 +72,9 @@
+         timestamp += FIT_STEP_S
+     return stamps
+ 
+ 
+-def _collect_masks(game: dict, timestamps: list[float]) -> list[np.ndarray]:
++def _collect_masks(game: dict, timestamps: list[float], game_key: str) -> list[np.ndarray]:
+     video = ROOT / game["video"]
+     capture = cv2.VideoCapture(str(video))
+     if not capture.isOpened():
+         raise RuntimeError(f"cannot open {video}")
+@@ -91,9 +91,9 @@
+                 for slot in ("tens", "ones"):
+                     box = cell.get(slot)
+                     if not box:
+                         continue
+-                    mask = _notus_red_mask(_crop(frame, box))
++                    mask = _notus_red_mask(_crop(frame, box), game_key)
+                     if int((mask > 0).sum()) < MIN_LIT_PIXELS:
+                         continue
+                     masks.append(
+                         cv2.resize(mask.astype(np.float32), (CANON_W, CANON_H), interpolation=cv2.INTER_AREA)
+
+[0m
+timestamp=2026-10-27T20:16:06.379Z level=INFO run=821f7e9f message=tracking hash=eef850ebae35281dd37ceb503732e8f4a7e56054 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:06.631Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=13
+timestamp=2026-10-27T20:16:06.865Z level=INFO run=821f7e9f message=tracking hash=e47a7b3c760c9c7d5d17fe90ca2ffdf1551e9644 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:06.873Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f017de9001iIm0KjHCqn01c2
+timestamp=2026-10-27T20:16:06.874Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:06.875Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:10.949Z level=INFO run=821f7e9f message=cleanup prune=7.days
+timestamp=2026-10-27T20:16:12.976Z level=INFO run=821f7e9f message=evaluated permission=edit pattern="scripts\\fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T20:16:12.976Z level=INFO run=821f7e9f message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+timestamp=2026-10-27T20:16:12.978Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+[0m← [0mEdit scripts/fit_notus_segments.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+@@ -197,11 +197,13 @@
+ 
+ def main() -> int:
+     rois = json.loads(ROI_FILE.read_text(encoding="utf-8"))
+     gate_s = _gate_timestamps(rois)
+-    masks: list[np.ndarray] = []
+-    counts: dict[str, int] = {}
++    
++    all_game_results = {}
++    
+     for game_id, game in (rois.get("games") or {}).items():
++        game_key = "A1" if "A1" in game_id else "A"
+         duration_s = float(game.get("fps") or 25.0)
+         video = ROOT / game["video"]
+         capture = cv2.VideoCapture(str(video))
+         if not capture.isOpened():
+@@ -210,31 +212,39 @@
+         fps = float(capture.get(cv2.CAP_PROP_FPS) or 25.0)
+         capture.release()
+         duration_s = frames / fps if frames else duration_s
+         timestamps = _sample_timestamps(duration_s, gate_s)
+-        game_masks = _collect_masks(game, timestamps)
+-        masks.extend(game_masks)
+-        counts[game_id] = len(game_masks)
++        game_masks = _collect_masks(game, timestamps, game_key)
++        
++        if not game_masks:
++            print(f"no masks for {game_id}")
++            continue
++            
++        geometry = _fit_geometry(game_masks)
++        all_game_results[game_key] = geometry
+         print(f"{game_id}: {len(game_masks)} non-gate slot masks from {len(timestamps)} frames")
+-
+-    geometry = _fit_geometry(masks)
+-    payload = {
+-        "generated_by": "scripts/fit_notus_segments.py",
+-        "method": (
+-            "Mean red-mask occupancy of non-gate tens/ones slots, resized to "
+-            f"{CANON_W}x{CANON_H}; the two dark holes locate the central column band and the "
+-            "upper/lower stroke bands; each segment is a core rectangle inside its measured band. "
+-            f"Fitting frames stay at least {GATE_GAP_S:.0f} s from every answer-key timestamp."
+-        ),
+-        "gate_gap_s": GATE_GAP_S,
+-        "core_scale": CORE_SCALE,
+-        "fit_masks": counts,
+-        "segments": geometry,
+-    }
+-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+-    OUT_FILE.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+-    print(f"wrote {OUT_FILE.relative_to(ROOT)}")
++    
++    for game_key, geometry in all_game_results.items():
++        out_file = ROOT / "data" / "roi" / f"notus_segment_geometry_{game_key}.json"
++        payload = {
++            "generated_by": "scripts/fit_notus_segments.py",
++            "method": (
++                "Mean red-mask occupancy of non-gate tens/ones slots, resized to "
++                f"{CANON_W}x{CANON_H}; the two dark holes locate the central column band and the "
++                "upper/lower stroke bands; each segment is a core rectangle inside its measured band. "
++                f"Fitting frames stay at least {GATE_GAP_S:.0f} s from every answer-key timestamp."
++            ),
++            "gate_gap_s": GATE_GAP_S,
++            "core_scale": CORE_SCALE,
++            "fit_masks": {game_id: len(game_masks) for game_id, game_masks in zip([k for k,v in (rois.get("games") or {}).items() if game_key in k], [all_game_results[game_key]])}, # this is wrong, fix logic
++            "segments": geometry,
++        }
++        out_file.parent.mkdir(parents=True, exist_ok=True)
++        out_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
++        print(f"wrote {out_file.relative_to(ROOT)}")
++    
+     return 0
+ 
+ 
++
+ if __name__ == "__main__":
+     raise SystemExit(main())
+
+[0m
+timestamp=2026-10-27T20:16:13.301Z level=INFO run=821f7e9f message=tracking hash=0d59d65a1bdc95a4e046d0f7b82fae8264b2fe4e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:13.510Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=14
+timestamp=2026-10-27T20:16:13.745Z level=INFO run=821f7e9f message=tracking hash=fac1b4bf86400e1f04b24f21eef17a1e8cee228e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:13.752Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0198c8001NCiitMOR17FQTz
+timestamp=2026-10-27T20:16:13.753Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:13.753Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m✗ [0mEdit scripts/fit_notus_segments.py failed
+[91m[1mError: [0mNo changes to apply: oldString and newString are identical.
+timestamp=2026-10-27T20:16:18.106Z level=INFO run=821f7e9f message=tracking hash=dadc1b91abe4d02e570c0fbf002af627657a3c57 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:18.316Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=15
+timestamp=2026-10-27T20:16:18.561Z level=INFO run=821f7e9f message=tracking hash=ffc09e18e7765b4a72dd7f3ba8c800daa7a6a2b6 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:18.568Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f01ab8e001v3YS57Rbi6phNt
+timestamp=2026-10-27T20:16:18.568Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:18.569Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:19.308Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m.venv/Scripts/python.exe scripts/fit_notus_segments.py
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 250, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 216, in main
+    game_masks = _collect_masks(game, timestamps, game_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 95, in _collect_masks
+    mask = _notus_red_mask(_crop(frame, box), game_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _notus_red_mask() takes 1 positional argument but 2 were given
+[0m
+timestamp=2026-10-27T20:16:19.848Z level=INFO run=821f7e9f message=tracking hash=ae4094136c7dca10de84ef4cfec51a2f4a4bcd5f cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:20.096Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=16
+timestamp=2026-10-27T20:16:20.288Z level=INFO run=821f7e9f message=tracking hash=ef9b45739f9359086b981a7f608f65496edd7aa3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:20.299Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f01b2810014Rs2dZYaEphVUH
+timestamp=2026-10-27T20:16:20.299Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:20.300Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:36.002Z level=INFO run=821f7e9f message=evaluated permission=edit pattern=scoreboard_clock_720p.py action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T20:16:36.003Z level=INFO run=821f7e9f message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+timestamp=2026-10-27T20:16:36.005Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+[0m← [0mEdit scoreboard_clock_720p.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+@@ -44,11 +44,21 @@
+     path = ROOT / "data" / "roi" / "notus_red_thresholds.json"
+     _NOTUS_THRESHOLDS = json.loads(path.read_text(encoding="utf-8"))
+     return _NOTUS_THRESHOLDS
+ 
+-def _notus_red_mask(crop: np.ndarray) -> np.ndarray:
++def _notus_red_mask(crop: np.ndarray, game_key: str = "default") -> np.ndarray:
+     """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
+-    thresholds = _load_notus_thresholds()
++    if game_key == "A1":
++        thresholds = _load_notus_thresholds_A1()
++    elif game_key == "A":
++        thresholds = _load_notus_thresholds_A()
++    else:
++        # Fallback to original single file if requested
++        try:
++            thresholds = _load_notus_thresholds()
++        except:
++            return np.zeros((crop.shape[0], crop.shape[1]), dtype=np.uint8)
++            
+     h_min = thresholds["h_min"]
+     h_max = thresholds["h_max"]
+     s_min = thresholds["s_min"]
+     v_min = thresholds["v_min"]
+
+[0m
+timestamp=2026-10-27T20:16:36.341Z level=INFO run=821f7e9f message=tracking hash=acf58a8499b06a5976a484d0d4c45a63b10ec43d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:36.601Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=17
+timestamp=2026-10-27T20:16:36.832Z level=INFO run=821f7e9f message=tracking hash=31f55ac00089ea0ad5747122dddae397446d1179 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:36.840Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f01f2fb001B2osWnEpUO4Dvt
+timestamp=2026-10-27T20:16:36.840Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:36.841Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:37.571Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe scripts/fit_notus_segments.py
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 250, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 216, in main
+    game_masks = _collect_masks(game, timestamps, game_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 95, in _collect_masks
+    mask = _notus_red_mask(_crop(frame, box), game_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py", line 51, in _notus_red_mask
+    thresholds = _load_notus_thresholds_A1()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name '_load_notus_thresholds_A1' is not defined. Did you mean: '_load_notus_thresholds'?
+[0m
+timestamp=2026-10-27T20:16:38.089Z level=INFO run=821f7e9f message=tracking hash=b0c6344ff65ffc30e9323c2891fa7cae3b860e94 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:38.294Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=18
+timestamp=2026-10-27T20:16:38.534Z level=INFO run=821f7e9f message=tracking hash=315958f9796cf1e5b4f5369272d88e280b282850 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:38.542Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f01f9980013j4DjE005CS2LS
+timestamp=2026-10-27T20:16:38.542Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:38.543Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:41.734Z level=INFO run=821f7e9f message=evaluated permission=edit pattern=scoreboard_clock_720p.py action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T20:16:41.735Z level=INFO run=821f7e9f message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+timestamp=2026-10-27T20:16:41.737Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+[0m← [0mEdit scoreboard_clock_720p.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+@@ -31,21 +31,53 @@
+ ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+ SEGMENT_GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+ TRACK_DIR = ROOT / "data" / "scoreboard_tracks"
+ 
+-_GEOMETRY: dict[str, tuple[float, float, float, float]] | None = None
+-_NOTUS_THRESHOLDS: dict | None = None
++_NOTUS_THRESHOLDS_A1: dict | None = None
++_NOTUS_THRESHOLDS_A: dict | None = None
++_NOTUS_GEOMETRY_A1: dict | None = None
++_NOTUS_GEOMETRY_A: dict | None = None
+ 
+-def _load_notus_thresholds() -> dict:
+-    global _NOTUS_THRESHOLDS
+-    if _NOTUS_THRESHOLDS is not None:
+-        return _NOTUS_THRESHOLDS
++def _load_notus_thresholds_A1() -> dict:
++    global _NOTUS_THRESHOLDS_A1
++    if _NOTUS_THRESHOLDS_A1 is not None:
++        return _NOTUS_THRESHOLDS_A1
+     import json
+     from pathlib import Path
+-    path = ROOT / "data" / "roi" / "notus_red_thresholds.json"
+-    _NOTUS_THRESHOLDS = json.loads(path.read_text(encoding="utf-8"))
+-    return _NOTUS_THRESHOLDS
++    path = ROOT / "data" / "roi" / "notus_red_thresholds_A1.json"
++    _NOTUS_THRESHOLDS_A1 = json.loads(path.read_text(encoding="utf-8"))
++    return _NOTUS_THRESHOLDS_A1
+ 
++def _load_notus_thresholds_A() -> dict:
++    global _NOTUS_THRESHOLDS_A
++    if _NOTUS_THRESHOLDS_A is not None:
++        return _NOTUS_THRESHOLDS_A
++    import json
++    from pathlib import Path
++    path = ROOT / "data" / "roi" / "notus_red_thresholds_A.json"
++    _NOTUS_THRESHOLDS_A = json.loads(path.read_text(encoding="utf-8"))
++    return _NOTUS_THRESHOLDS_A
++
++def _load_notus_geometry_A1() -> dict:
++    global _NOTUS_GEOMETRY_A1
++    if _NOTUS_GEOMETRY_A1 is not None:
++        return _NOTUS_GEOMETRY_A1
++    import json
++    from pathlib import Path
++    path = ROOT / "data" / "roi" / "notus_segment_geometry_A1.json"
++    _NOTUS_GEOMETRY_A1 = json.loads(path.read_text(encoding="utf-8"))
++    return _NOTUS_GEOMETRY_A1
++
++def _load_notus_geometry_A() -> dict:
++    global _NOTUS_GEOMETRY_A
++    if _NOTUS_GEOMETRY_A is not None:
++        return _NOTUS_GEOMETRY_A
++    import json
++    from pathlib import Path
++    path = ROOT / "data" / "roi" / "notus_segment_geometry_A.json"
++    _NOTUS_GEOMETRY_A = json.loads(path.read_text(encoding="utf-8"))
++    return _NOTUS_GEOMETRY_A
++
+ def _notus_red_mask(crop: np.ndarray, game_key: str = "default") -> np.ndarray:
+     """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
+     if game_key == "A1":
+         thresholds = _load_notus_thresholds_A1()
+
+[0m
+timestamp=2026-10-27T20:16:42.015Z level=INFO run=821f7e9f message=tracking hash=fe82baafa3ad490508357c125881d8be6cabd266 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:42.229Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=19
+timestamp=2026-10-27T20:16:42.478Z level=INFO run=821f7e9f message=tracking hash=18288f75798fa946ee9cd7f0d4e0f11628d5f849 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:42.485Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f0208f80017SW1258QuYfjtr
+timestamp=2026-10-27T20:16:42.485Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:42.486Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:16:43.157Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe scripts/fit_notus_segments.py
+jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334: 227 non-gate slot masks from 155 frames
+warning: could not find both holes; using the shared layout
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 250, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 222, in main
+    geometry = _fit_geometry(game_masks)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 160, in _fit_geometry
+    return _standard_geometry()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 146, in _standard_geometry
+    return {name: [float(value) for value in rect] for name, rect in _SEGMENTS.items()}
+                                                                     ^^^^^^^^^
+NameError: name '_SEGMENTS' is not defined
+[0m
+timestamp=2026-10-27T20:16:53.804Z level=INFO run=821f7e9f message=tracking hash=7b527751540276e0da458e1884ebb5b20a0e25c0 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:54.049Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=20
+timestamp=2026-10-27T20:16:54.289Z level=INFO run=821f7e9f message=tracking hash=76431d02a19bdfa5ce8c857e2e51053cac7a553c cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:54.299Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f023723001oo27L7RhFx54dy
+timestamp=2026-10-27T20:16:54.299Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:54.300Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m✗ [0mEdit scripts/fit_notus_segments.py failed
+[91m[1mError: [0mCould not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.
+timestamp=2026-10-27T20:16:56.161Z level=INFO run=821f7e9f message=tracking hash=6461ef711e9b22bb4bf5a1008331d8a8d79f49c1 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:56.372Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=21
+timestamp=2026-10-27T20:16:56.604Z level=INFO run=821f7e9f message=tracking hash=0a6dffabb4a4bfee1d2c364dbedd860a2d490f2a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:16:56.611Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f024035001Rp8743hQGZgMek
+timestamp=2026-10-27T20:16:56.612Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:16:56.613Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:17:07.884Z level=INFO run=821f7e9f message=evaluated permission=edit pattern="scripts\\fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T20:17:07.885Z level=INFO run=821f7e9f message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+timestamp=2026-10-27T20:17:07.886Z level=INFO run=821f7e9f message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\fit_notus_segments.py"
+[0m
+[0m← [0mEdit scripts/fit_notus_segments.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py
+@@ -142,9 +142,9 @@
+ 
+ 
+ def _standard_geometry() -> dict[str, list[float]]:
+     """Fallback only: the shared layout, if the mean map has no holes."""
+-    return {name: [float(value) for value in rect] for name, rect in _SEGMENTS.items()}
++    raise RuntimeError("fitting failed: no holes found and no fallback geometry defined")
+ 
+ 
+ def _fit_geometry(masks: list[np.ndarray]) -> dict[str, list[float]]:
+     if not masks:
+
+[0m
+timestamp=2026-10-27T20:17:08.198Z level=INFO run=821f7e9f message=tracking hash=6761832ceda951bc03328791e1ae74c46f39ae07 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:08.411Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=22
+timestamp=2026-10-27T20:17:08.644Z level=INFO run=821f7e9f message=tracking hash=e2ef66bef327c3425b84750368d609ac7440e96a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:08.652Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f026f3d001OP732cRRYs4Vp4
+timestamp=2026-10-27T20:17:08.652Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:17:08.653Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:17:09.398Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe scripts/fit_notus_segments.py
+jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334: 227 non-gate slot masks from 155 frames
+warning: could not find both holes; using the shared layout
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 250, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 222, in main
+    geometry = _fit_geometry(game_masks)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 160, in _fit_geometry
+    return _standard_geometry()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\fit_notus_segments.py", line 146, in _standard_geometry
+    raise RuntimeError("fitting failed: no holes found and no fallback geometry defined")
+RuntimeError: fitting failed: no holes found and no fallback geometry defined
+[0m
+timestamp=2026-10-27T20:17:19.971Z level=INFO run=821f7e9f message=tracking hash=23398c6c0d2266cd97af936687335c53453af49f cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:20.230Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=23
+timestamp=2026-10-27T20:17:20.425Z level=INFO run=821f7e9f message=tracking hash=aacacb7a2dd5306543557d50f4d54cd519dac75a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:20.433Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f029d69001UDD8lcRZ4LHIuH
+timestamp=2026-10-27T20:17:20.434Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:17:20.434Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:17:22.894Z level=INFO run=821f7e9f message=evaluated permission=bash pattern=".venv/Scripts/python.exe - <<'PY'\nimport json\nimport numpy as np\nimport cv2\nfrom pathlib import Path\n\nROOT = Path(r'C:\\Users\\scott\\Documents\\liberty-basketball-analysis')\nROI_FILE = ROOT / \"data\" / \"roi\" / \"notus_scoreboard_rois.json\"\nGEOMETRY_FILE = ROOT / \"data\" / \"roi\" / \"notus_segment_geometry.json\"\n\ndef load_json(p): return json.loads(p.read_text(encoding=\"utf-8\"))\n\nrois = load_json(ROI_FILE)\ngeometry = load_json(GEOMETRY_FILE)[\"segments\"]\n\n# For A1\ngame_id = \"jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334\"\nvideo_path = ROOT / rois[\"games\"][game_id][\"video\"]\ncap = cv2.VideoCapture(str(video_path))\n\nmasks = []\n# Sample a few frames\nfor i in range(100, 1000, 50):\n    cap.set(cv2.CAP_PROP_POS_FRAMES, i)\n    ret, frame = cap.read()\n    if not ret: continue\n    for side in (\"home\", \"away\"):\n        cell = rois[\"games\"][game_id][\"scores\"][side]\n        for slot in (\"tens\", \"ones\"):\n            box = cell[slot]\n            x, y, w, h = box\n            crop = frame[y:y+h, x:x+w]\n            hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)\n            mask = cv2.inRange(hsv, (0, 50, 50), (180, 255, 255)) # generic red-ish\n            masks.append(cv2.resize(mask.astype(np.float32), (100, 120)) / 255.0)\n\ncap.release()\nmean = np.mean(masks, axis=0)\nprint(f\"Mean max: {np.max(mean)}\")\nPY" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe - <<'PY'
+import json
+import numpy as np
+import cv2
+from pathlib import Path
+
+ROOT = Path(r'C:\Users\scott\Documents\liberty-basketball-analysis')
+ROI_FILE = ROOT / "data" / "roi" / "notus_scoreboard_rois.json"
+GEOMETRY_FILE = ROOT / "data" / "roi" / "notus_segment_geometry.json"
+
+def load_json(p): return json.loads(p.read_text(encoding="utf-8"))
+
+rois = load_json(ROI_FILE)
+geometry = load_json(GEOMETRY_FILE)["segments"]
+
+# For A1
+game_id = "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334"
+video_path = ROOT / rois["games"][game_id]["video"]
+cap = cv2.VideoCapture(str(video_path))
+
+masks = []
+# Sample a few frames
+for i in range(100, 1000, 50):
+    cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+    ret, frame = cap.read()
+    if not ret: continue
+    for side in ("home", "away"):
+        cell = rois["games"][game_id]["scores"][side]
+        for slot in ("tens", "ones"):
+            box = cell[slot]
+            x, y, w, h = box
+            crop = frame[y:y+h, x:x+w]
+            hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, (0, 50, 50), (180, 255, 255)) # generic red-ish
+            masks.append(cv2.resize(mask.astype(np.float32), (100, 120)) / 255.0)
+
+cap.release()
+mean = np.mean(masks, axis=0)
+print(f"Mean max: {np.max(mean)}")
+PY
+
+Mean max: 0.5
+[0m
+timestamp=2026-10-27T20:17:23.994Z level=INFO run=821f7e9f message=tracking hash=989372e4283966701f9ac6c5f9f7b39a6e2a7322 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:24.245Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=24
+timestamp=2026-10-27T20:17:24.442Z level=INFO run=821f7e9f message=tracking hash=e469955a9c0356aa2b5fed15da2e203593010602 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:24.450Z level=INFO run=821f7e9f message=process session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK messageID=msg_17f02ad17001DBjiVk4zKK1Myf
+timestamp=2026-10-27T20:17:24.451Z level=INFO run=821f7e9f message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK small=false agent=build mode=primary
+timestamp=2026-10-27T20:17:24.451Z level=INFO run=821f7e9f message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T20:17:27.309Z level=INFO run=821f7e9f message=tracking hash=a4732698ae543ca15df43e6add92daefdb30a00c cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T20:17:27.520Z level=INFO run=821f7e9f message=loop session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK step=25
+timestamp=2026-10-27T20:17:27.522Z level=INFO run=821f7e9f message="exiting loop" session.id=ses_e80ff5fa2ffe4DqP2APzfbBPtK
+timestamp=2026-10-27T20:17:27.526Z level=INFO run=821f7e9f message="disposing instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"

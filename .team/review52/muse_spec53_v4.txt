@@ -1,0 +1,100 @@
+[muse] model recursive/flint-v1.0:free 16:12:42
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/53_referee_signals_spec.md v4 (Hermes). Your v3 DISAGREE 
+(review52/muse_spec53_v3.txt): Scott's
+"book with wiggle room / several factors" cue fusion was compressed. Check v4 
+against .team/review52/
+addendum_ref53_scott.txt: per-shot cue fusion (arm-event type + timing vs 
+release/rim, nearest ref, play stops,
+next restart FT vs throw-in, score overlay change) -> one category (fouled_miss,
+waved_off, violation, and_one,
+none, unknown) with evidence; unknown -> coach flag <=20; no ref visible -> no 
+change; feeds spec 52 scoring
+(excluded from auto e2e denominator); no dangling section refs; SCOTT DECIDES 
+numbers kept. Also protocol: seen
+films only, no blind peeking, no new human review loops.
+End with one line: MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+
+────────────────────────────────────────
+☤ Hermes
+MUSE (reviewer) — read-only pass. Pulling the four artifacts: v4 spec, v3 review, Scott's addendum, and the protocol notes.
+────────────────────────────────────────
+
+📖 Read 53_referee_signals_spec.md  0.3s
+✗ Read muse_spec53_v3.txt  0.3s [File not found: muse_spec53_v3.txt]
+📖 Read addendum_ref53_scott.txt  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+The v3 review path didn't resolve. Locating it, plus pulling the related round-52/53 context.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -iname '*spec53*' -o -iname '*muse*53*' -o -iname '*ref53*' 2>/dev/null | grep -v node_modules  16.9s
+📖 Read cursor_ref53.txt
+📖 Read muse_round52_53.txt  0.1s
+📖 Read muse_spec53_v3.txt  0.1s
+📖 Read muse_spec53_v4.txt  0.1s
+📖 Read prompt_muse_spec53_v4.txt  0.1s
+📖 Read hermes_spec53_v4.txt  0.1s
+📖 Read cursor_spec53_v4.txt  0.1s
+📖 Read spec53_v3_sha.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Context so far is rich. Now pulling the remaining v3 artifacts and repo state to verify the v4 status-line claims (Cursor's v3 verdict, Hermes's v3 handling) before rendering my verdict.
+────────────────────────────────────────
+
+📖 Read cursor_spec53_v3.txt
+📖 Read hermes_spec53_v3.txt
+📖 Read muse_ref53.txt  0.1s
+📖 Read prompt_cursor_spec53_v3.txt  0.1s
+📖 Read prompt_hermes_spec53_v3.txt  0.1s
+📖 Read prompt_muse_spec53_v3.txt  0.1s
+💻 $ git status --porcelain + 1 command  31.6s
+
+────────────────────────────────────────
+☤ Hermes
+Review artifacts are now fully mapped. Running read-only cross-check greps on the v4 spec to confirm no dangling refs and that all checklist markers survived the v4 rewrite.
+────────────────────────────────────────
+
+💻 $ grep -n "section\|fusion\|Fusion" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md  0.1s
+💻 $ grep -n "SCOTT DECIDES\|Scott decides\|Scott confirms\|DECIDES\|decides\|coach\|unknown\|e2e\|no referee\|No referee" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE — read-only review of .team/specs/53_referee_signals_spec.md v4 (Hermes), checked against .team/review52/addendum_ref53_scott.txt and my own v3 DISAGREE (.team/review52/muse_spec53_v3.txt).
+
+Verdict on the v3 DISAGREE: RESOLVED IN V4. The specific complaint — Scott's "book with wiggle room / several factors" cue fusion being compressed away and the POSE LIMIT reference to "cue fusion (section 2)" dangling — is fixed in v4, and the fix is substantive, not cosmetic.
+
+Acceptance checklist vs the addendum, verified against the on-disk v4 text:
+
+1. Per-shot cue fusion restored: PASS. Full section 2 "PER-SHOT CUE FUSION (Scott addendum #2, binding; restored in v4)" is present with the complete block: per candidate shot, cue set within the moment window (section 1) + evidence list (arm-event type and time vs release/rim, nearest/lead referee, play stopping, next restart FT vs throw-in, score overlay change); combination into one category per shot (fouled_miss, waved_off, violation, and_one, none, unknown) via written rules / simple scoring table, NO learned model in v1, several-factor deduction allowed (Scott); one category per shot + evidence stored. Unknown -> coach-review flag (<=20, never guess); no referee visible -> no change; feeds spec 52 scoring (fouled/waved-off/warm-up excluded from auto e2e denominator, TEAM decision) and later shot calls (hook in assign_shot_calls, after spec-37 flags, before final shot_call, seen films first).
+
+2. No dangling section refs: PASS. All "(section N)" pointers resolve (1, 2, 5, 6, 7, 10 all map to real headings); the v3 dangling "cue fusion (section 2)" is gone, and POSE LIMIT / DETECTABLE EVENTS now point to the real section 2.
+
+3. SCOTT DECIDES numbers kept: PASS. Section 9 NUMBERS TABLE retains foul_ref_window_ms = 1500 (Scott confirms), waved_off window (Scott decides), 3PT arm-up min height (Scott decides, NOT spec 38 S8), small-ref keypoint-found share (SCOTT DECIDES, MUSE C3 first gate), labelled-true-shot false-fire pass bar (SCOTT DECIDES, MUSE C2), coach cap <=20 fixed, no-ref -> no cue fixed.
+
+4. Protocol: seen films only, no blind peeking, no new human review loops: PASS. Section 5 + section 11 RULES.
+
+5. Feeds spec 52 scoring / excluded from auto e2e denominator: PASS. Sections 2 and 7.
+
+6. Status line accuracy: PASS. v4 status correctly records CURSOR AGREED on v3, MUSE DISAGREED on v3, and that v4 restores the full section. Renumbering after inserting section 2 (old 2->3 ... old 11->12) is internally consistent, with cross-refs updated (scoring = 7, hook = 6, measurement = 5, make/miss = 10).
+
+Residual observations (non-blocking): waved_off / fouled_miss combination rules are carried as prose ("v1 combination") rather than a formal written combination table — acceptable for v1 but the addendum's "simple scoring table / several factors" ideally gets formalized later; minor wording ambiguity in "~47-56 px wide" for the smallest refs vs the Cursor audit box dims.
+
+Blocking issues against the v4 acceptance checklist: NONE.
+
+MUSE: AGREE | AGREE WITH CHANGES: none | DISAGREE: none
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a96a6d3da2356f9d668f12f5740fe49260b87be77e55eb560729b0d5d0a3b506
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #3"
+
+Session:        local-a96a6d3da2356f9d668f12f5740fe49260b87be77e55eb560729b0d5d0a3b506
+Title:          You are MUSE, the REVIEWER (not Hermes)… #3
+Duration:       3m 52s
+Messages:       28 (1 user, 26 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE | AGREE WITH CHANGES: none | DISAGREE: none

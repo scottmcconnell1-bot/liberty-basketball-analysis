@@ -1,0 +1,9 @@
+You are the Coder. One small fix to spec 39 in .team/shot_detectors/rim_first_finder.py and .team/shot_detectors/test_rim_first.py only. Do not commit. Do not run video or models. Nothing else changes (merge, walk, shot calls, make/miss, constants).
+
+Bug (Claude Code, Proven on run39): is_referee_player follows a matching PLAYER box across the +-REF_WINDOW_FRAMES frames by IoU; on those frames BODD often labels the person "referee" only, so no player box matches and the count stays low (Notus 194720 and 273920: referee picked as shooter). With the tested box held FIXED, a referee box sits inside it on 8 and 12+ of the +-12 frames.
+
+Fix: is_referee_player(box, frame, refs_by_frame, window, min_frames, inside): count frames g in [frame-window, frame+window] where some referee box q on frame g has inside_fraction(box, q) >= inside, using the TESTED box geometry unchanged on every frame (no player matching, no players_by_frame). True if count >= min_frames. Same constants (REF_INSIDE 0.5, REF_WINDOW_FRAMES 12, REF_MIN_FRAMES 5). Keep MATCH_IOU only if still used elsewhere; otherwise remove it and say so. Update callers and the cache.
+
+Tests: referee box inside the fixed box on 5 of the +-12 frames with NO player box on those frames -> True; on 4 -> False; a referee box half outside (inside_fraction 0.4) -> not counted; existing spec 39 tests still pass (adjust only the one that relied on player matching, and say which).
+Run and print exact command + result (python3 if .venv cannot run):
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q

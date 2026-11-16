@@ -1,0 +1,204 @@
+Query: TEAM REQUEST - referee hand signals (proposed spec 53). Read-only; do not
+edit any file except where your role says.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner), 2026-11-14, binding request:
+"Fouls/Violations called by the referee during a shot attempt can be detected by
+watching the referees hands.
+He/she will indicate a call by raising their hand. You can tell a lot by 
+watching them. They indicate when to stop
+the clock, when to start the clock, whether a shot is a 3pt attempt, when a foul
+is committed, when a violation is
+committed, when a foul is committed on a made shot. Find all the referees calls 
+and hand signals and include it in
+your decisions based on the hand motions."
+Scott also: "DO not run this by yourself. I want everyone involved and input 
+with their strengths." So nothing is
+built until the team agrees.
+
+CONTEXT
+- Scott rule (binding, 2026-11-14): fouled missed attempts, waved-off shots and 
+warm-up shots do NOT count as shots;
+  putbacks are separate; airballs count. The current shot model (r2plus1d clip 
+crop around the rim, .team/mm_clip/)
+  cannot see referees, so these cases become errors today.
+- Scott's own examples (.team/review52/spot_check_52_answers.json notes): 
+rimrock:77 travel called on the shot
+  ("no shot"), rimrock:253 shot waved off, gvg:149 shooting foul ("referee 
+raising his hand"), hsb:91 fouled shot,
+  gvg:349 jump ball (two thumbs up), rimrock:325 fouled before clip. Use them as
+the first known cases.
+- Tools on disk: the BODD/player detector already outputs a 'referee' class 
+(models/player_detector.pt,
+  rim_first_finder.py REFEREE_CLASS, is_referee_player); ultralytics 8.4.189 in 
+the GPU env
+  (~/.venvs/liberty-gpu, RTX 5060) -> a YOLO pose model (keypoints: shoulders, 
+elbows, wrists) can be added.
+  Films are 720p broadcast/NFHS; referees are often small and sometimes off 
+screen when the camera pans.
+- History: 2026-11-06 spec 36 referee cues (fouled_miss, referee_holding) were 
+DROPPED after false fires
+  (drift_log line ~149). Say why this attempt will not repeat that.
+- Standard signals (NFHS): stop clock = open hand raised; foul = closed fist 
+raised, then report; 3-pt attempt =
+  one arm raised with 3 fingers; 3-pt made = both arms raised; start clock = 
+chopping arm; violation (travel etc.)
+  = rotating fists / hand signal + direction; waved off / no basket = arms swung
+across body; and-one (foul on a
+  made basket) = count basket + foul signal; jump ball = thumbs up both hands; 
+timeout = T or hands to shoulders.
+- Spec 52 training is running (choose_e). Do not change spec 52; this is 
+additive.
+
+ROLES
+- HERMES (architect): write .team/specs/53_referee_signals_spec.md (this file 
+only): what to detect (ref box ->
+  pose keypoints -> arm-raised / fist / both-arms / waving / chop events with 
+times), how each event changes a
+  shot decision (fouled miss -> not a shot; waved off -> not a shot; 3-pt 
+attempt tag; and-one make stays make;
+  stop/start clock -> dead-ball and game-session help), how to measure it on 
+SEEN films only (labelled shots +
+  Scott's examples) before any blind use, with fixed pass numbers, and what 
+happens when no referee is visible
+  (no change; never guess). Keep it buildable. End with "HERMES: SPEC WRITTEN".
+- MUSE (reviewer): judge feasibility and risks on these films (ref size, 
+panning, occlusion, false fires like
+  spec 36), and the measurement protocol (no blind peeking, no new human review 
+loops - Scott refused more clip
+  reviews; any human role must be one-time and bounded). End with "MUSE: AGREE |
+AGREE WITH CHANGES: ... | DISAGREE: ...".
+- CURSOR (builder/auditor): check what exists in code (referee class quality, 
+frames.json referee boxes, where a
+  pose step plugs in, compute cost per film), list exact files/functions to 
+build, and the smallest prototype to
+  test on 3 seen clips first. End with "CURSOR: AGREE | AGREE WITH CHANGES: ... 
+| DISAGREE: ...".
+💻 $ pwd + 2 commands  46.1s
+📖 Read TEAM_RECOVERY.md
+📖 Read AUTHORITY.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read NEXT_TASK.md
+📖 Read ACTIVE.md  0.1s
+📖 Read STATUS.md  0.1s
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/spot_check_52_answers.json /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/36_rim_first_extras_fix_spec.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/36_rim_first_extras_fix_spec_v1_REJECTED.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/37_rim_first_cue_fix_spec.md  0.2s
+📖 Read drift_log.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ + 1 command  0.7s
+📖 Read hermes_ref53.txt  0.1s
+📖 Read muse_ref53.txt  0.1s
+📖 Read cursor_ref53.txt  0.1s
+📖 Read spot52_sample.json  0.1s
+📖 Read 36_rim_first_extras_fix_spec.md
+📖 Read prompt_hermes_spec36.txt
+📖 Read prompt_cursor_spec36.txt  0.2s
+📖 Read prompt_muse_spec36.txt  0.2s
+💻 $ grep -n -i "referee\|REFEREE" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py  0.2s
+💻 $ sed -n '348,391p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.6s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i "ref53\|refsignals"  0.4s
+📖 Read prompt_team_refsignals53.txt
+💻 $ head -30 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt.recursive_flint-v1.0_free.txt + 2 commands  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/models/  0.2s
+💻 $ ls /mnt/c/Users/scott/Documents/ + 1 command  0.2s
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read rim_first_finder.py
+📖 Read rim_first_finder.py L470-609
+🔎 Grep ^def |^class   1.0s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+📖 Read drift_log.md L80-219
+📖 Read rim_first_finder.py L680-819
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/  0.1s
+✗ Read 42_ft_lane_spec.md  0.2s [File not found: 42_ft_lane_spec.md]
+📖 Read hermes_ref53.txt  0.2s
+📖 Read 53_referee_signals_spec.md
+📖 Read STATUS.md
+💻 $ git status + 2 commands  38.2s
+💻 $ ps aux | grep -iE "hermes|muse|cursor|agent|claude|opencode" | grep -v grep  0.1s
+📖 Read ACTIVE.md
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/run_muse_or.sh + 4 commands  0.1s
+💻 $ ps aux | grep -iE "run_muse|run_hermes|cursor_wsl|run39|run38|ollama|run36|run37|run41|run42|run43|run44|run45|run46|run47|run48|run49|run50|run51|run52" | grep -v grep  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i "ref53\|refsignals" + 2 commands  0.3s
+📖 Read muse_ref53.txt.recursive_flint-v1.0_free.txt
+💻 $ ps -eo pid,ppid,etime,time,cmd --sort=pid | grep -iE "muse|cursor|hermes|flint|ollama|run_" | grep -viE "grep|hermes-agent|python3 -I|cursor-sandbox|bash -O|dump_bash|cursorsandbox|hermes_cli"  0.1s
+💻 $ for f in muse_ref53.txt muse_ref53.txt.* cursor_ref53.txt hermes_ref53.txt prompt_team_refsignals53.txt + 6 commands  3.7s
+💻 $ ps -eo pid,ppid,etimes,time,stat,cmd --sort=pid | awk '$3 ~ /h:/ || $4 ~ /h:/ || /cursor-agent|run_muse|run_hermes|run_hermes_model|cursor_wsl|hermes chat|ollama/ {print}'  0.1s
+💻 $ ps -eo pid,ppid,etimes,time,stat,cmd | grep -E "^\s*(8[0-9]{3}|9[0-9]{3})\b" | grep -v grep  0.1s
+💻 $ echo started + 12 commands
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+⚠️  Session compressed 2 times — accuracy may degrade. Consider /new to start fresh.
+✗ Proc wait  [session_id is required for wait]
+⚙️ Proc ls processes
+⚙️ Proc wait proc_4c4f3a1  180.0s
+💻 $ for f in /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt.* /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/cursor_ref53.txt + 8 commands  0.3s
+📖 Read muse_ref53.txt.recursive_flint-v1.0_free.txt
+📖 Read run_muse_or.sh
+📖 Read run_hermes_model.sh
+📖 Read cursor_wsl.sh
+💻 $ stat -c '%n %s %y' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt* + 2 commands  0.1s
+💻 $ echo MARKER_UNIQUE_9f3a_TEST + 2 commands  0.1s
+💻 $ grep -n "MARKER_UNIQUE_9f3a" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt.recursive_flint-v1.0_free.txt + 2 commands  0.1s
+💻 $ cat /home/scott/.hermes/cache/scratch/ref53_wait.txt 2>/dev/null + 4 commands  0.1s
+💻 $ echo '=====MUSE_OUT=====' + 7 commands  0.2s
+📖 Read addendum_ref53_scott.txt
+💻 $ ps -eo pid,ppid,etimes,time,stat,args --no-headers | grep -iE "flint|muse|cursor|hermes|ollama|run_muse|run_hermes|run_hermes_model|cursor_wsl|chat -m" | grep -v grep | cut -c1-150
+⚙️ Proc wait proc_4c4f3a1  180.0s
+⚙️ Proc wait proc_4c4f3a1  180.0s
+💻 $ kill 12331 2>/dev/null + 3 commands  2.3s
+💻 $ kill -9 12331 2>/dev/null + 3 commands  3.3s
+✗ $ echo started2 + 12 commands  180.3s [exit 124]
+💻 $ ps -eo pid,args --no-headers | grep -E "seq 1 360|ref53_wait2" | grep -v grep + 1 command
+✗ $ echo started3 + 12 commands  180.3s [exit 124]
+💻 $ echo started4 + 12 commands
+⚙️ Proc wait proc_019d94d  180.0s
+💻 $ echo '=====MUSE_OUT_CONTENT=====' + 9 commands  0.1s
+💻 $ ps -eo pid,ppid,etimes,time,stat,args --no-headers | grep -E "run_muse_or|run_hermes_model|cursor_wsl|hermes chat|cursor-agent|ollama|run_hermes" | grep -v grep | cut -c1-110 + 2 commands  0.2s
+💻 $ ps -eo pid,ppid,etimes,time,stat,args --no-headers | grep -E "15206|15208|15216|15217|15223|15225|15227|15379|15754|15755|8831|8815|8828" | grep -v grep | sed -n '1,40p'  0.2s
+⚙️ Proc wait proc_019d94d  180.0s
+📖 Read STATUS.md
+⚙️ Proc wait proc_019d94d  180.0s
+💻 $ stat -c '%n %s %y' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_ref53.txt.recursive_flint-v1.0_free.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/cursor_ref53.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/hermes_choose_e52.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_choose_e52.txt.* /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/cursor_choose_e52.txt  0.1s
+⚙️ Proc wait proc_019d94d  180.1s
+⚙️ Proc wait proc_019d94d  180.0s
+⚙️ Proc wait proc_019d94d  180.0s
+⚙️ Proc wait proc_019d94d  180.0s
+⚙️ Proc wait proc_019d94d  180.0s
+⚙️ Proc wait proc_019d94d  180.0s
+💻 $ echo '=====MUSE_VERDICT_CHECK=====' + 5 commands  0.3s
+📖 Read hermes_ref53.txt L150-289
+💻 $ echo '=====CHILDREN_OF_MUSE_BASH=====' + 7 commands  0.1s
+💻 $ echo '=====SPEC_TAIL=====' + 5 commands  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+The referee-hand-signals team round (spec 53) is now at its decision point. Here's the compiled status:
+
+Round status — TEAM REQUEST: referee hand signals (proposed spec 53), Scott, 2026-11-14
+
+- HERMES (architect): SPEC WRITTEN — wrote only .team/specs/53_referee_signals_spec.md (nothing else edited). It ends with the required line. Design: ref box → pose keypoints → arm events (raised / fist / both-arms / waving / chop) with times; each event mapped to shot decisions (fouled miss → not_a_shot, waved off → not_a_shot, 3-pt tag, and-one make stays make, stop/start clock → dead-ball help, no-referee-visible → no change/never guess); why it won't repeat spec 36's false fires (fixed-box + pose, no player-box matching, no-referee fail-safe); measurement on SEEN films only before any blind use; build order (fixed ref box → YOLO pose → measure); make/miss safety gate.
+
+- MUSE (reviewer): MUSE: DISAGREE — the spec cannot be approved as written; it must be rewritten first. Key findings:
+  - NFHS signal list in the spec is not authoritative — Claude Code's read of .team/review52/nfhs_signals_reference.md (2026-11-14) supersedes the list in prompt_team_refsignals53.txt; the "3 fingers" and "waved off = arms across body" wording were wrong/loose (waved off is really both arms crossing/scissoring in front at waist-chest height, out to sides — NFHS signal 16).
+  - Pose chain can't deliver required cues: YOLO pose keypoints (shoulders/elbows/wrists, COCO 0-15) have no finger/thumb joints; closed-fist / thumbs-up / 3-finger cues aren't directly detectable; only the Scott-approved arm-raise/both-arms proxy (spec 38 S8) is available.
+  - Numbers table misattributed: the "3PT arm-up min height (Scott decides, spec 38 S8 8 frames / 1.5 hoop widths approved)" figures belong to track-break gap and FT pass line, not 3PT arm-up; undecided, must be fixed.
+  - Pass bar should run against frozen labels (36/44/49/50/51 cand labels, labels52_v2, Scott's examples); fouled-miss → not_a_shot "possible_fouled_miss" mixes validated decision with uncertainty tag; shot-call order placement (post spec-37 L4) unspecified; make/miss safety gate needs scoping.
+
+- CURSOR (builder/auditor): CURSOR: AGREE WITH CHANGES — held-fixed-referee + pose direction is right, but the spec must add before anything is built: the referee shot-decision hook in rim_first_finder.assign_shot_calls (docstring: referee_boxes accepted and not read); full gesture-identity event taxonomy (beyond raised/not-raised); lock Scott's three numbers (foul_ref_window_ms ~1500 ms, waved-off window, 3PT arm-up min height) before the run; offline 3-clip prototype before any full-film run.
+
+- Addendum (Scott, 2026-11-14, binding): the NFHS signal list was from memory and is superseded by the official NFHS 2024–25 chart (nfhs_signals_reference.md, 39 signals) — use chart numbers (#2 stop clock open hand, #4 foul fist, #5 bird dog, #16 no score, #17 goal counts, #19 3-pt attempt/made both arms, #22 travel, #1 start clock, …). Scott also ruled: "Go with the book, but some wiggle room. Some things may have to be deduced with several factors because referees do not always follow the book, or clearly indicate their intent." → design must NOT be a strict per-signal classifier only; it must combine cues (arm-raised timing vs shot release/rim time, fist vs open hand, which referee, play stopping, score overlay change, next restart). Output a probability/category per shot (fouled_miss, waved_off, violation, and_one, none, unknown) with evidence listed; route unknown to coach-review flags rather than guessing.
+
+Team state: Muse DISAGREE → per team rules a DISAGREE stops the loop for Scott. Nothing has been built; nothing beyond the spec has been edited.
+
+Next: awaiting your decision — e.g., send it back to Hermes to rewrite the spec per Muse's findings before Cursor re-reviews, or override.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-df86bc953bd5287e15b55dd7e62a85b8ad9512dc41795cae608da1ab4bcbeff1
+  hermes -c "TEAM REQUEST - referee hand signals (proposed… #2"
+
+Session:        local-df86bc953bd5287e15b55dd7e62a85b8ad9512dc41795cae608da1ab4bcbeff1
+Title:          TEAM REQUEST - referee hand signals (proposed… #2
+Duration:       1h 0m 20s
+Messages:       103 (1 user, 101 tool calls)

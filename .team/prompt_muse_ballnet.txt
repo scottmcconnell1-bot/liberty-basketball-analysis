@@ -1,0 +1,10 @@
+﻿You are Muse, the checker. Check Claude Code's VETTED verdict on the plan .team/specs/16_ball_in_net_plan.md (stamp and
+BINDING NOTES a and b are at the top). Read the plan, ai_analyzer.py lines 33-52 and 355-370, settings_store.py lines 1-20
+and 85-105, net_detector.py lines 455-470, and AGENT_OPERATIONAL_PROTOCOL.md Golden Rules.
+Check: (1) the detector's confidence is never lowered and the model file is not changed; (2) binding note a is right that
+load_all_settings opens the database read-write, and its read-only replacement is correct; (3) binding note b is right
+about ball size (production shrinks the full frame to imgsz=640); (4) counts 140 = 19 missed makes + 28 correct makes +
+93 real misses; (5) no protected file edited, no banned trial (linear interpolation, ByteTrack, DeepSORT, early windows,
+wider column, hoop recenter), no hard-coded results, outputs outside the repo; (6) anything wrong in the stamp itself,
+including any line or section it cites. Do not edit any file.
+End with exactly one line that starts with "MUSE: AGREE" or "MUSE: DISAGREE: <reason with file and line>".

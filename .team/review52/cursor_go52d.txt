@@ -1,0 +1,36 @@
+## Pre-TRAIN GO — Spec 52d v3.1
+
+### Verdict on crop shift (the open question)
+
+**Acceptable by-product of the pinned window — not a train blocker.**
+
+`extract_clips.py` anchors `track_hoop` and `rim_offset` at `frames[K_TRIG]`. For `--window 52d`, `K_TRIG = int(round(-T0/STEP)) = 6` → time `t_trig + 0.08 s`, not exact `t`. Spec 1.4 pins that explicitly and discloses it (“trigger frame is now one 0.16 s grid step past … t_trig + 0.08; pinned as the trigger anchor, disclosed”). Crop geometry (2.6× / 3.0× hw → 96×112) is unchanged; only the template/rim reference frame moved with STEP.
+
+Same-time `clips8[k]` vs `clips7a[2k]` differing ~13–19/255 with mostly 0–1 px (some 4–6, one outlier) matches that 80 ms anchor offset plus G5 weak-match freeze — not a broken extract. Re-anchoring at exact `t` would be a **design change** outside the freeze, not a defect fix.
+
+### Proven (this session)
+
+| Check | Result |
+| --- | --- |
+| Spec sha | `e4ebccff…` matches `spec52d_v31_sha.txt` / on-disk prereg |
+| Build file shas | extract / train / ensemble / test_mm52 / build52d_commands all MATCH build report |
+| clips8 sha freeze | all 5 films MATCH `clips8_sha.txt` |
+| Shape | `(n,44,112,96,3)` on all 5 |
+| Parity vs clips7a | `t_ms`, `y`, `hoop_w` identical (adrian 166, notus 39, gvg 561, hsb 146, rimrock 398) |
+| Code pins | `Dropout(0.5)→Linear(512,3)`, `TIME_SHIFT_FRAMES=1`, `PREDICT_BS=8`, speed guard `1.06`, `K_TRIG=6` / `STEP=0.16` / `N=44` |
+| Planned train/gate | Matches Item 4 steps 6–7 + `build52d_commands.txt`; postproc52b unchanged |
+
+### Inferred
+
+Coordinator Windows pytest (327 pass / 2 skip) and GPU-venv head/guard checks are trusted as given; not re-run here. Build report’s WSL `324 passed, 2 skipped, 3 deselected` is consistent with torch-head skips on system Python.
+
+### Unknown
+
+Whether post-train SAME-5 gate passes — out of scope for this pre-train check. Speed-guard or gate fail → stop for Scott as planned.
+
+### Plan
+
+Train `logo clips8 → runs/logo52d` (E=5, seeds 0 1 2, GPU venv); then `gate52` + `postproc52b.json`. No extract rework before train.
+
+CURSOR: GOVerification finished clean: clips8 SHAs match the freeze, all five films keep `t_ms`/`y`/`hoop_w` parity with clips7a at shape `(n,44,112,96,3)`, and the build-report file hashes still match. That backs the earlier **CURSOR: GO** for 52d training.
+[cursor_wsl] exit 0 at 20:44:45

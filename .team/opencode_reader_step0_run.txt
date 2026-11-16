@@ -1,0 +1,5 @@
+Files created:
+- `data/roi/notus_scoreboard_rois_approved_2026-10-26.json`
+- `scripts/extract_notus_fit_crops.py`
+
+Total crops saved: 80

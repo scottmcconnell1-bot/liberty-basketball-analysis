@@ -1,0 +1,216 @@
+Query: You are HERMES, the architect. Write NEW file 
+.team/specs/52d_context_clip_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-15) after the 52c FAIL (review52/hermes_gate52c.txt, 
+muse_gate52c.txt, cursor_gate52c.txt; drift_log end): try a DIFFERENT MODEL FIX 
+in which the model sees what happens in the seconds after the shot (longer clip 
+or a second context clip), not a 1-bit flag.
+Facts: 52c seq flag fired on ~45% of gvg/rimrock candidates and was ignored; the
+3 silents (notus 252520, rimrock 274807, gvg 1158600; Scott-confirmed real 
+misses) still P(shot) 0.04-0.17. Current clip = 32 frames, STEP 0.08 s, window ,
+rim crop 96x112 (extract_clips.py). 52b check rule (postproc52b.json) worked and
+stays.
+Do:
+1. Choose ONE input change: (a) longer window (e.g. more frames or a larger STEP
+over a longer span), or (b) a second context clip after the main one through a 
+shared or second backbone, features concatenated. Consider what a missed first 
+shot vs a scramble looks like in the extra seconds and whether the rim crop 
+shows it. Pin every value now (span, frames, STEP, crop, fusion, head) with a 
+reason not taken from the 3 silent P values or any gate number; disclose where 
+the 3 gaps (1160/2600/5233 ms) influenced it.
+2. Pin the GPU/memory and run-time cost (current logo run ~40 min for 15 models 
+on this GPU) and the clip rebuild: new clips dir (clips8 or similar) from the 
+SAME candidates and labels52a, sha freeze, extract command.
+3. Recipe otherwise R4 unchanged; E=5, seeds 0 1 2, runs/logo52d; gate52 with 
+postproc52b.json; same-5 binding (Scott 'A'); fail -> stop for Scott; R10 blind 
+later. Silent definition unchanged.
+4. Exact build + test + run order. Disclosure section.
+End with "HERMES: PREREG WRITTEN".
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 1 command  1.8s
+✗ $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs /mnt/c/Users/scott/Documents/liberty-basketball-analysis/review52 2>/dev/null  0.3s [exit 2]
+📖 Read 52c_first_shot_sequence_prereg.md
+📖 Read 52b_check_rule_prereg.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ + 1 command  0.5s
+📖 Read hermes_spec52d.txt
+📖 Read hermes_gate52c.txt
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -maxdepth 2 -name "*52d*" -o -maxdepth 2 -name "*spec52d*" 2>/dev/null | grep -v ".git/"  0.3s
+💻 $ git status + 4 commands  32.2s
+💻 $ tail -n 150 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.3s
+📖 Read muse_gate52c.txt  0.1s
+📖 Read cursor_gate52c.txt  0.1s
+📖 Read postproc52b.json  0.1s
+📖 Read extract_clips.py  0.1s
+📖 Read train_clip.py  0.1s
+📖 Read ensemble_predict.py  0.1s
+📖 Read gate52.py  0.1s
+📖 Read test_mm52.py
+📖 Read candidates.py
+💻 $ grep -rn "R4" --include="*.md" -l .team/ docs/ *.md 2>/dev/null  1.0s
+💻 $ grep -rn "R4" --include="*.md" . | grep -iv "R4_[0-9]"  15.6s
+💻 $ grep -rn "Recipe" --include="*.md" .  14.8s
+📖 Read 52_label_audit_stable_ensemble_spec.md
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52c/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52a/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/clips7a/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/clips6/  0.2s
+💻 $ grep -rn "extract_clips" --include="*.md" --include="*.txt" --include="*.py" --include="*.sh" . 2>/dev/null | grep -v node_modules | grep -v ".venv"  55.9s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+📖 Read hermes_spec52d.txt
+📖 Read 52c_first_shot_sequence_prereg.md
+📖 Read extract_clips.py  0.2s
+✗ Read gate52_report.json  0.2s [File not found: gate52_report.json]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/silent3/  0.5s
+📖 Read gate52_report.json  0.1s
+📖 Read prompt_hermes_spec52d.txt  0.1s
+📖 Read silent3_answers.json  0.1s
+📖 Read clips7a_sha.txt  0.1s
+📖 Read hermes_gate52c.txt
+📖 Read postproc52b.json
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/ + 1 command  0.3s
+📖 Read new_film.sh  0.1s
+💻 $ nvidia-smi + 1 command  2.9s
+💻 $ grep -n "clips7a" .team/drift_log.md  0.1s
+💻 $ grep -rn "labels52a" --include="*.md" --include="*.txt" .team/ | grep -v "review52/labels52a"  1.7s
+💻 $ wc -l .team/drift_log.md + 1 command
+📖 Read spec52c_v2_sha.txt
+💻 $ grep -n "extract_clips\|argv\|moments.json\|_mv.json\|tags|" .team/review52/hermes_spec52c_r1.txt
+📖 Read drift_log.md L340-449
+📖 Read train_clip.py  0.1s
+📖 Read 52b_check_rule_prereg.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/cand5/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/cand/ + 2 commands  0.2s
+✗ $ python3 -c " import torchvision, inspect import torchvision.models.video as v src = inspect.getsource(v) import re i = src.find('class R2Plus1D') print(src[i:i+3000]) " [BLOCKED: Command flagged as dangerous (script...]
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/data/film_tags/ + 1 command  0.4s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/data -maxdepth 2 -type d 2>/dev/null + 1 command  1.8s
+✗ $ find / -name "*.py" -path "*torchvision*" 2>/dev/null | grep -i "video\|r2plus"  180.3s [exit 124]
+💻 $ grep -rn "HoopsAlytics\|/Basketball/" --include="*.md" --include="*.sh" --include="*.txt" --include="*.py" .team/ 2>/dev/null | grep -v node_modules  2.4s
+💻 $ grep -rn -i "40 min\|minutes\|elapsed\|took .*min\|run time\|runtime\|seconds" .team/*.md .team/review52/*.txt 2>/dev/null | grep -i "logo\|train\|epoch\|min\b\|minute"  0.5s
+💻 $ grep -n -A3 -B3 "extract_clips.py" .team/review52/hermes_prereg52a_v2.txt .team/review52/hermes_spec52c_r1.txt .team/review52/hermes_review52_run2.txt 2>/dev/null  0.1s
+💻 $ grep -rn "tags|\|gvfmt|\|inherit|\|moments.json\|mv.json\|clips7\|clips6\|clips5" --include="*.txt" --include="*.md" .team/review52/ .team/ 2>/dev/null | grep -v node_modules | grep -i "extract\|python\|command\|usage"  2.1s
+📖 Read ensemble_predict.py
+💻 $ grep -rn "gvfmt\|extract_clips.py " --include="*.txt" --include="*.md" --include="*.sh" .team/ 2>/dev/null | grep -v node_modules | grep -v "hermes_spec52c_r1\|hermes_prereg52a_v2\|hermes_review52_run2"  2.3s
+💻 $ grep -rn "rimrock\|adrian\|notus\|hsb\|gvg" --include="*.sh" --include="*.txt" --include="*.md" .team/ 2>/dev/null | grep -i "mp4\|\.mp4\|video\|\.mp4\|C:/\|mnt/c"  0.3s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+⚠ Compression summary failed: Network connection lost.. Inserted a fallback context marker.
+⚠️  Session compressed 2 times — accuracy may degrade. Consider /new to start fresh.
+💻 $ cat .team/mm_clip/new_film.sh + 1 command  0.1s
+💻 $ grep -n "add_argument\|def main\|def gate\|sys.argv\|postproc\|films\|models\|preds" .team/mm_clip/gate52.py
+📖 Read train_clip.py  0.1s
+📖 Read extract_clips.py
+📖 Read hermes_gate52c.txt
+💻 $ tail -n 60 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md
+📖 Read 52c_first_shot_sequence_prereg.md
+✗ $ ls -la .team/specs/ + 1 command  0.3s [exit 2]
+💻 $ grep -rn "nfhs_gam0a66d85e12" --include="*.txt" --include="*.sh" --include="*.py" --include="*.json" .team/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/ 2>/dev/null | grep -i "mnt/c\|C:/\|/uploads\|uploads/"  1.1s
+✗ $ find /mnt/c -maxdepth 5 \( -iname "*nfhs*" -o -iname "*LIBERTY_H*" -o -iname "*liberty_h*" \) -not -path "*/.git/*" 2>/dev/null  120.2s [exit 124]
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -0,0 +1,253 @@
+│ +# Spec 52D - Temporal Context Clip Model Fix (PRE-REGISTERED) v1
+│ +
+│ +Author: HERMES (Architect)
+│ +Date: 2026-11-15
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +Outputs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/
+│ +
+│ +## Status
+│ +
+│ +PRE-REGISTERED (v1). The change set below is frozen BEFORE any code change or training.
+│ +This is the binding pre-registration for the temporal-context model fix chosen by Scott
+│ +(2026-11-15) after the Spec 52C v2 binding same-5 re-gate FAILED.
+│ +
+│ +- NOT a 1-bit sequence flag (the Spec 52C model change, now superseded here for the model
+│ +  input change).
+│ +- NOT a check-rule change (Spec 52B; postproc52b.json stays and is combined into the
+│ +  same-5 re-gate).
+│ +- NOT a relabel (labels52a_class0_restore.json FROZEN; no labels52c file).
+│ +- NOT a thr / floor / seed / epoch retune.
+│ +
+│ +## Binding decision (Scott, 2026-11-15)
+│ +
+│ +- Scott decided (2026-11-15) after the 52c FAIL (review52/hermes_gate52c.txt,
+│ +  muse_gate52c.txt, cursor_gate52c.txt; drift_log end): try a DIFFERENT MODEL FIX in which
+│ +  the model sees what happens in the seconds after the shot (longer clip or a second context
+│ +  clip), not a 1-bit flag.
+│ +- Pre-registered; Muse + Cursor review; Scott approves; then the SAME-5 re-gate is the
+│ +  binding pass/fail (Scott 'A'); later R10 blind films: NOTUS_A, IDAHO_CITY, RIVERSTONE.
+│ +
+│ +## Inputs read this session (no source changed by this spec)
+│ +
+│ +- .team/specs/52a_class0_restore_prereg.md (v3)
+│ +- .team/specs/52b_check_rule_prereg.md (v2)
+│ +- .team/specs/52_label_audit_stable_ensemble_spec.md (v3; R6/R7/R8)
+│ +- .team/specs/52c_first_shot_sequence_prereg.md (v2)
+│ +- .team/review52/hermes_gate52c.txt, .team/review52/muse_gate52c.txt, .team/review52/cursor_gate52c.txt
+│ +- .team/review52/labels52a_class0_restore.json
+│ +  sha256 = d8d2acd4eaa04004924e3919c0fc3a98ee34f93efe5244d6aa33171b229df384
+│ +  (FROZEN; not changed by this spec)
+│ +- .team/review52/silent3/silent3_answers.json (Scott's label confirmation)
+│ +- .team/review52/clips7a_sha.txt
+│ +- .team/mm_clip/extract_clips.py, train_clip.py, ensemble_predict.py, gate52.py, test_mm52.py
+│ +- .team/mm_clip/postproc52.json, postproc52a.json, postproc52b.json
+│ +- Liberty_Shot_Outputs/mm_clip/clips7a/, runs/logo52a/, runs/logo52c/, runs/choose_e52/,
+│ +  runs/logo52c/gate52_report.json, runs/logo52c/gate52c_stdout.txt
+│ +
+│ +## Gate facts being answered (baseline: logo52c, E=5, seeds 0 1 2, postproc52b.json)
+│ +
+│ +OVERALL FAIL (binding re-gate target):
+│ +
+│ +- adrian: ensemble auto 93.7 pct (119/127) PASS (all conditions true); checks 6; silent_reject 0; honest review 94.5 (120/127).
+│ +- notus: auto 87.1 pct (27/31); checks 3; silent_reject 1 -> FAIL (auto_ge_90 false; silent_eq_0 false); honest review 90.3 (28/31).
+│ +- gvg: auto 95.4 pct (208/218); checks 20; silent_reject 1 -> FAIL (silent_eq_0 false); checks_le_20 true (20 <= cap 20); honest review 96.3 (210/218).
+│ +- hsb: auto 97.1 pct (136/140) PASS (all conditions true); checks 5; silent_reject 0; honest review 98.6 (138/140).
+│ +- rimrock: auto 94.3 pct (116/123); checks 21 (cap 20 -> false); silent_reject 1 -> FAIL (checks_le_20 false, silent_eq_0 false); honest review 95.1 (117/123).
+│ +
+│ +- Seed spread <= 3.2 all games (gate bar <= 5).
+│ +- The 3 silents (labelled misses, ens P(shot) < floor 0.2, all 3 seeds P(shot) < 0.5):
+│ +  notus t=252520, rimrock t=274807, gvg t=1158600. Scott confirmed all 3 are real misses
+│ +  (first shot of a 2-shot sequence; review52/silent3/silent3_answers.json).
+│ +- First-shot P(shot) logo52a -> logo52c: notus 0.083 -> 0.170, rimrock 0.096 -> 0.037, gvg 0.181 -> 0.092 (seq flag = 1 on all 3).
+│ +- 52b check rule worked: gvg checks 150 -> 20, rimrock 77 -> 21 (postproc52b extras_require_seed_disagreement).
+│ +- Seq flag (52c, superseded here as the model fix): seq_follower window 6000 ms fired on
+│ +  gvg ~46.9 pct and rimrock ~44.7 pct (~45 pct) of candidates; not a shot marker (gvg
+│ +  not-a-shot seq rate 0.49 vs labelled shots 0.29; rimrock 0.42 vs shots 0.45). One float
+│ +  after a 512-d pool.
+│ +
+│ +## Item 1 - Decision: ONE input change (PINNED FIX): longer post-shot clip window (option (a))
+│ +
+│ +### 1.1 Clip window geometry (extract_clips.py, pre-change code)
+│ +
+│ +- T0 = -0.88 s, STEP = 0.08 s, N = 32 -> window [t_trig - 0.88, t_trig + 1.60] s,
+│ +  trigger at K_TRIG = int(round(-T0 / STEP)) = 11; crop 96 x 112 (w x h), BGR uint8;
+│ +  fps read from the video; frame k = round((t_trig + T0 + k*STEP) * fps); moment t_ms IS
+│ +  the trigger.
+│ +
+│ +### 1.2 What the old window contained / missed
+│ +
+│ … omitted 175 diff line(s) across 1 additional file(s)/section(s)
+💻 $ tail -n 8 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md + 2 commands  31.4s
+
+────────────────────────────────────────
+☤ Hermes
+Done. New file written:
+
+- Created: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md (new, untracked)
+
+It is the Spec 52D v1 pre-registration for the temporal-context model fix (Scott's 2026-11-15 decision after the 52c FAIL): option (a) — longer post-shot clip window, pinned as the single input change (T0 −0.88 s, STEP 0.08 s, WINDOW_END_S 6.0 s, N = 87 frames, K_TRIG = 11, crop 96×112 unchanged, fusion = single pooled clip → Linear(512,3), no seq/no dropout), with the 3 gaps (1160/2600/5233 ms) disclosed as informing the 6.0 s pin.
+
+Contents: binding decision, inputs read, logo52c gate facts (OVERALL FAIL), pinned decision/values, GPU (RTX 5060, ~8 GiB) + run-time (~40 min → ~60–75 min budget for clips8) and clips8 rebuild (same candidates + labels52a, sha freeze, pinned extract command), R4 recipe unchanged / E=5 / seeds 0 1 2 / runs/logo52d / gate52 + postproc52b / same-5 binding / fail→stop for Scott / R10 blind later, silent definition unchanged, exact build+test+run order, honest read.
+
+Verified: file written via tool (15,047 bytes, write confirmed), ends with HERMES: PREREG WRITTEN.
+
+Not done (per your instruction, THIS FILE ONLY): no code changes, no tests, no training, no clip rebuild, no gate — those are next in the team flow (Muse + Cursor review, Scott approval, then build).
+
+HERMES: PREREG WRITTEN
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d8fbaaab2ae34e84c192ec22ba8a598d3e695d95280e395dcfa4c663fcb8cb7d
+  hermes -c "You are HERMES, the architect. Write NEW file… #6"
+
+Session:        local-d8fbaaab2ae34e84c192ec22ba8a598d3e695d95280e395dcfa4c663fcb8cb7d
+Title:          You are HERMES, the architect. Write NEW file… #6
+Duration:       26m 59s
+Messages:       34 (1 user, 32 tool calls)
+[hermes] exit 0 at 18:32:45

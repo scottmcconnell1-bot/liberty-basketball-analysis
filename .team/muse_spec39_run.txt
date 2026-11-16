@@ -1,0 +1,41 @@
+[muse] model recursive/flint-v1.0:free 12:02:42
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/39_shooter_fix_spec.md (Claude Code's VETTED WITH CONDITIONS block 
+P0-P6 on top, then Hermes v1), .team/specs/38_handcheck_results.json, 
+.team/specs/39_handcheck_rule.json, last 10 lines of .team/drift_log.md. Read 
+only; write nothing.
+Check, 1-3 lines each:
+1. Are P1 (referee filter rewritten) and P3 (hold-length rule dropped) justified
+by the stated checks, and is it honest that P1's numbers were chosen after 
+seeing the spec-38 sample with a new seed-39 sample as the test?
+2. Is IoU matching across nearby frames (P1, P6) a banned tracker 
+(ByteTrack/DeepSORT) or interpolation? 
+3. Golden Rules: new numbers all "Scott decides before the run", no looser 
+existing cutoff (0.6, 8 frames, 3000 ms unchanged), shot calls/make-miss 
+untouched, finder reads no tags, one try, Q4 blind last.
+Last line exactly "MUSE: AGREE" or "MUSE: DISAGREE <reason>".
+📖 Read 39_shooter_fix_spec.md  0.1s
+📖 Read 38_handcheck_results.json  0.1s
+📖 Read 39_handcheck_rule.json  0.2s
+💻 $ tail -n 10 .team/drift_log.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Check 1: P1 justified - F1's player-area overlap missed the referee-inside-player case (0 of 4 caught); the rewrite uses referee-relative overlap >= 0.5 with cross-frame player IoU >= 0.5, >=5 frames within +/-12, consistent with the sample (refs 9-20, others 0-1). P3 justified - hold length does not separate right (1-73) from wrong lane (1-8), so dropping F3 is right; E2 left unfixed as stated. P1's numbers were chosen after seeing the spec-38 sample and said plainly, with the seed-39 sample as the test - honest.
+
+Check 2: No - IoU matching across nearby frames (P1, P6) is the same box-overlap test as the sanctioned P2 merge (IoU >= 0.5), bounded to +/-12 frames and sustained over >=5 frames; it is not ByteTrack/DeepSORT and not interpolation.
+
+Check 3: Golden Rules hold - new numbers carry "Scott decides before the run"; existing cutoffs (release 0.6, 8-frame break, 3000 ms) unchanged; shot calls/make-miss untouched; finder reads no tags; one try; Q4 blind last - all as required.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-53cab8fc7f3b051b3eb1a68bb273962b3f949e0f1aafde86fc3ff5ba436708f4
+  hermes -c "You are Muse, the checker of Claude Code's… #8"
+
+Session:        local-53cab8fc7f3b051b3eb1a68bb273962b3f949e0f1aafde86fc3ff5ba436708f4
+Title:          You are Muse, the checker of Claude Code's… #8
+Duration:       4m 58s
+Messages:       7 (1 user, 5 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE

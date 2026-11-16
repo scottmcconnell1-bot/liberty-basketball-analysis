@@ -1,0 +1,81 @@
+Query: MUSE CHECK (read only; do not edit anything). Repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+Scott 2026-11-02 approved the fall-through guard (spec 
+.team/specs/24_fall_through_guard_spec.md) and said: write the code, run once on
+the 140 build shots (pass: misses_called_makes == 0 AND makes_right >= 29) and 
+once on Adrian Q4 18 shots (pass: misses_called_makes == 0 AND makes_right >= v6
+plain on Q4), no tuning.
+Locked rule: (1) ball center crosses the rim plane downward; (2) during descent 
+|x - hoop_x| < 0.5*hoop_w; (3) track continues below the rim (>= 3 points in 
+0..180*scale_y below rim) and does not rise more than 5*scale_y.
+Hermes wrote the code; Claude Code fixed: the "seen above the rim" check (now 
+the nearest earlier ball point off the rim plane must be above the rim, stricter
+than Hermes's "any earlier point above"), removed a dead function with 
+hoop_w=0.0, and kept the answer out of frame picking in q4_blind_test.py.
+Read: .team/review_fall_guard_small_fixes.diff, .team/review_fall_guard_kbd.diff
+(it also contains the earlier, already-agreed --mapping-proof-json lines), 
+.team/shot_detectors/q4_blind_test.py, and the new tests at the end of 
+.team/shot_detectors/test_keep_ball_detections.py. Claude Code ran: 61 passed.
+Check and answer AGREE or DISAGREE with reasons:
+1. With the switch off, nothing changes (old results identical).
+2. The guard can only turn a make into a miss; numbers 180, 3, 0.5, 5 come from 
+the locked rule/existing lines; nothing looser.
+3. q4_blind_test.py: truth used only for scoring; old_pred = plain v6 rule; PASS
+line matches the fixed pass rule; it cannot overwrite outputs.
+4. Any bug that would make the one run invalid.
+End your reply with ONE line that starts exactly "MUSE: AGREE" or "MUSE: 
+DISAGREE: <reason>".
+⏳ Provider temporarily unavailable — retrying automatically in 17s (cycle 1/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 34s (cycle 2/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 68s (cycle 3/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 63s (cycle 4/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 71s (cycle 5/5); press Esc to stop
+⏳ Automatic recovery gave up after 5 cycles — the provider is still unavailable.
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.9s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.2s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.3s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.8s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.9s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 6.0s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.1s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.7s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.8s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.8s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.6s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.5s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+❌ API failed after 3 retries — HTTP 503: Provider returned error
+   💀 Final error: HTTP 503: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter reported it was overloaded on all 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 503: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-47289697846244a642362054f39e85e62329859bb831f3edef96d1ef1cbab8fe
+  hermes -c "MUSE CHECK (read only; do not edit anything)…"
+
+Session:        local-47289697846244a642362054f39e85e62329859bb831f3edef96d1ef1cbab8fe
+Title:          MUSE CHECK (read only; do not edit anything)…
+Duration:       5m 15s
+Messages:       2 (1 user, 0 tool calls)

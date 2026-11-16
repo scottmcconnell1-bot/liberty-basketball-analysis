@@ -1,0 +1,1 @@
+Read TEAM_RECOVERY.md and AGENTS.md. You are the Coder. Build NEXT_TASK.md only if it carries a VETTED stamp from Claude Code. Change only the files it names, purely additive, and add the tests it lists. Run the tests with .\.venv\Scripts\python.exe -m pytest the test files the plan lists -q. Do not commit; Claude vets first. Report exactly what you changed.

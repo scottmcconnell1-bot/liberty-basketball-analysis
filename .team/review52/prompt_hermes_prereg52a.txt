@@ -1,0 +1,19 @@
+You are HERMES, the architect. Write .team/specs/52a_class0_restore_prereg.md (THIS FILE ONLY; create it).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (binding, 2026-11-14): approve proposal (a) from the gate review, and the re-gate on the SAME 5 LOGO
+games (adrian notus gvg hsb rimrock, spec 52 R6 unchanged) is the binding pass/fail.
+Read: .team/specs/52_*.md (v3), .team/review52/{hermes,muse,cursor}_gate52.txt, drift_log.md last 10 lines,
+.team/review52/labels52_v2.json structure (do not change it; write a NEW labels file name), train_clip.py,
+ensemble_predict.py / postproc52, game_session_48b outputs.
+Pre-register, fixed BEFORE any training, exactly:
+1. Class-0 restore: which rows become class 0 per film (adrian, notus, hsb especially; gvg/rimrock keep labels52_v2),
+   from what source (e.g. 48b out-of-session warm-up candidates = class 0; in-session untagged stays -1 unless a
+   stated rule), counts expected per film, new frozen labels file + sha procedure. No row may be chosen by looking at
+   logo52 predictions.
+2. Predict-time game-session filter: which function, which 48b outputs per film, what happens when a film has no
+   readable board (Riverstone-type: no change), applied identically to all 5 folds.
+3. Unchanged: R4 recipe, E=5, seeds 0 1 2, R6 thresholds, floor 0.2, checks cap 20. No other change.
+4. Write down the flip intent Muse flagged (train aug hflip and TTA hflip both horizontal mirrors).
+5. Run order and outputs (runs/logo52a/), scored with gate52.py exactly as logo52. Fail -> stop for Scott.
+6. Blind films available for later R10 (info): NOTUS_A, IDAHO_CITY, RIVERSTONE (all Liberty home gym).
+End with "HERMES: PREREG WRITTEN".

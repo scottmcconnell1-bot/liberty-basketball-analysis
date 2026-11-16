@@ -1,0 +1,25 @@
+Hermes, Scott 2026-11-02: "We are frozen in analysis... Force Hermes to Write the Code, Not Just the Spec." You WRITE CODE now. Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto. Spec: .team/specs/24_fall_through_guard_spec.md (yours). Edit ONLY the files named below. Do not run anything that writes outside /tmp. Do not run the real tests on video. Do not commit. If your write tool refuses, say so plainly.
+
+Read first: .team/shot_detectors/small_fixes_v6_copy.py (decide_shot from line 174 to its end, short_track_stays_in_net line 119), .team/shot_detectors/keep_ball_detections.py (constants lines 20-50, step_extract ~907, run_arc_and_rule_on_shot ~680, step_arc_rule_report ~1098, main ~1364), .team/shot_detectors/test_keep_ball_detections.py.
+
+THE GUARD (Claude Code fixed every number now, all from existing lines; do not change them):
+In decide_shot add keyword switch_fall_through: bool = False. Only when it is True AND decide_shot is about to return pred == True (every return path that returns a make), run the guard; if the guard fails return (False, details) with details["vetoed"]=True, details["veto_reason"]="fall_through_fail", details["fall_through_why"]=<one of the four below>. A miss is never changed. With the switch False the function is byte-for-byte the same behaviour as now.
+Guard steps (ball = track["ball"] list of (frame, x, y); hoop_x, hoop_y, hoop_w, scale_y as decide_shot already has them; cross_frame = combined[cross_idx][0], the crossing decide_shot accepted):
+  1. G = []; for pt in ball with pt[0] >= cross_frame, in order: yr = pt[2] - hoop_y; if yr > 180.0*scale_y: stop (180 = small_fixes line ~239 net-depth limit); if yr > 0: append pt to G.
+  2. "no_ball_crossing": the last ball point with frame < G[0][0] must exist and have y < hoop_y (ball model itself saw it above the rim, then below). Also fail with this reason if G is empty.
+  3. "short_fall": len(G) < 3 (3 = existing short_net_depth minimum, line ~271).
+  4. "outside_rim": any pt in G with abs(pt[1] - hoop_x) >= 0.5*hoop_w (Scott's locked rule; stricter than the existing 0.55/0.6, never looser).
+  5. "went_up": walking G in order with running max depth m, any pt with pt[2] < m - 5.0*scale_y (5 = existing bounce tolerance line ~483).
+Guard passes only if none of 2-5 fail.
+
+FILES TO CHANGE / CREATE:
+A. .team/shot_detectors/small_fixes_v6_copy.py: the switch + a helper fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) -> Optional[str] (None = pass, else the why string). No other line changes.
+B. .team/shot_detectors/keep_ball_detections.py (additive only, no number changed): run_arc_and_rule_on_shot gets fall_through: bool = False, passed ONLY to the NEW decide_shot call (old_pred stays the plain v6 call). step_arc_rule_report gets fall_through_guard: bool = False, passed through; when True, out_payload["fall_through_guard"] = True. CLI flag --fall-through-guard (store_true). Default behaviour unchanged.
+C. NEW .team/shot_detectors/q4_blind_test.py, CLI:
+   --q4-tracks <json> (list of {t, result, start, hoop, ball, bodd}; written by q4_rebuild_tracks.py), --weights <pt>, --out-dir <dir>, --fall-through-guard.
+   Video = the Adrian film's video_rel from FILMS in keep_ball_detections.py (check it equals uploads/nfhs_gam0a66d85e12.mp4; stop if not).
+   For each track with a hoop (count and list the ones with hoop None as "no hoop - scored as miss call"): extract candidates exactly like step_extract does (same peak_from_track, frames_to_extract, detect_on_crop, zone_filter_candidates, CANDIDATE_CAP, BALL_CONFIDENCE) with the given weights, then run_arc_and_rule_on_shot(track, ..., fall_through=flag). Truth = track["result"] only for scoring.
+   Report per shot: start, truth, v6 plain rule call (old_pred), new call (new_pred) + reason. Summary for BOTH: makes_right, makes_total, misses_called_makes. Write out-dir/q4_results.json and q4_report.md (refuse if they exist). Print the pass line: PASS if new misses_called_makes == 0 AND new makes_right >= v6 plain makes_right, else FAIL. Exit 0 either way. No retry, no tuning, no thresholds of its own.
+D. Tests, appended to .team/shot_detectors/test_keep_ball_detections.py (or a new test_fall_through_guard.py): fall_through_check on hand-made lists: straight drop inside rim -> None; one point at 0.5*hoop_w -> "outside_rim"; rises 6 px after going deeper -> "went_up"; only 2 points below rim -> "short_fall"; first point after crossing below rim with no earlier ball point above rim -> "no_ball_crossing"; decide_shot with switch False == current result on a make track and a miss track; switch True never turns a miss into a make.
+
+Report: list every file changed with a short diff summary and the test command (repo venv: .venv/Scripts/python.exe -m pytest .team/shot_detectors -q) - Claude Code runs it.

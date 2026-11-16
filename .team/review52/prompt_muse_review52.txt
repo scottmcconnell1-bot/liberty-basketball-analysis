@@ -1,0 +1,25 @@
+You are Muse, the reviewer on the Liberty basketball film project. Scott (the owner) asked for your input because Claude Code's last round failed. Read this whole prompt, then read /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/evidence.txt and the tail (last 40 lines) of /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md.
+
+GOAL (Scott, binding): >= 90% of ALL shots in a game found AND called right (make/miss), with minimal coach work. A small coach check list per game is acceptable.
+
+CURRENT SYSTEM (built by Claude Code alone since 2026-11-12, no review by you or Cursor):
+1. Candidates: old rim finder + trigger2 (pan-safe) merged, then moving_ball filter (drops static clutter like a shot-clock digit read as a ball).
+2. Per candidate, a 32-frame hoop-centred clip (-0.88..+1.60 s) -> r2plus1d_18 video model, 3 classes: 0 not a shot, 1 miss, 2 make. Training: 5 games (adrian, notus, gvg = Garden Valley 2 games, hsb, rimrock), 18 epochs, class-weighted CE, strong augmentation.
+3. Post-processing locked (postproc_locked51.json): shot if P(miss)+P(make) >= 0.5; merge shots within 0.8 s; coach checks: shots with P(shot) < 0.65 or |P(make|shot) - 0.5| < 0.3, plus below-threshold candidates with P(shot) >= 0.35.
+
+RESULTS:
+- Rimrock blind (older 4-game model): 81.0% auto. FAIL.
+- Leave-one-game-out over 5 games: 93.9% auto, 95.7% with coach checks (15 checks/game mean).
+- HSB1 blind (new 5-game model, seed 0): 65.4% auto, 70.1% with checks. FAIL. Makes fine (33/37); 33/70 misses called not-a-shot, mostly P(shot) < 0.1.
+- After the blind score (HSB1 is no longer blind): 4 more seeds, same data and settings: auto 93.5%, 65.4%, 91.6%, 79.4%; 5-model average 78.5% auto, 86.9% with checks. HUGE seed variance. Two of five models confidently reject HSB1 misses.
+- Labels: adrian/notus come from the coach's tags. gvg, hsb, rimrock and HSB1 labels were made by Claude Code from frame sheets; no second person checked them. Rimrock contributes 263 not-a-shot examples (most of all films).
+
+QUESTIONS - answer each, specifically:
+Q1. What is the most likely cause of the seed instability on misses? Consider (a) inconsistent 'miss' vs 'not a shot' labelling across films (coach tags vs Claude Code labels; Rimrock's many not-a-shot rows), (b) class balance / weighting, (c) too little data per gym, (d) something else. Use the per-model probabilities in evidence.txt.
+Q2. What must change in the TEST PROTOCOL so the next blind result can be trusted (who labels, how labels are checked, what is locked, what counts as a shot)?
+Q3. What is the single highest-value next step to reach the goal? Be concrete.
+Q4. Is anything in the locked post-processing or coach-check rule unsound?
+
+Finish with ONE line that starts exactly with "MUSE: AGREE" (the plan Claude Code proposes below is right) or "MUSE: DISAGREE:" followed by what to do instead.
+
+Claude Code's proposed plan: (1) define a written miss / not-a-shot rule; (2) re-check every Claude-Code-labelled 'not a shot' and 'miss' in rimrock, hsb, gvg against that rule (and against the coach's tag style on adrian/notus); (3) retrain with corrected labels and an ensemble of 5 seeds; (4) require seed agreement on the leave-one-game-out check before locking; (5) test once on new unseen films that Scott supplies, with labels made before any model output and a random 20% of them checked by a second reviewer.

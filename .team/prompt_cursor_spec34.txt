@@ -1,0 +1,15 @@
+You are the Coder. Read .team/specs/34_ball_track_check_spec.md in full. Line 1 is Claude Code's VETTED stamp with binding conditions D1-D6, which OVERRIDE the spec text below it where they differ (Muse AGREE). Build only what it names. Do not commit. Edit no existing file.
+
+CREATE ONLY:
+1. .team/shot_detectors/ball_track_check.py - pure functions + CLI. Inputs: C:/Users/scott/Documents/Liberty_Shot_Outputs/shot_rules/{adrian,notus}.json (spec 33 tracks; same moment format collect_flight_tracks.py writes) and C:/Users/scott/Documents/Liberty_Shot_Outputs/shot_rules_measured/results.json (spec 33 rule per moment, incl. landing/peak/rise info). Output --out-dir (refuse if exists), default C:/Users/scott/Documents/Liberty_Shot_Outputs/ball_check: results.json + summary.md.
+2. .team/shot_detectors/test_ball_track_check.py - pure tests, no video.
+
+PER D3 - NO CUTOFFS, DISTRIBUTIONS ONLY, all in hoop widths (hoop from the same frame, else most recent earlier in the moment, else next later - same rule as shot_rules_measure.hoop_at; import it from shot_rules_measure, do not copy-edit that file):
+- per source (v6 crop = ball_track, BODD full = bodd_track), per film, tagged vs fake: height above hoop (hoop_y - y)/hoop_w, distance from hoop centre / hoop_w, frame-to-frame jump distance / hoop_w (consecutive detected frames only, divided by frame gap is NOT done - report raw jump and the frame gap separately). Report n, median, 90th percentile, max.
+- missing (c): per source, missing frames / window frames and longest missing run.
+- failed tagged moments (spec 33 rule NOT_A_SHOT, PASS or ORANGE): the values above at the frame that set the failure (rise frame, peak frame, landing frame as recorded in results.json; say which field you used), which source supplied the ball at that frame (v6 or BODD - same v6-first rule as combine_ball_track), and the spec 33 reason. Table per moment.
+- coverage bug (D5): list moments with coverage_ratio > 1 and the fields that cause it. Report only.
+- D4 hand-check selection: 20 failed tagged moments chosen evenly in moment order (every k-th, k = floor(failures/20)), Adrian Q1-Q3 + Notus Q1 only. A separate CLI step --hand-check writes one full JPEG frame per selected moment at the failure frame, with the BODD ball box (red) and v6 ball (green) and hoop (yellow) drawn, into <out-dir>/hand_check/ (local only), plus hand_check.json listing moment_id, film, frame, video path, source. Videos: uploads/nfhs_gam0a66d85e12.mp4 (adrian), uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 (notus). No label is written by code; Claude Code labels.
+- Adrian Q4 never read (filter quarter Q4 out first).
+Tests: hoop-width units equal on a 1920 and 1280-scaled copy; jump stats on a hand track; missing run count; failure-frame lookup picks the right frame and source; even selection k for 57 and 20 failures; coverage >1 detection; Q4 filter.
+Run the tests, print the exact command and result.

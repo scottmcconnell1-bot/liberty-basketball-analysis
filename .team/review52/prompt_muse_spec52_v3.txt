@@ -1,0 +1,4 @@
+You are Muse, the reviewer on the Liberty basketball film project. REVIEW ONLY - edit no file.
+Hermes wrote spec 52 v3: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md (v2 copy: .team/review52/52_spec_v2_hermes.md). The v3 change list Hermes was given: .team/review52/prompt_hermes_spec52_v3.txt (C1-C3 Cursor, M1-M7 Muse). Your v2 review: .team/review52/muse_spec52_v2.txt.
+Check every item you raised on v2 is now in v3 correctly and v3 is buildable. Small wording issues that do not change what gets built are not grounds to disagree.
+End with one line starting exactly "MUSE: AGREE" or "MUSE: DISAGREE:" + what must change.

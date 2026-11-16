@@ -1,0 +1,40 @@
+Spec 40 is in place under Claude Code's Q1–Q9 settings. The free-throw step runs only when a retrace or live pass has both a video and a gym. `--ft-off` leaves the spec 39 trace as it was.
+
+```text
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q
+83 passed in 11.37s
+```
+
+No video and no model were loaded. Nothing was committed.
+
+A still moment reads one frame, the frame nearest trigger−1000 ms. `free_throw` true overrides status, shooter box, floor spot (bottom-centre), shooter, and shooter_reason (`free_throw_half_circle`), and keeps the old box on `trace_shooter_box`. Still with no ellipse sets status orange and reason `ft_circle_not_found`. Shot call, make/miss, and hoop fields are left as the trace wrote them.
+
+`--ft-debug-moments t1,t2,...` with `--video`, `--gym`, and `--ft-debug-dir` writes `{t_ms}_c{i}.png` for those moments only and writes no moments file. An existing debug directory is refused.
+
+**Proven:** the pytest command above, this session. **Inferred:** the Q7 mask check still has to be done by eye on real frames. **Unknown:** whether those gym masks contain the arc.
+
+### Functions
+
+`ft_half_circle.py` (new): `stillness`, `is_still`, `still_frame_index`, `candidates`, `region_for`, `paint_in_region`, `remove_straight`, `ellipse_distance`, `ransac_ellipse`, `feet_inside`, `decide_ft`, `debug_image`, `stage1b_config`.
+
+`rim_first_finder.py`: `annotate_free_throws`, `_apply_ft_decision`, `_ball_points_for_moment`, `parse_ft_debug_moments`, `run_ft_debug`. `retrace_moments`, `run_retrace`, and `detect_span` take the video/gym/FT arguments. `build_arg_parser` and `main` gained `--gym`, `--ft-off`, `--ft-debug-dir`, `--ft-debug-moments`.
+
+`rim_first_measure.py`: `ft_section` and `_render_ft`. `build_report` adds `report["ft"]` (found / missed / false on matched tags, orange `ft_circle_not_found` count, flagged `t_ms` plus tag event type).
+
+### Choices the spec left open
+
+- Stillness links a player by nearest centre on frames 5 apart. The speed used is the 25-frame step, divided by that box height and by `25/fps`. Each player contributes the median of their speeds; the moment uses the median of those. No pair means not still.
+- A ball-holder is the nearest still-frame box. There is no extra match radius.
+- Candidates run in `(x, y, w, h)` order. The first ellipse with exactly one candidate's feet wins. An ellipse with 0 or 2+ feet does not cancel a later candidate.
+- The major axis is OpenCV's full axis (the longer side of `fitEllipse`), because a 6 ft radius is about two player heights across.
+- Point-to-ellipse distance is the sampled Euclidean distance to `(a cos t, b sin t)` rotated by the OpenCV angle. The sample count is `ceil(2π max(a, b))`, about 1 px along the longer semi-axis. The sign is negative inside the ellipse. The inlier test uses the absolute value. Points are scored 2048 at a time.
+- Hough scale is frame width/1280. The min-length and max-gap floors are the ones in `extract_lines` (12 and 4). The erase stroke is the yaml `merge_max_offset_px`.
+- The debug image draws the paint mask before straight segments are removed.
+- A free-throw hit clears `reason`. An orange `ft_circle_not_found` also sets `shooter` and `shooter_reason`, and leaves the trace shooter box.
+- `free_throw` and `ft_reason` are written when the step runs. `--ft-off`, or a retrace without both `--video` and `--gym`, does not add them.
+- The free-throw step always merges and drops referees with the spec 39 rules. `--fixes-off` still changes only the trace.
+- The live pass opens the video again for still frames.
+- `region_for` takes the frame width and height so the square can be clipped.
+- A missing frame is `no_frame`. A frame that will not read is `frame_unreadable`. The trace is left as it was.
+- In the measure, `false` counts matched non-FT tags that were flagged. The flagged list includes every flagged moment; the event type is empty when that moment was not in the match.
+[cursor_wsl] exit 0 at 13:43:20

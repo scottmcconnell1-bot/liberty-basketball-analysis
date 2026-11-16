@@ -1,0 +1,74 @@
+Query: You are checking Claude Code's code (Scott 2026-10-30: Cursor is out of 
+credits, "go ahead and take over"; Hermes and Muse check Claude Code's code). 
+Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis. Do not edit any 
+file.
+Spec: .team/specs/19_d1_job_spec.md (v4, VETTED, Muse AGREE). Code: 
+.team/shot_detectors/keep_ball_detections.py and 
+.team/shot_detectors/test_keep_ball_detections.py. Reference: v6_ball() in 
+collect_q4_bodd.py (lines 106-145).
+Claude Code changed only: (1) constants BALL_CONFIDENCE 0.25 -> 0.28 and new 
+CROP_LEFT_RIGHT=260, CROP_ABOVE=200, CROP_BELOW=240, PREDICT_IMGSZ=640; (2) new 
+functions crop_bounds() and detect_on_crop(); (3) in step_extract, one seek to 
+the earliest needed frame then sequential cap.read() to the last needed frame, 
+calling detect_on_crop on needed frames (was: a seek per frame and a full-frame 
+model call); (4) load_build_shot_list raises SystemExit unless exactly 140 shots
+(was a warning); (5) tests: 0.28, crop constants, two new tests (crop offset 
+added back; every box kept). Claimed test result: 13 passed (python -m pytest 
+.team/shot_detectors/test_keep_ball_detections.py -q).
+Check: (a) crop bounds, clamping, conf, imgsz and the offset add-back match 
+v6_ball exactly; (b) every box is kept (no single-pick, no 220 px filter, no 
+continuity weight); (c) the sequential read reads the right absolute frames 
+(frame index = earliest + count of reads); (d) nothing else in the file changed 
+behaviour: arc windows, zone, cap, truth only in scoring, unchanged rule copy, 
+mapping gate 90%, hard gate 0 misses called makes; (e) no protected file touched
+(git status). Run the tests if you can.
+End with exactly one line: "CHECK: AGREE" or "CHECK: DISAGREE: <reason with file
+and function>".
+📖 Read 19_d1_job_spec.md  0.1s
+📖 Read keep_ball_detections.py  0.3s
+📖 Read test_keep_ball_detections.py  0.3s
+📖 Read collect_q4_bodd.py L106-150  0.3s
+💻 $ git status  38.2s
+✗ $ python -m pytest .team/shot_detectors/test_keep_ball_detections.py -q [exit 1]
+✗ $ pip install pytest -q + 1 command  0.4s [exit 1]
+💻 $ .venv/bin/python -m pytest .team/shot_detectors/test_keep_ball_detections.py -q + 1 command  0.9s
+
+────────────────────────────────────────
+☤ Hermes
+All 13 tests pass. Let me verify the specific checks:
+
+(a) Crop bounds, clamping, conf, imgsz, offset add-back match v6_ball exactly:  
+- CROP_LEFT_RIGHT=260, CROP_ABOVE=200, CROP_BELOW=240, PREDICT_IMGSZ=640, BALL_CONFIDENCE=0.28 — constants match v6_ball (collect_q4_bodd.py:121-125).  
+- crop_bounds() clamps exactly as v6_ball: max(0, hx-260), max(0, hy-200), min(w, hx+260), min(h, hy+240).  
+- detect_on_crop() calls model.predict(crop, conf=0.28, imgsz=640, verbose=False) and adds x0, y0 back to every box centre — identical to v6_ball's cx, cy = x0 + (a+c)/2, y0 + (b+d)/2.
+
+(b) Every box kept — no single-pick, no 220 px filter, no continuity weight:  
+- zone_filter_candidates() keeps all class_name=="basketball" with confidence>=0.28 inside the zone (3 hoop widths horizontal, 4 above / 300 px below).  - No 220 px filter, no single-pick (picks.sort(); picks[0]), no continuity weight (prev * 0.35).
+
+(c) Sequential read uses correct absolute frames:  
+- step_extract: frame_list = frames_to_extract(...) (sorted absolute frames), first, last = min/max, cap.set(..., first), then for abs_fr in range(first, last+1): cap.read() — frame index equals earliest + read count.
+
+(d) No other behaviour changes:  
+- Arc windows: -15..0 and 1..12 (constants match spec).  
+- Zone: 3 hoop widths H, 4 above, 300 px below (constants match).  - Cap: top 3 by confidence (constant CANDIDATE_CAP=3).  
+- Truth only in scoring: truth_is_make(), summarize_results() — arc/rule functions strip result.  
+- Rule: imports decide_shot, reason_of from small_fixes_v6_copy, calls with all switches False.  - Mapping gate 90%: MAPPING_MIN_MATCH_RATE=0.90 enforced in step 1 and step 2.  - Hard gate: misses_called_makes == 0 required.  
+- Shot count gate: EXPECTED_BUILD=140 raises SystemExit if not exact.
+
+(e) No protected files touched:  
+- Git status shows many pre-existing modified files (unrelated to this task).  
+- The two new files for this task — .team/shot_detectors/keep_ball_detections.py and .team/shot_detectors/test_keep_ball_detections.py — are untracked; they do not modify ai_bridge.py, models/, or any protected file.
+
+Test result: 13 passed (run with project venv Python).
+
+CHECK: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-05cc2a86799feda028f5c26af3a1526259ba65a119de34e265a53bd040b0e013
+  hermes -c "Review shot detector crop optimization changes"
+
+Session:        local-05cc2a86799feda028f5c26af3a1526259ba65a119de34e265a53bd040b0e013
+Title:          Review shot detector crop optimization changes
+Duration:       2m 26s
+Messages:       14 (1 user, 12 tool calls)

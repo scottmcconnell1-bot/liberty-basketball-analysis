@@ -1,0 +1,7 @@
+You are CURSOR. READ-ONLY, no file edits. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Pre-TRAIN GO check for spec 52d v3.1 (sha e4ebccff..., Scott approved build + re-test). Cursor build report review52/cursor_build52d.txt; commands review52/build52d_commands.txt. Coordinator: shas match; Windows .venv pytest 327 passed 2 skipped (logo52/52a repro tests skip on Windows paths; ran in WSL); GPU venv ClipModel fc = Sequential(Dropout(0.5), Linear(512,3)), TIME_SHIFT_FRAMES 1, speed guard 1.06 s/step.
+clips8 built (Outputs/mm_clip/clips8, sha review52/clips8_sha.txt): shape (n,44,112,96,3); t_ms, y, hoop_w identical to clips7a on all 5 films.
+Disclosure: clips8 frame k vs clips7a frame 2k (same time) differ by mean 13-19/255; shift search says mostly 0-1 px crop shift, some 4-6 px, one outlier. Coordinator reads this as track_hoop/rim_offset now referencing K_TRIG=6 (t+0.08 s) instead of frame 11 (t). Is that acceptable as a by-product of the pinned window, or a defect that must be fixed before training (e.g. anchor the tracker at time t)? Check extract_clips.py.
+Planned: train_clip.py logo clips8 -> runs/logo52d --films adrian notus gvg hsb rimrock --epochs 5 --seeds 0 1 2 (Windows GPU venv); gate52 with postproc52b.json; fail or speed guard -> stop for Scott.
+End with ONE line: CURSOR: GO | CURSOR: NO-GO: <why>

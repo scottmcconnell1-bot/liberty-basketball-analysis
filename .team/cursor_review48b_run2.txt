@@ -1,0 +1,6 @@
+Prior DISAGREE items are fixed in the re-read: S1 states the board-type path in full (and marks it new), names the `adrian48` crop as authoritative, and B locks npz keys, `knn48`/`adrian_read48` training, `eval_v3` glue, and `digits48.sheet`.
+
+S2–S7 numbers match `board_probe` / `stopstart48` / `session_v3` / `adrian48`; named ports remove the remaining build guesses. No leftover conflict with design48b.
+
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 11:15:27

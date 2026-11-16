@@ -1,0 +1,76 @@
+Measurement finished. No detector changes; threshold is reporting-only. At 0.08 it catches 8/19 missed makes and fires on 22/93 real misses (FAIL printed as required).
+
+### Command
+```bash
+python3 .team/shot_detectors/pixel_miss/net_check.py --out .team/shot_outputs_test/net_check
+```
+
+### Files created (only these two source files)
+- `.team/shot_detectors/pixel_miss/net_check.py`
+- `.team/shot_detectors/pixel_miss/README.md`
+
+Outputs under `.team/shot_outputs_test/net_check/`: `build_results.json`, `summary.md`, `missed_makes_detail.md`, `correct_makes_detail.md`, `misses_fired_on.md`, and 39 crop PNGs. No commit; no other files edited. BINDING NOTE a applied (red1/red2 sat/val ≥ 70; orange ≥ 90).
+
+### Console (verbatim)
+```
+Shot counts after dedupe: build=140 missed_makes=19 correct_makes=28 real_misses=93
+[1/140] notus_a1 t=55400 peak=1387 max_delta=-0.1512 crossing=False
+... (140 per-shot lines) ...
+[140/140] adrian t=3314200 peak=82855 max_delta=0.0000 crossing=False
+
+=== NET CHECK SUMMARY ===
+Build shots: 140
+Missed makes: 19
+  Caught (delta_ratio ≥ 0.08): 8
+  By crossing status:
+    Has crossing: 6 caught / 12
+    No crossing:  2 caught / 7
+Correct makes: 28
+  Caught (delta_ratio ≥ 0.08): 7   <-- sanity check
+Real misses: 93
+  Fired on (delta_ratio ≥ 0.08): 22   <-- MUST BE 0
+FAIL: expected 0 real misses at threshold 0.08, got 22
+  Fired on (delta_ratio ≥ 0.05): 36
+  Fired on (delta_ratio ≥ 0.10): 14
+  Fired on (delta_ratio ≥ 0.12): 10
+
+Per missed make:
+  missed_make_01 (notus_a1 t=64200):  max_delta=-0.11 at frame 1609  crossing=False
+  missed_make_02 (notus_a1 t=142600):  max_delta=2.28 at frame 3633  crossing=True
+  missed_make_03 (notus_a1 t=159300):  max_delta=0.00 at frame 3984  crossing=False
+  missed_make_04 (notus_a1 t=212300):  max_delta=0.20 at frame 5335  crossing=True
+  missed_make_05 (notus_a1 t=357500):  max_delta=4.69 at frame 8984  crossing=True
+  missed_make_06 (notus_a1 t=483400):  max_delta=-0.05 at frame 12086  crossing=False
+  missed_make_07 (notus_a1 t=774600):  max_delta=0.43 at frame 19400  crossing=True
+  missed_make_08 (adrian t=342800):  max_delta=0.05 at frame 8578  crossing=True
+  missed_make_09 (adrian t=638300):  max_delta=0.05 at frame 15997  crossing=True
+  missed_make_10 (adrian t=717000):  max_delta=0.01 at frame 17957  crossing=False
+  missed_make_11 (adrian t=801800):  max_delta=0.12 at frame 20047  crossing=False
+  missed_make_12 (adrian t=1231400):  max_delta=0.10 at frame 30787  crossing=True
+  missed_make_13 (adrian t=1792900):  max_delta=-0.08 at frame 44823  crossing=True
+  missed_make_14 (adrian t=1836700):  max_delta=0.05 at frame 45963  crossing=True
+  missed_make_15 (adrian t=2479100):  max_delta=0.13 at frame 62033  crossing=False
+  missed_make_16 (adrian t=2870400):  max_delta=0.06 at frame 71804  crossing=True
+  missed_make_17 (adrian t=2962500):  max_delta=0.03 at frame 74063  crossing=True
+  missed_make_18 (adrian t=3045900):  max_delta=0.11 at frame 76171  crossing=True
+  missed_make_19 (adrian t=3095700):  max_delta=-0.10 at frame 77402  crossing=False
+
+Wrote: .team/shot_outputs_test/net_check/build_results.json
+Wrote: .team/shot_outputs_test/net_check/summary.md
+Wrote: .team/shot_outputs_test/net_check/missed_makes_detail.md
+Wrote: .team/shot_outputs_test/net_check/correct_makes_detail.md
+Wrote: .team/shot_outputs_test/net_check/misses_fired_on.md
+Crops: 39 PNGs in crops/
+STOP — measurement complete, no detector changes
+```
+
+### Summary counts (Proven: this run)
+| Set | Count | Caught / fired @ 0.08 |
+|-----|-------|------------------------|
+| Build | 140 | — |
+| Missed makes | 19 | 8 caught (6/12 crossing, 2/7 no crossing) |
+| Correct makes | 28 | 7 caught |
+| Real misses | 93 | 22 fired — FAIL |
+
+Miss fires at other report thresholds: 0.05→36, 0.10→14, 0.12→10. Nothing tuned; nothing applied to any detector. Checker can re-run with the Windows venv to `C:\Users\scott\Documents\Liberty_Shot_Outputs\net_check`.Verification finished cleanly: 39 crop PNGs, summary counts match the run (8/19 missed makes caught, 22/93 misses fired at 0.08), and git shows only the two new files (`net_check.py`, `README.md`) untracked.
+[cursor_wsl] exit 0 at 14:32:27

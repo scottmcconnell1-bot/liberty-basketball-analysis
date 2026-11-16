@@ -1,0 +1,2 @@
+Cursor, REVIEW ONLY: do not edit, create or run anything that writes.
+After your AGREE, Muse asked for no silent drops. Claude Code added S7b to .team/specs/48b_game_session_v2_spec.md (dropped_segments, warnings w1/w2, CLI print, S9 compares reference keys only) and fixed the tip-window wording in S6 to match session_v3.build. Re-read S6, S7b and S9. Buildable without guessing, and no conflict with the design code? At most 5 short lines. Last line exactly: CURSOR: AGREE or CURSOR: DISAGREE: <reason>.

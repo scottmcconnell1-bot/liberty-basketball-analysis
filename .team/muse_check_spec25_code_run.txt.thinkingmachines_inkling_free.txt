@@ -1,0 +1,44 @@
+Query: MUSE CHECK (read only; do not edit anything). Repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+Spec: .team/specs/25_doublecount_and_player_motion_spec.md v2 (VETTED, Muse 
+AGREE). Hermes wrote the code; Claude Code then fixed 3 bugs in 
+measure_player_motion.py: (1) BODD hoop centre was taken from the box corner, 
+now (x1+x2)/2,(y1+y2)/2; (2) frames without a usable hoop were counted as 0 
+players, now None and left out of the medians; (3) one seek then sequential 
+reads instead of a seek per frame. Claude Code ran the repo venv tests: 83 
+passed.
+Read: .team/shot_detectors/double_count_fix.py, 
+.team/shot_detectors/measure_player_motion.py, the --double-count-cut parts of 
+.team/shot_detectors/keep_ball_detections.py (search "double_count"), 
+.team/shot_detectors/test_double_count.py, 
+.team/shot_detectors/test_player_motion.py.
+Check: flag off = old behaviour; the cut only removes points at frame offset >= 
+cut; the cut is applied before peak_from_track/frames_to_extract (extract) and 
+before both decide calls (report); measure_player_motion changes no call, 
+matches no player across frames (no tracking), uses only 3.0 and the spec's 
+window, refuses to overwrite; any bug that would make the one run invalid.
+End with ONE line that starts exactly "MUSE: AGREE" or "MUSE: DISAGREE: 
+<reason>".
+📖 Read 25_doublecount_and_player_motion_spec.md  0.1s
+📖 Read double_count_fix.py
+📖 Read measure_player_motion.py
+📖 Read keep_ball_detections.py
+📖 Read test_double_count.py
+📖 Read test_player_motion.py
+📖 Read measure_player_motion.py L50-129
+
+────────────────────────────────────────
+☤ Hermes
+Verified: BODD hoop center uses (x1+x2)/2,(y1+y2)/2 (line 173); frames without hoop appended None and filtered out of medians (lines 182-186, 218-219); cap seek is once (set at 139) then sequential read() loop — no per-frame seek. Refuses overwrite (388-390). Uses only 3.0, no tracking (line 107), per-frame only, no cross-frame match. Double-count: flag defaults False; >= cut_offset dropped; applied before peak_from_track/frames_to_extract (step_extract 976-982) and before both decide_shot calls (run_arc_and_rule_on_shot 1222-1226).
+
+MUSE: AGREE — all 3 Claude fixes present (hoop center, None skip, single seek); cut behavior, ordering, measure scope, and refusal logic match spec v2; no invalidating bug found.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-7755fc31e50434bdb5f37b2cefca6c7d0ff2809662220450f10bcb8077b996ba
+  hermes -c "MUSE CHECK (read only; do not edit anything)… #8"
+
+Session:        local-7755fc31e50434bdb5f37b2cefca6c7d0ff2809662220450f10bcb8077b996ba
+Title:          MUSE CHECK (read only; do not edit anything)… #8
+Duration:       22s
+Messages:       16 (1 user, 14 tool calls)

@@ -1,0 +1,117 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your Stage 1 plan was REJECTED: read the first line of 
+.team/specs/06_stage1_keypoints_plan_v1_REJECTED.md for the five errors, then 
+rewrite the WHOLE plan so its body carries every fix (no notes stamped on top). 
+Keep the good parts: 20 evenly spaced frames per game, numbered overlays colored
+by confidence, per-frame JSON with labels UNKNOWN_<id>, per-index detection 
+rates, a landmark-hypothesis table with evidence frames, read-only model use, no
+interpolation, outputs under .team/stage1_keypoints/. The coder script is 
+scripts/stage1_measure_keypoints.py, run as .\.venv\Scripts\python.exe 
+scripts/stage1_measure_keypoints.py. Include a heading exactly ## Files listing 
+the script and every output path. STRICT: create or edit ONLY 
+.team/specs/06_stage1_keypoints_plan.md. Do not create, edit, or delete any 
+other file. Do not run code that writes files.
+📖 Read 06_stage1_keypoints_plan_v1_REJECTED.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/06_stage1_keypoints_plan.md
+│ .team/specs/06_stage1_keypoints_plan.md
+│ @@ -0,0 +1,217 @@
+│ +# Stage 1 Keypoint Measurement Plan — Coder Plan
+│ +
+│ +**Goal:** Quantify `models/court_keypoint_detector.pt` on ~20 evenly spaced frames per game (Adrian, Notus A1, Notus A). Produce overlay images and JSON per frame, plus a `measurement_report.md`. Measurement only — no changes to `ai_bridge.py` or any existing file, no interpolation, read-only use of the model.
+│ +
+│ +---
+│ +
+│ +## Videos and Frame Selection
+│ +
+│ +| Game | Video Path | Gym |
+│ +|------|------------|-----|
+│ +| Adrian | `uploads/nfhs_gam0a66d85e12.mp4` | Adrian's gym (unknown length) |
+│ +| Notus A1 | `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` | Liberty (92 ft) |
+│ +| Notus A | `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4` | Liberty (92 ft) |
+│ +
+│ +**Frame selection per game (~20 frames):**
+│ +- Uniform spacing only: `total_frames // 20` stride, starting at frame 0
+│ +- No key moments, no tag-based selection
+│ +- Record the exact frame indices chosen in the JSON output
+│ +
+│ +---
+│ +
+│ +## Model Loading
+│ +
+│ +Load the model exactly as `dist/scripts/run_v8.py` does, but with paths relative to the repo root:
+│ +
+│ +```python
+│ +from ultralytics import YOLO
+│ +import cv2
+│ +import numpy as np
+│ +
+│ +court_model = YOLO("models/court_keypoint_detector.pt", verbose=False)
+│ +```
+│ +
+│ +Run inference on a single frame:
+│ +```python
+│ +result = court_model.predict(frame, conf=0.3, verbose=False)[0]
+│ +if result.keypoints is not None and len(result.keypoints) > 0:
+│ +    kpts = result.keypoints[0].xy.cpu().numpy()[0]   # shape (18, 2)
+│ +    confs = result.keypoints[0].conf.cpu().numpy()[0] # shape (18,)
+│ +```
+│ +
+│ +**GPU:** Allow GPU when available (do not force `CUDA_VISIBLE_DEVICES=''`).
+│ +
+│ +---
+│ +
+│ +## Output Directory
+│ +
+│ +All outputs under `.team/stage1_keypoints/`:
+│ +```
+│ +.team/stage1_keypoints/
+│ +├── adrian/
+│ +│   ├── frame_0000_overlay.jpg
+│ +│   ├── frame_0000.json
+│ +│   ├── ...
+│ +│   └── summary_adrian.json
+│ +├── notus_a1/
+│ +│   ├── frame_0000_overlay.jpg
+│ +│   ├── frame_0000.json
+│ +│   ├── ...
+│ +│   └── summary_notus_a1.json
+│ +├── notus_a/
+│ +│   ├── frame_0000_overlay.jpg
+│ +│   ├── frame_0000.json
+│ +│   ├── ...
+│ +│   └── summary_notus_a.json
+│ +└── measurement_report.md
+│ +```
+│ +
+│ +---
+│ +
+│ +## Per-Frame JSON Schema
+│ +
+│ +```json
+│ +{
+│ +  "game": "adrian|notus_a1|notus_a",
+│ +  "frame_idx": 1234,
+│ +  "timestamp_ms": 49360,
+│ +  "keypoints": [
+│ … omitted 139 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten plan fixes all five rejection errors:
+
+1. Adrian video path → uploads/nfhs_gam0a66d85e12.mp4
+2. Run command → .\.venv\Scripts\python.exe scripts/stage1_measure_keypoints.py
+3. No homography/half-court in Stage 1 → removed all half-court measurements, Stage 2 gates, floor-point classification; Stage 1 is discovery only
+4. Terminology → keypoints_detected_conf_0_3 instead of floor_points_detected; no floor-point assumptions5. GPU allowed → removed forced CUDA_VISIBLE_DEVICES=''; evenly spaced frames only, no key moments
+
+All good parts preserved: 20 evenly spaced frames, numbered confidence-colored overlays, per-frame JSON with UNKNOWN_<id>, per-index detection rates, landmark-hypothesis table with evidence frames, read-only model, no interpolation, outputs under .team/stage1_keypoints/, ## Files heading with script and every output path.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d4a50e4f20ec4531f78bef5bdfa2c6fe426d8ed1236537c68b8ed969b61abb4d
+  hermes -c "Rewrite rejected Stage 1 keypoints plan"
+
+Session:        local-d4a50e4f20ec4531f78bef5bdfa2c6fe426d8ed1236537c68b8ed969b61abb4d
+Title:          Rewrite rejected Stage 1 keypoints plan
+Duration:       3m 13s
+Messages:       6 (1 user, 4 tool calls)

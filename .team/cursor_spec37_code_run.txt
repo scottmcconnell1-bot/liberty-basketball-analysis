@@ -1,0 +1,27 @@
+Spec 37 is in the two rim-first files. Shot calls are now `not_a_hoop`, then `same_shot_merged`, then `possible_shoot_around`, then `shot`. Referee boxes are still saved and no longer change the call.
+
+```text
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+```
+
+61 passed in 1.96s. That was system `python3`. The repo venv was not used.
+
+**Proven:** that pytest run. **Inferred:** a 1.7× box never reaches the carry because `detect_span` filters before `_hoop_samples_from_raw`. **Unknown:** how run 37 will score on the films. No video and no models were run.
+
+**Added:** `filter_frame_hoops`, `kept_hoop_indices`, `_moment_hoop_xy`.
+
+**Changed:** `assign_shot_calls`, `emit_moments`, `detect_span`, and the `main` call. `SHOOT_AROUND_MIN_FRAMES = 12` with the comment `Scott decided 2026-11-06, spec 37`. Each moment stores `run_first_frame` and `run_last_frame`. `frames.json` still stores raw hoops under `"h"` and now stores kept indices under `"hk"`.
+
+**Removed:** the `FOUL_REF_WINDOW_MS` constant, and the `referee_holding` and `possible_fouled_miss` call paths, including the `foul_ref_window_ms` argument. No functions were deleted. `_frames_touch_window` is still there and is no longer called.
+
+Choices this prompt left open:
+
+- A missing or non-positive `film_hoop_w` skips the width band and the same-hoop collapse, and cross-series merge is skipped too. A hoop with no width is treated as 0 and dropped by the band.
+- On a confidence tie, the earlier box in the frame is kept.
+- The shoot-around count bisects the millisecond times of the sorted hot-frame list, because the window is in milliseconds and `frame_to_ms` rounds.
+- A moment is "earlier" only when its trigger frame is strictly smaller. A moment with no hoop centre or no run bounds is not a cross-series candidate.
+- Chain resolution walks both same-series and cross-series links and keeps the earliest trigger frame. If one moment is merged by both rules, `merged_into_frame` is the earlier of those two frames. A same-series-only merge still stores the immediate earlier trigger, as it does today.
+- The 0.73-width and 0.74-width test boxes sit in different 80 px buckets, so the old bucket dedupe is not what makes one series or two.The git status check was stopped on purpose. It was walking a large dirty tree and was not part of the spec 37 change.
+
+The implementation itself is unchanged: the two rim-first files are updated, and `python3 -m pytest` reported 61 passed.
+[cursor_wsl] exit 0 at 09:18:32

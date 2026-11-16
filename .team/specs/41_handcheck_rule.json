@@ -1,0 +1,6 @@
+{
+ "frozen_by": "Claude Code",
+ "frozen_at": "2026-11-08, after the L7 gate, before the spec 41 measured run",
+ "rule": "Per film, from run41_<film> moments with free_throw true: drop the 6 calibration moments (adrian 250600, 950760, 2587840; notus 144920, 371600, 763760) and every t_ms in .team/specs/38_handcheck_results.json and 39_handcheck_results.json; sort the rest by t_ms; random.Random(41).sample up to 10. For each: still frame with the FT line, band and picked shooter drawn. Verdict per moment: right shooter / wrong shooter / not a free throw / unclear. Written to .team/specs/41_handcheck_results.json BEFORE reading measure41 ft numbers. Also: every free_throw moment whose tag is not FT (measure non_ft_flagged) is looked at and judged separately.",
+ "measured_run": "retrace from run37_<film> with --video and --gym (adrian | liberty), out run41_<film>; measure41_<film> with the same tags/truth as measure39b. One try; no setting changes after."
+}

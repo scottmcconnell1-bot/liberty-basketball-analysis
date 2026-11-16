@@ -1,0 +1,221 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/32_find_shots_measure_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "FIND SHOTS - MEASURE WHAT EXISTS SPEC v1 - not run". Plain markdown, no
+line-number prefixes, no literal "\n". Edit nothing else, run nothing that 
+writes (read-only code reading and sqlite SELECTs on film_analysis.db opened 
+read-only are fine). If your write tool refuses, say so plainly. One to two 
+pages.
+
+Scott 2026-11-03: "find the shots" - the program must find WHEN shots happen on 
+an UNTAGGED game (today every shot time comes from Scott's manual tags). Order 
+after this: shot type 2/3/FT, shooter, make/miss (make/miss already has the 
+coach review page). Scott's standing rule: the program tries its own method 
+first; coach review is the fallback once that is exhausted.
+
+THIS SPEC = STEP 1 ONLY: measure the shot finders that ALREADY exist against 
+Scott's tags. No new detector, no training, no tuning.
+
+FACTS (Claude Code checked this session, read-only):
+- Tags (answer key): 
+data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json (127 
+shots 2PT/3PT/FT, all 4 quarters) and 
+data/film_tags/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json (31 
+shots). Loader: .team/shot_detectors/pixel_miss/measure_net_moved.py 
+load_shot_tags. Videos uploads/nfhs_gam0a66d85e12.mp4 (Adrian, 25 fps) and 
+uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4.
+- film_analysis.db events table has AI shot events: game_id 
+'jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334__rerun_20261006_033941' 
+source_type 'ai': made_two 30, missed_two 101, made_three 10, missed_three 75, 
+made_free_throw 14, missed_free_throw 17, plus 'shot' 229 (what 'shot' ai rows 
+are - imported tags or detector output - NOT FOUND, Claude Code to check; find 
+out from code: program_mode.py, event_generator.py, ai_analyzer.py, 
+film_tool_tags.py). Notus A1 game_id 
+'jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334' ai: made_two 5, missed_two 
+50, made_three 2, missed_three 38, made_free_throw 11, missed_free_throw 103, 
+'shot' 209.
+- Earlier work: scoreboard reader found makes from score changes (TEAM_RECOVERY:
+"scoreboard-only makes proven on Adrian (43/43)"); Stage C pairs report 
+Liberty_Shot_Outputs/scoreboard/pairs_report.md. Ball/hoop detectors: BODD 
+C:/Users/scott/AppData/Local/Temp/BODD_yolov8n_0001.pt (basketball, hoop, 
+player, referee), v6 ball model.
+- Rules: no core file edits (ai_analyzer.py, event_generator.py, 
+court_memory.py, net_detector.py, manual_tag_teach.py, game_boxscore.py, 
+scoreboard_clock.py); schema.sql, models/, ball_confidence untouched; 
+applied_to_core false; no banned trials (linear interpolation, ByteTrack, 
+DeepSORT, early windows, wider column, hoop recenter); no tuning after results; 
+Adrian Q4 (18 shots) is the blind test - report it SEPARATELY and never use it 
+to design; DB read-only.
+
+PLAN:
+1. List every existing shot finder you can find in code/outputs (name file + 
+function + what output it writes), and for each: does it run on an untagged game
+(needs no tags)? Separate "detector output" rows from "rows copied from tags".
+2. Measurement: for each finder that needs no tags, match its shot times to tag 
+times per film. Matching window: one number fixed BEFORE the run - take it from 
+existing code (name line) or mark "Scott decides before the run" and propose 
+one. Each tag matches at most one finder shot (nearest within window). Report 
+per film and per kind (2PT/3PT/FT): found (recall), extra (finder shots with no 
+tag), timing error median. Q1-Q3 (+Notus) and Adrian Q4 separately.
+3. Output: Liberty_Shot_Outputs/find_shots/ (refuse if exists): results JSON + 
+short markdown table. No DB writes.
+4. Code: one new script under .team/shot_detectors/ (name it) with pure matching
+functions + tests (hand-made times: exact, inside window, outside, two finder 
+shots near one tag, one finder shot near two tags).
+5. Roles: Claude Code vets, Muse checks, Cursor codes. Stop for Scott with the 
+table.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+🔎 Grep shot.*detect|detect.*shot|find.*shot|shot.*find  6.1s
+🔎 Grep scoreboard.*make|make.*scoreboard  6.1s
+🔎 Grep pixel_miss|measure_net_moved  6.1s
+🔎 Grep ball_through_rim|net_moved|rim_arc_shots  3.2s
+🔎 Find event_generator\.py|ai_analyzer\.py|program_mode\.py|film_tool_tags\.py  3.2s
+🔎 Grep event_type.*shot|event_type.*made|event_type.*missed  3.2s
+📖 Read event_generator.py L1-200
+📖 Read ai_analyzer.py L1-200
+📖 Read program_mode.py L1-200
+🔎 Find film_tool_tags  3.5s
+🔎 Grep generate_precision_events|precision.*event|rim_arc_shots  3.5s
+📖 Read event_generator.py L200-499  3.5s
+📖 Read event_generator.py L500-799
+📖 Read event_generator.py L1000-1199
+📖 Read measure_net_moved.py L1-200  2.4s
+🔎 Grep scoreboard.*clock|score.*change|find.*make|make.*from.*score  2.4s
+🔎 Grep scoreboard.*pair|pair.*scoreboard|score.*change.*make  6.8s
+📖 Read ai_bridge.py L1-200  6.8s
+🔎 Grep run_saved_v6_rule  6.2s
+🔎 Grep Liberty_Shot_Outputs/scoreboard|pairs_report  6.2s
+📖 Read ai_bridge.py L900-1099  0.1s
+✗ Read pairs_report.md L1-200  0.1s [File not found: pairs_report.md]
+🔎 Find pairs_report  7.2s
+🔎 Grep net_moved_after_shot  7.2s
+📖 Read net_detector.py L500-599  2.7s
+🔎 Find scoreboard.*pair|pairs_report  2.7s
+🔎 Find pairs|scoreboard  2.2s
+🔎 Grep detect_shot_attempts|find_shots  2.2s
+🔎 Grep detect_shot_attempts|find_shots  0.4s
+📖 Read detect_shots_distance.py L1-100  0.5s
+📖 Read detect_v5.py L1-200  0.1s
+📖 Read detect_v3.py L1-200  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/  0.1s
+🔎 Grep scoreboard.*change|find.*make.*score|score.*diff  6.6s
+📖 Read scoreboard_pair_rises.py L1-200
+
+────────────────────────────────────────
+☤ Hermes
+Now I have a comprehensive understanding of all the existing shot finders. Let me write the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/32_find_shots_measure_spec.md
+│ .team/specs/32_find_shots_measure_spec.md
+│ @@ -0,0 +1,130 @@
+│ +FIND SHOTS - MEASURE WHAT EXISTS SPEC v1 - not run
+│ +
+│ +This spec defines STEP 1 ONLY: measure every existing shot-finding method against Scott's manual tags. No new detector, no training, no tuning.
+│ +
+│ +1. EXISTING SHOT FINDERS INVENTORY
+│ +
+│ +For each finder: name, file+function, what it outputs, whether it runs on an UNTAGGED game (needs no manual tags).
+│ +
+│ +| # | Finder name | File + Function | Output written | Runs untagged? | Notes |
+│ +|---|-------------|-----------------|----------------|----------------|-------|
+│ +| 1 | Precision shot pass | `event_generator.py` → `generate_precision_events_from_segments()` → `detect_shot_from_segment()` (primary + secondary) | Writes `event_type='shot'` rows to `events` table with `shot_result` make/miss + `details_json` (peak_frame, ball_rise, lateral_travel, shot_kind, through_rim, net_moved). Also writes `made_two`/`made_three`/`made_free_throw`/`missed_two`/`missed_three`/`missed_free_throw` rows derived from each shot. | YES | Opt-in via `ai.event_generator_mode = "precision"`. Uses possession segments + ball track. Two passes: primary (min_rise=80px, `live_shot_min_ball_rise`=170px) and secondary (relaxed, min_rise=10px, ball_y_threshold=550). Refractory: 6s per possessor, 4s global. |
+│ +| 2 | Expanded shot pass | `event_generator.py` → `generate_expanded_events_from_segments()` → `detect_shot_from_segment()` (primary + secondary) | Same event types as precision, but different thresholds and higher volume. | YES | Default mode (`expanded`). Primary: `min_ball_rise=10`. Secondary: `SECONDARY_MIN_BALL_RISE=10`, `SECONDARY_BALL_Y_THRESHOLD=550`. No refractory gating between shots. |
+│ +| 3 | Scoreboard rise finder | `.team/shot_detectors/scoreboard_pair_rises.py` → `find_rises()` | Returns list of confirmed score rises `{team, t, from, to, points}`. Does NOT write to DB. Used only for measurement/pairing (Stage C). | YES (needs scoreboard track) | Reads scoreboard track via `scoreboard_clock.py`. A "rise" = score value holds for 3 readable 1s samples. Rise time = FIRST sample showing new value. Proven 43/43 makes on Adrian (TEAM_RECOVERY.md). Only finds MAKES (score changes); misses = no rise. |
+│ +| 4 | `rim_arc_shots` | `event_generator.py` → `rim_arc_shots(ball_track, hoop_samples, min_rise=170, max_dist=280, cluster_ms=4000)` | Returns list of dicts: `{timestamp_ms, peak_frame, peak_x, peak_y, ball_rise, rim_distance}`. Does NOT write to DB. | YES (if called) | "Defined and not called" (BRAD.md, ACTIVE.md). Finds peaks where kept ball rises, falls, and is within 280px of hoop. On Adrian matches tagged shots AND moments with no tag (BRAD.md). |
+│ +| 5 | `run_saved_v6_rule` | `ai_bridge.py` → `run_saved_v6_rule(tag_timestamps, v6_tracks_path, homography_matrix)` | Returns dict: `{total_tags, right, makes_missed, misses_called_makes, results[], applied_to_core:false}`. Each result: `{tag_ts, true, pred, details}`. | NO | Make/miss CLASSIFIER only — requires tag timestamps as input. Scores on SAVED v6 tracks (ball+bodd+hoop). Not a shot-time finder. |
+│ +| 6 | `net_moved_after_shot` | `net_detector.py` → `net_moved_after_shot(frame_reader, peak_frame, hoop, rim_r)` | Returns bool (net moved = make). | NO | Make/miss CLASSIFIER only — requires peak_frame (shot time) as input. Called from precision pass after shot detected. |
+│ +| 7 | `ball_through_rim` | `court_memory.py` → `ball_through_rim(ball_box, hoop)` | Returns bool (ball through rim = make). | NO | Make/miss CLASSIFIER only — requires ball box at shot time. Called from precision pass. |
+│ +| 8 | Experimental detectors | `experiments/detect_v3.py` `find_shots()`, `experiments/detect_v5.py` `find_shots()`, `experiments/detect_shots_distance.py` | CSV outputs (`shots_v3.csv`, `shots_v5.csv`, etc.). Not integrated into pipeline. | YES (standalone) | Research-only. Not in production code path. |
+│ +
+│ +Summary: Only finders #1, #2, #3, #4 can produce shot times on an untagged game. #3 only produces MAKE times (score changes). #4 is not called. #1 and #2 are the main production finders.
+│ +
+│ +2. MEASUREMENT PROTOCOL
+│ +
+│ +2.1 Films and Tags (Answer Key)
+│ +
+│ +| Film | Tag file | Video | Shots (2PT/3PT/FT) | Quarters |
+│ +|------|----------|-------|-------------------|----------|
+│ +| Adrian | `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json` | `uploads/nfhs_gam0a66d85e12.mp4` (25 fps) | 127 (111 Q1-Q3, 18 Q4) | Q1-Q4 |
+│ +| Notus A1 | `data/film_tags/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json` | `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` | 31 | Q1 only |
+│ +
+│ +Tag loader: `.team/shot_detectors/pixel_miss/measure_net_moved.py` → `load_shot_tags()` (lines 73-97). Filters: `eventtype in {2PT,3PT,FT}`, `result in {Make,Miss}`, `quarter in {Q1,Q2,Q3,Q4}`.
+│ +
+│ +2.2 Matching Window
+│ +
+│ +One number fixed BEFORE the run. Sources in priority order:
+│ +- Existing code constant (name the line)
+│ +- If no constant exists: "Scott decides before the run" and propose one.
+│ +
+│ +Candidate windows from code:
+│ +- `MATCH_TOLERANCE_MS = 8000` in `manual_tag_teach.py` (TEACH_ISSUE_ANALYSIS.txt line 36: "AI-detected shot event should only be rejected as a duplicate if there exists a MANUAL TAGGED SHOT within 8 seconds")
+│ +- `shot_refractory_ms = 6000` in `PRECISION_DEFAULTS` (event_generator.py line 712)
+│ +- `shot_global_refractory_ms = 4000` in `PRECISION_DEFAULTS` (line 714)
+│ +- `WINDOW_MS = 25000` in `scoreboard_pair_rises.py` (line 17) — shot t to shot t + 25s (for scoreboard rise pairing, not shot matching)
+│ +
+│ +Proposed default: **8000 ms** (from `MATCH_TOLERANCE_MS`, the teach duplicate-rejection window). Scott confirms or overrides before run.
+│ +
+│ +2.3 Matching Rule
+│ +
+│ +- Each tag matches at most ONE finder shot (nearest within window).
+│ +- Each finder shot matches at most ONE tag (nearest within window).
+│ +- Greedy: sort all (tag, finder) pairs by absolute time difference, take closest first, remove both from pools, repeat.
+│ +- Unmatched tags = missed (false negatives). Unmatched finder shots = extra (false positives).
+│ +
+│ +2.4 Per-Film and Per-Kind Reporting
+│ +
+│ +For each film (Adrian Q1-Q3, Adrian Q4, Notus A1) and each shot kind (2PT, 3PT, FT), report:
+│ +
+│ +| Metric | Definition |
+│ +|--------|------------|
+│ +| **Tagged** | Total tags of this kind in this film |
+│ +| **Found (Recall)** | Tags matched to a finder shot |
+│ +| **Extra** | Finder shots with no matching tag |
+│ +| **Timing error (ms)** | Median |tag_t - finder_t| for matched pairs |
+│ +| **Precision** | Found / (Found + Extra) |
+│ +| **Recall** | Found / Tagged |
+│ +
+│ +Adrian Q4 (18 shots) reported SEPARATELY (blind test — never used to design).
+│ +
+│ +2.5 Output Directory
+│ +
+│ +`Liberty_Shot_Outputs/find_shots/` — script MUST refuse if directory already exists.
+│ +
+│ +Outputs:
+│ +- `results.json` — full per-shot matching detail
+│ +- `summary.md` — short markdown table (per film × kind)
+│ +
+│ +No DB writes.
+│ +
+│ … omitted 52 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 32_find_shots_measure_spec.md L1-100
+📖 Read 32_find_shots_measure_spec.md L100-149
+
+────────────────────────────────────────
+☤ Hermes
+Created /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/32_find_shots_measure_spec.md (130 lines, ~1.5 pages).
+
+Summary of the spec:
+
+- 8 finders inventoried — only #1 (precision), #2 (expanded), #3 (scoreboard rises), #4 (rim_arc_shots) can run on untagged games. #3 only finds makes. #4 is defined but not called. #5-7 are make/miss classifiers needing tag times. #8 are research-only.
+
+- Matching window — proposed 8000 ms from MATCH_TOLERANCE_MS in manual_tag_teach.py (teach duplicate-rejection window). Scott confirms/overrides before run.
+
+- Measurement — greedy nearest-neighbor matching, per film × kind (2PT/3PT/FT), Adrian Q4 reported separately as blind test.
+
+- Output — Liberty_Shot_Outputs/find_shots/ (refuses if exists), results.json + summary.md, no DB writes.
+
+- New code — one script .team/shot_detectors/find_shots_measure.py with pure match_shots() function + 6 hand-made-time tests.
+
+- Roles — Cursor codes, Claude Code vets, Muse checks, Scott reviews table before next step.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-9b7af6a4c0719789a963afc53aa85376be1fec8b74d32165cd962e6bc2e4990e
+  hermes -c "Create find shots measure spec document"
+
+Session:        local-9b7af6a4c0719789a963afc53aa85376be1fec8b74d32165cd962e6bc2e4990e
+Title:          Create find shots measure spec document
+Duration:       3m 18s
+Messages:       59 (1 user, 57 tool calls)

@@ -1,0 +1,37 @@
+Built the four acceptance files only:
+
+- `scoreboard_clock_720p.py` (segment-occupancy reader; no templates in score path)
+- `scripts/fit_notus_segments.py` (fits geometry on non-gate frames ≥60 s from every gate timestamp)
+- `data/roi/notus_segment_geometry.json` (measured geometry)
+- `tests/test_notus_digit_gate.py`
+
+The first gate run hit a Windows `cp1252` error while printing `✓`/`✗` (not a row failure); I fixed only the test’s stdout encoding and reran to get the table. No fit or threshold was changed after the gate.
+
+**Gate result: 9 of 20 rows failed. Stopped. No retuning, no track building, no commit.**
+
+```
+crop                     exp home exp away got home got away
+---------------------------------------------------------------
+notus_A1_00_202s                0        4        0        4  ✓
+notus_A1_01_606s                2       11        2       11  ✓
+notus_A1_02_1010s               4       11        4       11  ✓
+notus_A1_03_1413s               5       14        5       14  ✓
+notus_A1_04_1817s              10       15     None       15  ✗
+notus_A1_05_2221s              13       19     None       14  ✗
+notus_A1_06_2625s              15       25     None     None  ✗
+notus_A1_07_3028s              21       30       21       30  ✓
+notus_A1_08_3432s              29       38     None     None  ✗
+notus_A1_09_3836s              29       40     None     None  ✗
+notus_A_00_187s                 5        2     None     None  ✗
+notus_A_01_562s                11        4       11        4  ✓
+notus_A_02_936s                13        8       13        8  ✓
+notus_A_03_1311s               16        9       16        9  ✓
+notus_A_04_1686s               16       11       16       11  ✓
+notus_A_05_2060s               16       15       16       15  ✓
+notus_A_06_2435s               19       15       19       15  ✓
+notus_A_07_2810s               23       17     None       17  ✗
+notus_A_08_3184s               25       21     None       21  ✗
+notus_A_09_3559s               36       21     None       21  ✗
+```
+
+Failing rows: `notus_A1_04_1817s`, `notus_A1_05_2221s`, `notus_A1_06_2625s`, `notus_A1_08_3432s`, `notus_A1_09_3836s`, `notus_A_00_187s`, `notus_A_07_2810s`, `notus_A_08_3184s`, `notus_A_09_3559s`.

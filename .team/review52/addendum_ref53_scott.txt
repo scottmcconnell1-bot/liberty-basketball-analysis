@@ -1,0 +1,15 @@
+ADDENDUM for spec 53 (referee signals) - read with nfhs_signals_reference.md and nfhs_signal_chart_2024-25.pdf
+1. The signal list in prompt_team_refsignals53.txt was from memory and is SUPERSEDED by the official NFHS 2024-25
+   chart (nfhs_signals_reference.md, 39 signals). Use the chart numbers (#2 stop clock open hand, #4 foul fist,
+   #5 bird dog, #16 no score, #17 goal counts, #19 3-pt attempt / made both arms, #22 travel, #1 start clock, ...).
+2. Scott, binding (2026-11-14): "Go with the book, but some wiggle room. Some things may have to be deduced with
+   several factors because referees do not always follow the book, or clearly indicate their intent."
+   => The design must NOT be a strict per-signal classifier only. It must combine cues: arm-raised timing vs the
+   shot (release/rim time), fist vs open hand where resolvable, which referee (nearest/lead), play stopping
+   (players stop, ball handed to ref, clock overlay stops where readable, free-throw setup / lane lineup next),
+   score overlay change (or not), and the next restart (throw-in vs free throws). Output a probability/category
+   per shot (fouled_miss, waved_off, violation, and_one, none, unknown) with the evidence listed, and route
+   'unknown' to the coach-review flags (within the <=20 cap) rather than guessing.
+3. Team inputs already in (spec 52 retrain): Hermes AGREE (score fouled/waved-off as not-shots, flags catch
+   model firings); Cursor AGREE WITH CHANGES (exclude fouled/waved-off/warm-up from the auto e2e denominator; agent
+   checks Scott's blind labels, not Scott checking more). Spec 53 should state how its output feeds that scoring.

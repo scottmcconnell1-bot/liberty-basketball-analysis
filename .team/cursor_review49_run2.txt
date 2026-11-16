@@ -1,0 +1,5 @@
+P4/P5 are report-only for `49_rs_score.py`; H5’s operating T stays 0.70 (H7 “no second threshold” = no retune of the verdict).
+B already writes every moment with `p or null`; non-null `p` on every in-session rules-miss is required for P4 and matches H5’s need to score those rows.
+P5’s drop buckets map to 48b `session.json` (`dropped_segments`+reasons, periods/gaps); no conflict with H5/B.
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 12:40:26

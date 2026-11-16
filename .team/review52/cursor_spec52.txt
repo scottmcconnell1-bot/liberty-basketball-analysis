@@ -1,0 +1,50 @@
+**Verdict:** With V1–V4 applied, the direction is right (labels → floor → stable train → LOGO gate → blind), but the written plan is not yet complete or trustworthy enough for a blind that can stand for the ≥90% goal.
+
+### What V1–V4 correctly fix
+- **V1:** Airballs/shorts count as shots (matches coach tags).
+- **V2:** Stops peeking at the LOGO test game for early stop; fixed `E` from an inner split.
+- **V3:** Sampler only + plain CE (no double reweight).
+- **V4:** Seed-disagreement is defined enough to implement.
+
+### Further problems (concrete fixes)
+
+1. **Adrian/Notus still poison class 0**  
+   R1 says unmatched → `-1`, but R2 only re-audits Claude films. `labels_tagmatch` / `labels_tags` still write unmatched far-from-tag candidates as `0` (27 Adrian / 8 Notus class-0 today).  
+   **Fix:** Change both helpers to `-1` for unmatched; rebuild or remask `clips6` for adrian/notus; freeze new sha256. Do this before any retrain.
+
+2. **“With review” score is still an oracle**  
+   R6/R10 lock and pass on coach-checked ≥90%, but `ensemble_predict.score` gold-injects tags at check times and can double-count. That inflated 65.4→70.1 and will fake the gate.  
+   **Fix:** Score review only as: auto (non-check) predictions unchanged + human answers on flagged items only. Offline dry-run may simulate “coach always corrects a matched flag,” but must never insert gold for unflagged times or unmatched extras.
+
+3. **Floor 0.2 + V4 still leaves a silent zone**  
+   Real HSB1 misses with all seeds ≤0.21 (e.g. #69, #126) stay below 0.2 and trigger no disagreement.  
+   **Fix:** Add a hard diagnostic gate before lock: on each LOGO held-out game (and HSB1 as seen diagnostic only), count labelled misses with ensemble mean P(shot) < 0.2 and every seed P(shot) < 0.5. If any remain, fail lock (label/model not fixed). Do not rely on the floor alone.
+
+4. **Denominator must be all real shots, not only candidates the finder kept**  
+   Goal is ≥90% of *all* shots found and called right. Candidate-only scoring hides finder misses (Rimrock note already: true figure ≤ labelled %).  
+   **Fix:** R6/R10 use end-to-end scoring vs the full real-shot list (coach tags or complete sheet); no-candidate = not found.
+
+5. **V2 epoch rule is not buildable as written**  
+   “Inner split” / “best epoch” / metric / search cap are unspecified; R3 still literally says “18 ep” and “best on hsb.”  
+   **Fix:** Per LOGO fold: train on 3 games, inner-val on 1 of the 4 train games; pick epoch by miss recall (tie-break: shots_correct_overall); `E = median` of the five fold best-epochs over seeds 0–2; search `1..18`; final `fit` runs exactly `E` epochs (last weights). No held-out test game in that choice.
+
+6. **Seed-disagreement vs 3-seed LOGO**  
+   V4 is phrased for 5 seeds; R5 uses 3.  
+   **Fix:** Define disagreement for the `M` models under test (`M=3` LOGO, `M=5` final/blind): ≥1 shot and ≥1 non-shot, or make/miss split among those that call shot.
+
+7. **Check budget will fight the new flags**  
+   Floor 0.2 + disagreement will raise flags above last round’s worst 25; R8 wants ≤20.  
+   **Fix:** R8 is a hard LOGO gate—if any game’s flag list >20, stop for Scott (do not silently truncate flags and still claim “with review” ≥90%).
+
+8. **Re-audit needs a second pair of eyes before freeze**  
+   Claude re-checking Claude labels alone reintroduces the same miss/non-shot bias.  
+   **Fix:** Before freeze, second reviewer (Scott) spot-checks ≥20% of labels that flip `0↔1` (and a sample of unchanged `0`/`1`) on rimrock/hsb/gvg; record that check in `drift_log`.
+
+9. **HSB1 / deliverables clarity**  
+   **Fix:** State explicitly: HSB1 stays out of R4 training; re-audit is for honest diagnostic only. Name code deliverables: `extract_clips.py` unmatched→`-1`, `train_clip.py` (bf16, sampler, aug, fixed `E`), `ensemble_predict.py` (floor 0.2, seed flags, honest review score), new `postproc52.json`.
+
+### Toward the goal?
+Label audit + stable ensemble + lower floor are necessary and buildable once the above is spelled out. As written (even with V1–V4), a “pass” can still be untrustworthy because of class-0 poison on coach films, oracle review scoring, silent unanimous rejects, and candidate-only denominators.
+
+CURSOR: DISAGREE: require unmatched→-1 rebuild for adrian/notus; honest (non-oracle) review scoring; silent-reject miss diagnostic as a lock gate; all-shots e2e denominator; fully specified inner-split E; M-seed disagreement; hard ≤20 checks; second-person spot-check before label freeze.
+[cursor_wsl] exit 0 at 21:22:27

@@ -1,0 +1,28 @@
+Spec 46 implemented in the two allowed files only. Not committed.
+
+### Pytest
+```
+python3 -m pytest .team/shot_detectors/test_rim_first_make_miss.py .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_ft_half_circle.py -q
+```
+**108 passed in 2.07s** (`.venv/bin/python` missing on WSL; used `python3`)
+
+### Functions added/changed
+**Added:** `v6_ball_scaled`, `crop_scale_doc`, `find_reuse_source_track`, `_write_tracks_json`, `_write_crop_scale_beside`, `_fill_balls_scaled`  
+**Changed:** `cmd_tracks` (`--scaled-crop` / `--reuse-hoops-from`), `cmd_d1` (`--scaled-crop` / `--crop-scale-json` + kbd try/finally), `build_parser`
+
+### Exact crop lines in `v6_ball_scaled`
+```68:71:.team/shot_detectors/rim_first_make_miss.py
+        x0 = int(max(0, hx - 260 * s))
+        y0 = int(max(0, hy - 200 * s))
+        x1 = int(min(w, hx + 260 * s))
+        y1 = int(min(h, hy + 240 * s))
+```
+Pick radius: `abs(cx - hx) > 220 * s or abs(cy - hy) > 220 * s`
+
+### Choices not spelled out
+- V4 pass 1 skips unscaled `v6_ball` (BODD+hoop only; pass 2 is the only ball pass) — matches S1, not a wasted double v6 run
+- `crop_scale.json` refused if it already exists beside `out-json`
+- Reuse match: all tracks by `t` first, then by `moment_t_ms`
+- `kbd_crop` keys use the constant names (`CROP_LEFT_RIGHT`, …)
+- Module “no scoreboard path” test checks path tokens, not the docstring word “scoreboard”Spec 46 is done: both allowed files updated, **108 passed** on the requested pytest trio (`python3`). Not committed — ready for Claude Code’s G1/G2 on Windows when you want that.
+[cursor_wsl] exit 0 at 08:58:11

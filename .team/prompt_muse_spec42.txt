@@ -1,0 +1,4 @@
+Muse, you check. Read-only. Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis.
+Read .team/specs/42_ft_band_lane_spec.md (Claude Code's M1-M6 block at top wins over the text), .team/specs/42_ft_lane_proto.py, .team/shot_detectors/ft_half_circle.py, last 4 lines of .team/drift_log.md.
+Check: (1) spec + M1-M6 match the prototype method and the SETTINGS FIXED block; (2) nothing chosen after seeing Adrian Q4; Q4 is one blind try; (3) the gate can catch a coding error; (4) no rule broken (no core edits, no tags read by finder, no banned trials, one try then stop for Scott); (5) anything missing that Cursor needs to code it.
+Answer in at most 12 lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE.

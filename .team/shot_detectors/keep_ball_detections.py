@@ -64,6 +64,7 @@ from measure_net_moved import (  # noqa: E402
     peak_from_track,
 )
 from small_fixes_v6_copy import decide_shot, reason_of  # noqa: E402
+from double_count_fix import apply_double_count_cut, next_shot_cuts  # noqa: E402
 
 TRACKS_FALLBACK_DIRS = [
     Path(r"C:\Users\scott\AppData\Local\Temp"),
@@ -688,6 +689,7 @@ def run_arc_and_rule_on_shot(
     fps: float,
     cands_by_frame: Dict[int, List[Dict[str, Any]]],
     seed: int = RANSAC_SEED,
+    fall_through: bool = False,
 ) -> Dict[str, Any]:
     """Arc + rule for one shot. Track may contain result; arc path never sees it."""
     track_no_truth = {k: copy.deepcopy(v) for k, v in track.items() if k != "result"}
@@ -719,6 +721,7 @@ def run_arc_and_rule_on_shot(
         switch_a8=False,
         switch_a4=False,
         switch_c4=False,
+        switch_fall_through=fall_through,
     )
     new_reason = reason_of(new_details)
 
@@ -899,6 +902,13 @@ def write_report_md(path: Path, summary: Dict[str, Any], rows: List[Dict[str, An
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _load_all_shot_times_for_film(film: Dict[str, Any]) -> List[int]:
+    """Load all shot tag times (ms) for a film, all quarters, filtered to SHOT_KINDS."""
+    tags_path = ROOT / film["tags_rel"]
+    tags = load_shot_tags(tags_path)
+    return [int(shot["t"]) for shot in tags]
+
+
 # ---------------------------------------------------------------------------
 # Steps
 # ---------------------------------------------------------------------------
@@ -909,6 +919,7 @@ def step_extract(
     v6_weights: Path,
     tracks_dir: Optional[Path],
     out_json: Path,
+    double_count_cut: bool = False,
 ) -> int:
     """Windows / torch step: decode frames, run v6, write candidates + mapping check."""
     import cv2  # step-local
@@ -929,6 +940,19 @@ def step_extract(
     frames_over_cap = 0
     out_shots: List[Dict[str, Any]] = []
 
+    # Pre-compute cuts per film if flag is ON
+    cuts_by_film: Dict[str, Dict[int, Optional[int]]] = {}
+    if double_count_cut:
+        for film in FILMS:
+            film_name = film["name"]
+            all_shot_times = _load_all_shot_times_for_film(film)
+            video_path = ROOT / film["video_rel"]
+            cap = cv2.VideoCapture(str(video_path))
+            fps_v = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+            fps = fps_v if fps_v > 1e-6 else FPS_FALLBACK
+            cap.release()
+            cuts_by_film[film_name] = next_shot_cuts(all_shot_times, fps)
+
     for film in FILMS:
         film_name = film["name"]
         video_path = ROOT / film["video_rel"]
@@ -942,10 +966,15 @@ def step_extract(
         mapping_by_film.setdefault(film_name, {"hits": 0, "total": 0})
 
         film_shots = [s for s in shots if s["film"] == film_name]
+        film_cuts = cuts_by_film.get(film_name, {})
         for shot in film_shots:
             t = int(shot["t"])
             track = tracks_by_film[film_name][t]
             track_no_truth = {k: v for k, v in track.items() if k != "result"}
+            # Apply double-count cut right after stripping result, before peak_from_track / frames_to_extract
+            cut_offset = film_cuts.get(t)
+            if double_count_cut and cut_offset is not None:
+                track_no_truth = apply_double_count_cut(track_no_truth, cut_offset)
             hoop = track_no_truth["hoop"]
             hoop_x, hoop_y, hoop_w = float(hoop[0]), float(hoop[1]), float(hoop[2])
             anchor_frame, _u, _o, anchor_reason = peak_from_track(track_no_truth, t, fps)
@@ -1032,6 +1061,7 @@ def step_extract(
                     "tracks_path": str(path_by_film[film_name]),
                     "video_rel": film["video_rel"],
                     "frames": frames_out,
+                    "cut_offset": cut_offset if double_count_cut else None,
                 }
             )
 
@@ -1071,6 +1101,7 @@ def step_extract(
             "ZONE_BELOW_PX": ZONE_BELOW_PX,
             "CANDIDATE_CAP": CANDIDATE_CAP,
         },
+        "double_count_cut": double_count_cut,
     }
     out_json = Path(out_json)
     out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -1101,6 +1132,9 @@ def step_arc_rule_report(
     tracks_dir: Optional[Path],
     out_json: Path,
     out_md: Path,
+    mapping_proof_json: Optional[Path] = None,
+    fall_through_guard: bool = False,
+    double_count_cut: bool = False,
 ) -> int:
     cand_path = resolve_path(str(candidates_json))
     if not cand_path.exists():
@@ -1109,6 +1143,31 @@ def step_arc_rule_report(
     payload = json.loads(cand_path.read_text(encoding="utf-8"))
     mapping = payload.get("mapping_check") or {}
     rate = float(mapping.get("rate") or 0.0)
+    agreement_with_v6: Optional[float] = None
+    if mapping_proof_json is not None:
+        # Spec 23 v3: frame mapping proven by v6's own candidates.json on this unchanged code;
+        # this file's rate is then agreement with the saved v6 ball points, not a gate.
+        proof_path = resolve_path(str(mapping_proof_json))
+        if not proof_path.exists():
+            raise SystemExit(f"ERROR: mapping proof json not found: {proof_path}")
+        proof = json.loads(proof_path.read_text(encoding="utf-8"))
+        same = (
+            proof.get("constants") == payload.get("constants")
+            and proof.get("n_shots") == payload.get("n_shots")
+            and {(s["film"], int(s["t"])) for s in proof.get("shots") or []}
+            == {(s["film"], int(s["t"])) for s in payload.get("shots") or []}
+        )
+        if not same:
+            msg = (
+                "MAPPING PROOF MISMATCH: proof file and candidates.json differ in constants, "
+                "n_shots or shot set. Stopping for Scott."
+            )
+            print(msg)
+            raise SystemExit(msg)
+        agreement_with_v6 = rate
+        rate = float((proof.get("mapping_check") or {}).get("rate") or 0.0)
+        print(f"mapping proven by {proof_path}: rate {rate:.4f}")
+        print(f"agreement_with_v6 (not a gate): {agreement_with_v6:.4f}")
     if rate < MAPPING_MIN_MATCH_RATE:
         msg = (
             f"MAPPING CHECK GATE FAILED (from candidates.json): rate {rate:.4f} "
@@ -1119,6 +1178,21 @@ def step_arc_rule_report(
 
     shots, tracks_by_film, _paths = load_build_shot_list(tracks_dir)
     prove_noop_identity(shots, tracks_by_film)
+
+    # Pre-compute cuts per film if flag is ON
+    cuts_by_film: Dict[str, Dict[int, Optional[int]]] = {}
+    if double_count_cut:
+        for film in FILMS:
+            film_name = film["name"]
+            all_shot_times = _load_all_shot_times_for_film(film)
+            # For arc-rule-report, fps comes from candidates.json per shot (or FPS_FALLBACK)
+            # We need a representative fps per film; use the first shot's fps from candidates
+            cand_shots = [s for s in payload.get("shots") or [] if s["film"] == film_name]
+            if cand_shots:
+                fps = float(cand_shots[0].get("fps") or FPS_FALLBACK)
+            else:
+                fps = FPS_FALLBACK
+            cuts_by_film[film_name] = next_shot_cuts(all_shot_times, fps)
 
     cand_by_key = {(s["film"], int(s["t"])): s for s in payload.get("shots") or []}
     result_rows: List[Dict[str, Any]] = []
@@ -1141,8 +1215,18 @@ def step_arc_rule_report(
             cands_by_frame = _cands_map_from_shot(cand_shot)
             fps = float(cand_shot.get("fps") or FPS_FALLBACK)
 
+        # Apply double-count cut right after stripping result, before run_arc_and_rule_on_shot's decide calls
+        # old_pred must also use the cut track (so we pass track_no_truth with cut applied)
+        track_no_truth = {k: v for k, v in track.items() if k != "result"}
+        cut_offset = None
+        if double_count_cut:
+            film_cuts = cuts_by_film.get(film, {})
+            cut_offset = film_cuts.get(t)
+            if cut_offset is not None:
+                track_no_truth = apply_double_count_cut(track_no_truth, cut_offset)
+
         outcome = run_arc_and_rule_on_shot(
-            track, t_ms=t, fps=fps, cands_by_frame=cands_by_frame
+            track_no_truth, t_ms=t, fps=fps, cands_by_frame=cands_by_frame, fall_through=fall_through_guard
         )
         hoop = track["hoop"]
         hoop_x, hoop_y, hoop_w = float(hoop[0]), float(hoop[1]), float(hoop[2])
@@ -1172,6 +1256,7 @@ def step_arc_rule_report(
                 "arc_meta": outcome["arc_meta"],
                 "diagnostic_rows": diag_rows,
                 "diagnostic_counts": diag_counts,
+                "cut_offset": cut_offset if double_count_cut else None,
             }
         )
 
@@ -1205,7 +1290,12 @@ def step_arc_rule_report(
             "BALL_CONFIDENCE": BALL_CONFIDENCE,
         },
         "applied_to_core": False,
+        "double_count_cut": double_count_cut,
     }
+    if agreement_with_v6 is not None:
+        out_payload["agreement_with_v6"] = agreement_with_v6
+    if fall_through_guard:
+        out_payload["fall_through_guard"] = True
     out_json = Path(out_json)
     out_md = Path(out_md)
     out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -1351,7 +1441,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--out-md", type=Path, default=None)
     parser.add_argument("--candidates-json", type=Path, default=None)
     parser.add_argument("--results-json", type=Path, default=None)
+    parser.add_argument("--mapping-proof-json", type=Path, default=None)
     parser.add_argument("--overlay-dir", type=Path, default=None)
+    parser.add_argument("--fall-through-guard", action="store_true", default=False)
+    parser.add_argument("--double-count-cut", action="store_true", default=False)
     args = parser.parse_args(argv)
 
     tracks_dir = Path(args.tracks_dir) if args.tracks_dir else None
@@ -1361,7 +1454,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             raise SystemExit("--v6-weights is required for --step extract")
         out_json = args.out_json or (default_out_dir() / "candidates.json")
         return step_extract(
-            v6_weights=args.v6_weights, tracks_dir=tracks_dir, out_json=out_json
+            v6_weights=args.v6_weights, tracks_dir=tracks_dir, out_json=out_json, double_count_cut=args.double_count_cut
         )
 
     if args.step == "arc-rule-report":
@@ -1379,6 +1472,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             tracks_dir=tracks_dir,
             out_json=out_json,
             out_md=out_md,
+            mapping_proof_json=args.mapping_proof_json,
+            fall_through_guard=args.fall_through_guard,
+            double_count_cut=args.double_count_cut,
         )
 
     if args.step == "overlays":

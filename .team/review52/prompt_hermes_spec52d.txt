@@ -1,0 +1,10 @@
+You are HERMES, the architect. Write NEW file .team/specs/52d_context_clip_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-15) after the 52c FAIL (review52/hermes_gate52c.txt, muse_gate52c.txt, cursor_gate52c.txt; drift_log end): try a DIFFERENT MODEL FIX in which the model sees what happens in the seconds after the shot (longer clip or a second context clip), not a 1-bit flag.
+Facts: 52c seq flag fired on ~45% of gvg/rimrock candidates and was ignored; the 3 silents (notus 252520, rimrock 274807, gvg 1158600; Scott-confirmed real misses) still P(shot) 0.04-0.17. Current clip = 32 frames, STEP 0.08 s, window [t-0.88, t+1.60], rim crop 96x112 (extract_clips.py). 52b check rule (postproc52b.json) worked and stays.
+Do:
+1. Choose ONE input change: (a) longer window (e.g. more frames or a larger STEP over a longer span), or (b) a second context clip after the main one through a shared or second backbone, features concatenated. Consider what a missed first shot vs a scramble looks like in the extra seconds and whether the rim crop shows it. Pin every value now (span, frames, STEP, crop, fusion, head) with a reason not taken from the 3 silent P values or any gate number; disclose where the 3 gaps (1160/2600/5233 ms) influenced it.
+2. Pin the GPU/memory and run-time cost (current logo run ~40 min for 15 models on this GPU) and the clip rebuild: new clips dir (clips8 or similar) from the SAME candidates and labels52a, sha freeze, extract command.
+3. Recipe otherwise R4 unchanged; E=5, seeds 0 1 2, runs/logo52d; gate52 with postproc52b.json; same-5 binding (Scott 'A'); fail -> stop for Scott; R10 blind later. Silent definition unchanged.
+4. Exact build + test + run order. Disclosure section.
+End with "HERMES: PREREG WRITTEN".

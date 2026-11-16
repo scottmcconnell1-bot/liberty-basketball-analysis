@@ -1,0 +1,157 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-playbook (a git worktree on 
+branch team/playbook, made from main; the shot-detection work lives elsewhere 
+and must not be touched). You are the Architect. Read AGENTS.md, AUTHORITY.md, 
+and AGENT_OPERATIONAL_PROTOCOL.md there. Scott's goal (2026-10-27): a separate 
+PLAYER app for his Jr High team, ready by Jan 4, 2027. It shows ONLY animated 
+plays, and ONLY the plays Scott picks for Jr High (not the whole playbook). 
+Players and parents use it on their phones. Scott keeps drawing and editing 
+plays on his computer in the main program; the playbook stays in the main 
+program unchanged. Sync is ONE-WAY: main program -> player app; players cannot 
+edit. Delivery: an installable web app (PWA: Add to Home Screen, own icon, full 
+screen, works offline after first load, iPhone and Android, no app store). 
+Publishing: Scott marks plays as Jr High and clicks Publish; the app updates 
+next time it opens. Privacy: minors use it, so no logins, no names, no 
+analytics, no data collected; plays only; an optional team code to open it. 
+Study the existing code first: blueprints/playbook.py (especially the share 
+routes /play/share/<token> and /choreography), playbook_choreography.py, 
+data/playbook/choreography/*.json, templates/play_draw.html and 
+templates/playbook.html, static/js/playbook-*.js, and the 
+plays/play_steps/play_categories/playbooks tables in schema.sql. Reuse the 
+existing animation code; do not rewrite it. Note schema.sql is a Scott gate: 
+prefer a design that needs NO schema change (for example a Jr High list kept in 
+a JSON file); if a schema change is truly needed, say so clearly as a decision 
+for Scott. Write a staged plan: Stage 1 the smallest thing that works (export 
+the chosen plays to a static folder and a phone viewer that animates them, 
+testable on Scott's PC); later stages add PWA install/offline, the Publish 
+button, hosting options with costs (free first), and the team code. For each 
+stage: files, exact run/test commands, and how Scott checks it by eye. Include a
+heading exactly ## Files for Stage 1. Write the plan to 
+.team/specs/10_jrhigh_player_app_plan.md. STRICT: create or edit ONLY that one 
+file. Do not create any other file and do not run code that writes files.
+📖 Read AGENTS.md  0.1s
+📖 Read AUTHORITY.md  0.1s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.1s
+📖 Read playbook.py  3.7s
+📖 Read playbook_choreography.py  3.7s
+🔎 Find data/playbook/choreography/  3.7s
+🔎 Find data/playbook/choreography/  4.1s
+📖 Read play_draw.html  4.1s
+📖 Read playbook.html  4.1s
+🔎 Find playbook-  2.2s
+📖 Read schema.sql  2.2s
+🔎 Find playbook-  0.5s
+🔎 Find choreography  0.6s
+🔎 Find  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-playbook/data/playbook/choreography/  0.1s
+📖 Read 101.json
+📖 Read playbook-export.js
+
+────────────────────────────────────────
+☤ Hermes
+Now I have a thorough understanding of the codebase. Let me write the staged plan.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md  0.1s
+│ .team/specs/10_jrhigh_player_app_plan.md
+│ @@ -0,0 +1,306 @@
+│ +# Jr High Player App — Staged Plan
+│ +
+│ +**Goal:** A separate PLAYER app for Jr High team. Shows ONLY animated plays Scott picks. Players/parents use on phones. Scott draws/edits in main program; playbook unchanged. Sync ONE-WAY: main → player. Delivery: installable web app (PWA: Add to Home Screen, own icon, full screen, works offline after first load, iPhone/Android, no app store). Publishing: Scott marks plays as Jr High and clicks Publish; app updates next open. Privacy: minors — no logins, no names, no analytics, no data collected; plays only; optional team code to open.
+│ +
+│ +**Key existing pieces to reuse:**
+│ +- `blueprints/playbook.py`: share routes `/play/share/<token>` and `/play/share/<token>/choreography` are public, no auth
+│ +- `playbook_choreography.py`: sticky choreography JSON at `data/playbook/choreography/{play_id}.json`
+│ +- Animation: inline SVG/JS in `templates/playbook.html` (lines 624–2500+) and `static/js/playbook-export.js` (video recording)
+│ +- Plays table has `team_key` (jh_boys, jh_girls, hs_boys, hs_girls) — already in DB via additive ALTER
+│ +- Export: `/playbook/export/<id>` returns play + steps JSON
+│ +
+│ +**Schema decision:** NO schema.sql change. Jr High list kept in a JSON file (`data/playbook/jrhigh_player_plays.json`). If Scott later wants multi-team or metadata, that becomes a gate.
+│ +
+│ +---
+│ +
+│ +## Stage 1 — Smallest Working Slice (Export + Phone Viewer)
+│ +
+│ +**What it does:** Scott clicks "Export for Player App" on a play. A static JSON bundle is written to `static/jrhigh_player/`. A tiny viewer page (`/player`) reads the bundle and animates using existing animation code. Testable on Scott's PC at `http://localhost:5000/player`.
+│ +
+│ +### Files for Stage 1
+│ +
+│ +| File | Action | Purpose |
+│ +|------|--------|---------|
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/play/<int:play_id>/export-player", methods=["POST"])` | Export one play to player bundle |
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/player")` (public, no auth, no feature flag) | Player viewer page |
+│ +| `blueprints/playbook.py` | ADD helper `_build_player_bundle(play_id, db)` | Build JSON bundle: play meta + steps + choreography |
+│ +| `templates/player.html` | CREATE new template | Minimal viewer: court SVG + play selector + Play All button |
+│ +| `static/js/player-viewer.js` | CREATE new file | Animation logic copied/adapted from `playbook.html` inline script |
+│ +| `data/playbook/jrhigh_player_plays.json` | CREATE (empty list `[]`) | Manifest of play_ids Scott publishes |
+│ +| `static/jrhigh_player/` | CREATE directory | Output folder for static bundles (gitignored) |
+│ +
+│ +### New Route: Export for Player App
+│ +```python
+│ +@playbook_bp.route("/playbook/play/<int:play_id>/export-player", methods=["POST"])
+│ +@require_feature("ENABLE_PRACTICES")
+│ +def playbook_export_player(play_id):
+│ +    db = get_db()
+│ +    play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+│ +    if not play:
+│ +        return jsonify({"error": "Play not found"}), 404
+│ +    # Only Jr High team plays can be exported
+│ +    if play["team_key"] not in ("jh_boys", "jh_girls"):
+│ +        return jsonify({"error": "Only Jr High plays can be exported to Player App"}), 400
+│ +    bundle = _build_player_bundle(play_id, db)
+│ +    # Write to static/jrhigh_player/{play_id}.json
+│ +    out_dir = Path(current_app.root_path) / "static" / "jrhigh_player"
+│ +    out_dir.mkdir(parents=True, exist_ok=True)
+│ +    out_path = out_dir / f"{play_id}.json"
+│ +    out_path.write_text(json.dumps(bundle, indent=2))
+│ +    # Update manifest
+│ +    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_plays.json"
+│ +    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else []
+│ +    if play_id not in manifest:
+│ +        manifest.append(play_id)
+│ +        manifest_path.write_text(json.dumps(manifest, indent=2))
+│ +    return jsonify({"ok": True, "play_id": play_id, "url": url_for("playbook.player_view", play_id=play_id)})
+│ +```
+│ +
+│ +### New Route: Player Viewer
+│ +```python
+│ +@playbook_bp.route("/player")
+│ +def player_index():
+│ +    # Public, no auth, no feature flag
+│ +    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_plays.json"
+│ +    play_ids = json.loads(manifest_path.read_text()) if manifest_path.exists() else []
+│ +    db = get_db()
+│ +    plays = []
+│ +    for pid in play_ids:
+│ +        p = db.execute("SELECT id, name, category, team_key FROM plays WHERE id = ?", (pid,)).fetchone()
+│ +        if p:
+│ +            plays.append(dict(p))
+│ +    return render_template("player.html", plays=plays)
+│ +
+│ +@playbook_bp.route("/player/play/<int:play_id>")
+│ +def player_view(play_id):
+│ +    # Public, no auth
+│ +    bundle_path = Path(current_app.root_path) / "static" / "jrhigh_player" / f"{play_id}.json"
+│ +    if not bundle_path.exists():
+│ … omitted 228 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 10_jrhigh_player_app_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+Plan written to .team/specs/10_jrhigh_player_app_plan.md. It contains:
+
+- Stage 1: Export route + /player viewer using existing animation code (static JSON bundles, no schema change)
+- Stage 2: PWA manifest + service worker for install/offline
+- Stage 3: One-click "Publish to Player App" button in main playbook UI- Stage 4: Free hosting options (Cloudflare Pages recommended) with static build script
+- Stage 5: Optional team code gate (no logins, no PII)
+
+Each stage has: file table, exact run/test commands, and "How Scott checks by eye" verification steps. The ## Files for Stage 1 heading is present as required.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-0ab9c1b502fc07dd701e3e31c025f890816909c96bd64b8bcd7a40eabb2b5bb3
+  hermes -c "Plan Jr High player app PWA architecture"
+
+Session:        local-0ab9c1b502fc07dd701e3e31c025f890816909c96bd64b8bcd7a40eabb2b5bb3
+Title:          Plan Jr High player app PWA architecture
+Duration:       3m 19s
+Messages:       30 (1 user, 28 tool calls)

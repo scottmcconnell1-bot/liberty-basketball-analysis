@@ -1,0 +1,159 @@
+﻿Query: You are Hermes, the architect. Scott (2026-10-28): "we have to get to 
+100%" on makes and misses, and he approved a DIAGNOSIS step before any new fix. 
+FIRST read docs/agent_handoffs/ACTIVE.md, AUTHORITY.md, 
+.team/specs/13_shot_work_order_plan.md, NEXT_TASK.md (step 1, done), 
+.team/drift_log.md (last 3 entries), ai_bridge.py lines 908-1120 
+(run_saved_v6_rule), and the step-1 results 
+/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json 
+and net_moved_summary.md.
+Facts (measured 2026-10-28): the current rule misses 19 makes (Notus A1 Q1 7, 
+Adrian Q1-Q3 12) and calls 0 misses makes. 50 of 142 build shots have no rim 
+crossing in the saved ball path. net_moved_after_shot as-is catches 6 of 19 
+missed makes but fires on 38 of 93 misses (Adrian tags contain 2 exact duplicate
+miss rows at 45:38.6 and 45:47.2; true Adrian Q1-Q3 baseline is 97 of 109; whole
+film 111 of 127).
+Task (plan only, no code): write .team/specs/14_missed_makes_diagnosis_plan.md 
+for the CODER (Cursor, in a sandbox; it can run Linux python3 with cv2/numpy, 
+cannot write outside the repo; the checker Claude runs the final run with the 
+Windows venv). Step: build a review page (static HTML) of the 19 missed makes, 
+plus for comparison 10 correctly-called makes and 10 misses chosen by a fixed 
+rule before looking. For each shot show a strip of frames around the rim (crop 
+around the saved hoop box, every frame from 10 before to 25 after the 
+tag-relative crossing or closest-approach frame), the saved ball points drawn on
+the crops, the hoop box, and why the rule said miss (its details reason). Each 
+missed make gets a cause from a FIXED list decided in the plan before looking 
+(for example: ball never detected near the rim; ball detected but crossing 
+outside 0.55 hoop width; hoop box wrong or moved; camera panned/zoomed during 
+the shot; ball hidden by players/backboard; crossing seen but column/drift test 
+rejected; other), assigned by Scott or the checker looking at the page, never by
+code guessing. Output: images and the page OUTSIDE the repo at 
+C:\Users\scott\Documents\Liberty_Shot_Outputs\missed_makes_review\ (the coder's 
+sandbox test run may write under .team/shot_outputs_test/, never committed); 
+only the script inside the repo (.team/shot_detectors/pixel_miss/). Name exact 
+files, exact commands, and what is reported (a cause count table). Read-only: 
+tags, tracks, videos; no protected file edited; no detector change in this step;
+STOP after the page is built. Also add one line recommending the 2 duplicate tag
+rows be handled (Scott decides). Do not edit any other file; no scratch files in
+the repo. Clean Markdown, no "12|" prefixes, no literal backslash-n. Read the 
+file back after writing and confirm. If a write fails, say so plainly.
+📖 Read ACTIVE.md  0.2s
+📖 Read AUTHORITY.md  0.2s
+📖 Read 13_shot_work_order_plan.md  0.2s
+📖 Read NEXT_TASK.md  0.2s
+📖 Read drift_log.md  0.2s
+📖 Read ai_bridge.py L908-1127
+📖 Read net_moved_build_results.json
+📖 Read net_moved_summary.md
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the context. Let me write the diagnosis plan.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/14_missed_makes_diagnosis_plan.md
+│ .team/specs/14_missed_makes_diagnosis_plan.md
+│ @@ -0,0 +1,317 @@
+│ +# Missed Makes Diagnosis Plan — Step 2: Build Review Page (Read-Only)
+│ +
+│ +**Author:** Hermes (Architect)  
+│ +**Date:** 2026-10-28  
+│ +**Status:** Plan for Coder (Cursor sandbox)  
+│ +**Gate:** Vetter review before implementation  
+│ +
+│ +---
+│ +
+│ +## 1. Purpose
+│ +
+│ +Scott's directive (2026-10-28): "we have to get to 100%" on makes and misses. A DIAGNOSIS step is required before any new fix. This task builds a static HTML review page so Scott and the checker can **look at the 19 missed makes** and assign each a cause from a fixed list. No detector changes, no threshold tuning, no code guessing.
+│ +
+│ +**Measured facts (2026-10-28):**
+│ +- Current rule misses 19 makes (Notus A1 Q1: 7, Adrian Q1–Q3: 12) and calls 0 misses makes.
+│ +- 50 of 142 build shots have no rim crossing in the saved ball path.
+│ +- `net_moved_after_shot` as-is catches 6 of 19 missed makes but fires on 38 of 93 misses (Adrian tags contain 2 exact duplicate miss rows at 45:38.6 and 45:47.2; true Adrian Q1–Q3 baseline is 97 of 109; whole film 111 of 127).
+│ +
+│ +---
+│ +
+│ +## 2. Scope
+│ +
+│ +**Read-only inputs:**
+│ +- Tag files: `data/film_tags/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json` (31 shots), `data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json` (129 shots, 111 Q1–Q3)
+│ +- Saved v6 tracks: `C:\Users\scott\AppData\Local\Temp\v6_tracks_notus_q1.json` (31 tracks), `C:\Users\scott\AppData\Local\Temp\v6_tracks.json` (111 tracks)
+│ +- Videos: `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` (25 fps, 1280×720), `uploads/nfhs_gam0a66d85e12.mp4` (25 fps, 1920×1080)
+│ +
+│ +**No edits to:** `ai_bridge.py`, `net_detector.py`, `models/ball_detector.pt`, `ball_confidence`, `schema.sql`, any core file.  
+│ +**No detector changes in this step.** STOP after the page is built.
+│ +
+│ +---
+│ +
+│ +## 3. Shot Selection (Fixed Before Looking)
+│ +
+│ +### A. The 19 Missed Makes (Ground Truth = Make, `run_saved_v6_rule` Prediction = Miss)
+│ +
+│ +From `net_moved_build_results.json` (build set, `missed_make=true`):
+│ +
+│ +| # | Film | t (ms) | Time | Quarter | Label | Player | Peak Frame | Peak Reason | Net Moved |
+│ +|---|------|--------|------|---------|-------|--------|------------|-------------|-----------|
+│ +| 1 | notus_a1 | 64200 | 1:04.2 | Q1 | And-1 | 0 - Camden Linkhart | 1605 | no_crossing_closest_ball | False |
+│ +| 2 | notus_a1 | 142600 | 2:22.6 | Q1 | FT Make | 0 - Camden Linkhart | 3629 | crossing | False |
+│ +| 3 | notus_a1 | 159300 | 2:39.3 | Q1 | FT Make | 0 - Camden Linkhart | 3983 | no_crossing_closest_ball | False |
+│ +| 4 | notus_a1 | 212300 | 3:32.3 | Q1 | 2PT Make | 11 - Flores | 5333 | crossing | False |
+│ +| 5 | notus_a1 | 357500 | 5:57.5 | Q1 | FT Make | 0 - Camden Linkhart | 8983 | crossing | False |
+│ +| 6 | notus_a1 | 483400 | 8:03.4 | Q1 | 2PT Make | 2 - Carson Linkhart | 12085 | no_crossing_closest_ball | False |
+│ +| 7 | notus_a1 | 774600 | 12:54.6 | Q1 | FT Make | 53 - Price | 19398 | crossing | False |
+│ +| 8 | adrian | 342800 | 5:42.8 | Q1 | 2PT Make | 51 - Peterson | 8573 | crossing | False |
+│ +| 9 | adrian | 638300 | 10:38.3 | Q1 | And-1 | 21 - Colman | 15992 | crossing | False |
+│ +| 10 | adrian | 717000 | 11:57.0 | Q1 | 2PT Make | 21 - Colman | 17953 | no_crossing_closest_ball | False |
+│ +| 11 | adrian | 801800 | 13:21.8 | Q1 | 2PT Make | 40 - Dayley | 20045 | no_crossing_tag_frame | True |
+│ +| 12 | adrian | 1231400 | 20:31.4 | Q2 | FT Make | 25 - Alvarez | 30785 | crossing | True |
+│ +| 13 | adrian | 1792900 | 29:52.9 | Q2 | 2PT Make | 40 - Dayley | 44822 | crossing | False |
+│ +| 14 | adrian | 1836700 | 30:36.7 | Q2 | 3PT Make | 21 - Colman | 45959 | crossing | False |
+│ +| 15 | adrian | 2479100 | 41:19.1 | Q3 | 2PT Make | 23 - Rodus | 62031 | no_crossing_closest_ball | True |
+│ +| 16 | adrian | 2870400 | 47:50.4 | Q3 | 3PT Make | 21 - Colman | 71803 | crossing | False |
+│ +| 17 | adrian | 2962500 | 49:22.5 | Q3 | 2PT Make | 21 - Colman | 74062 | crossing | True |
+│ +| 18 | adrian | 3045900 | 50:45.9 | Q3 | FT Make | 25 - Alvarez | 76169 | crossing | True |
+│ +| 19 | adrian | 3095700 | 51:35.7 | Q3 | FT Make | 13 - Mendoza | 77401 | no_crossing_closest_ball | True |
+│ +
+│ +### B. 10 Correctly-Called Makes (Ground Truth = Make, Rule Prediction = Make)
+│ +
+│ +**Selection rule (fixed before looking):** From the build set shots where `gt_make=true` and `rule_pred_make=true`, take the first 10 by timestamp (ascending `t`). If fewer than 10, take all.
+│ +
+│ +### C. 10 Misses (Ground Truth = Miss, Rule Prediction = Miss)
+│ +
+│ +**Selection rule (fixed before looking):** From the build set shots where `gt_make=false` and `rule_pred_make=false`, take the first 10 by timestamp (ascending `t`) **excluding the 2 duplicate Adrian rows** (t=2752600 "45:38.6 2PT Miss" and t=2755400 "45:47.2 3PT Miss" — same timestamps appear twice in tags and tracks). If fewer than 10 after deduplication, take all unique.
+│ +
+│ +---
+│ +
+│ +## 4. Fixed Cause List (Decided in This Plan, Before Looking)
+│ +
+│ +Each of the 19 missed makes will be assigned **exactly one** cause from this list by Scott or the checker looking at the review page. The coder does **not** assign causes.
+│ +
+│ +1. **ball_never_detected_near_rim** — no ball points in the saved track within ~150 px of the hoop center during the shot window
+│ +2. **ball_detected_crossing_outside_055** — ball crosses hoop_y but horizontal distance > 0.55 × hoop_w at the crossing frame
+│ +3. **hoop_box_wrong_or_moved** — the saved hoop box (hoop_x, hoop_y, hoop_w) is visibly not on the orange rim in the frames around the shot
+│ +4. **camera_panned_zoomed_during_shot** — the camera moves noticeably (background shifts) during the 10-before to 25-after frame window, so the fixed hoop box no longer aligns
+│ … omitted 239 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 14_missed_makes_diagnosis_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+Plan written and verified at .team/specs/14_missed_makes_diagnosis_plan.md. It includes:
+
+- 19 missed makes enumerated from net_moved_build_results.json with timestamps, peak frames, rule reasons, and net_moved results
+- 10 correct makes and 10 misses selected by fixed timestamp-order rules (misses exclude the 2 duplicate Adrian rows at 45:38.6 / 45:47.2)
+- 7 fixed causes decided in the plan before looking (ball never detected, crossing outside 0.55, hoop box wrong, camera pan/zoom, ball hidden, column/drift rejected, other)
+- Static HTML review page spec: 36-frame crop strips per shot (10 before → 25 after peak), hoop box + ball points drawn, peak marker, rule reason badge, cause dropdown for missed makes only
+- Output outside repo at C:\Users\scott\Documents\Liberty_Shot_Outputs\missed_makes_review\
+- Script inside repo at .team/shot_detectors/pixel_miss/build_review_page.py
+- Exact run command and verification checklist
+- One-line duplicate tag recommendation (Scott decides)
+- No detector changes, no protected file edits, STOP after page built
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-39a510913860b8fd89b91c72f0f87c496ab8ee13a5463712b5f1b77f7b6444fd
+  hermes -c "Create missed makes diagnosis plan spec"
+
+Session:        local-39a510913860b8fd89b91c72f0f87c496ab8ee13a5463712b5f1b77f7b6444fd
+Title:          Create missed makes diagnosis plan spec
+Duration:       2m 39s
+Messages:       16 (1 user, 14 tool calls)

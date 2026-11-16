@@ -1,0 +1,9 @@
+**Files changed:** `.team/shot_detectors/make_review_queue_page.py` only.
+
+**Summary (under `--wide-combined` only):**
+1. **Wide JPEGs** — written from the source frame as-is (no 640px resize); `WIDE_WIDTH` removed.
+2. **Layout** — `.wrap` / `.views` use `grid-template-columns: 1fr`; wide on top full card width; close-up below at intrinsic size; same play/step/slider still drives both.
+3. **Fullscreen** — click wide → `#fs` overlay of the current wide frame; updates with play/step; Esc or overlay click closes.
+
+Close-up write path unchanged (same crop, 2× cubic, JPEG q=85), so those frames stay byte-identical to `page_v4` when regenerated. No video run, no commit. `node --check` on the wide-page JS: pass.Spec 29 coding is done on `team/auto`: only `.team/shot_detectors/make_review_queue_page.py` changed (full-res wide JPEGs, stacked 1fr layout, fullscreen overlay). No video run, no commit.
+[cursor_wsl] exit 0 at 17:15:37

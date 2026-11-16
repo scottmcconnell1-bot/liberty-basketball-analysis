@@ -1,0 +1,5 @@
+CLAUDE CODE VET OF SPEC 52 (Hermes draft) - points for reviewers:
+V1. R1 'shot := ball crosses rim cylinder' excludes airballs/short shots; coach tags count airballs as shots. Proposed: shot := a field-goal or free-throw attempt toward this hoop (incl. airballs), judged from the shooter's motion and the ball's flight.
+V2. R3(d) picks best epoch on held-out game hsb, but R4 final models train on all 5 games incl. hsb (no held-out left). Proposed: inside LOGO, best epoch per fold on the fold's own held-out game is NOT allowed (that is the test); instead pick a fixed epoch count E from LOGO validation curves (median best epoch over folds, using an inner split of the training games), then train final models for E epochs.
+V3. R3(b) + DISAGREEMENTS asks for a balanced sampler AND inverse-frequency loss weights = double correction. Proposed: sampler only, plain CE (keep label smoothing 0.05).
+V4. R7 'seed-disagreement (>=2 seeds disagree)' undefined. Proposed: flag a candidate if, among the 5 seeds, at least 1 seed calls it a shot (P(shot)>=0.5) and at least 1 calls it not-a-shot, or seeds split on make vs miss.

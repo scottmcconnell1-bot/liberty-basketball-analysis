@@ -1,0 +1,39 @@
+Files created/changed:
+- `scripts/measure_notus_red_thresholds.py` (created)
+- `scoreboard_clock_720p.py` (edited)
+- `scripts/fit_notus_segments.py` (edited)
+- `data/roi/notus_red_thresholds.json` (created)
+- `data/roi/notus_segment_geometry.json` (updated)
+
+Frozen numbers (`data/roi/notus_red_thresholds.json`):
+`{"h_min": 169, "h_max": 27, "s_min": 91, "v_min": 152}`
+
+Off-segment shares:
+- Game A1: 0.0000%
+- Game A: 0.0000%
+
+Gate table:
+```
+crop                     exp home exp away got home got away   
+---------------------------------------------------------------
+notus_A1_00_202s                0        4        0        4  ✓
+notus_A1_01_606s                2       11     None       11  ✗
+notus_A1_02_1010s               4       11        4       11  ✓
+notus_A1_03_1413s               5       14        5       14  ✓
+notus_A1_04_1817s              10       15       10       15  ✓
+notus_A1_05_2221s              13       19     None       14  ✗
+notus_A1_06_2625s              15       25       15     None  ✗
+notus_A1_07_3028s              21       30       21       30  ✓
+notus_A1_08_3432s              29       38       29       38  ✓
+notus_A1_09_3836s              29       40     None       40  ✗
+notus_A_00_187s                 5        2     None     None  ✗
+notus_A_01_562s                11        4       11     None  ✗
+notus_A_02_936s                13        8       13        6  ✗
+notus_A_03_1311s               16        9       16     None  ✗
+notus_A_04_1686s               16       11       16     None  ✗
+notus_A_05_2060s               16       15       16        5  ✗
+notus_A_06_2435s               19       15       19       15  ✓
+notus_A_07_2810s               23       17     None       17  ✗
+notus_A_08_3184s               25       21     None       21  ✗
+notus_A_09_3559s               36       21     None       21  ✗
+```

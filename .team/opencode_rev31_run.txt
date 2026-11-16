@@ -1,0 +1,38 @@
+Now applying revision 3.1 to the gate script.
+Changed only the three revision 3.1 files:
+
+- `scripts/team_gate.py`: added SHA-256 snapshot helpers, `--round-start`, round-start-aware `check_files`/`check_protected`, and fail-closed `check_scores` including Notus `misses_called_makes`.
+- `tests/test_team_gate.py`: updated the equal-score fixture; added tests for pre-existing unchanged vs changed files, protected-file hash changes, new files, missing film/right/misses fields, and Notus regression.
+- `team_loop.ps1`: writes `.team/round_start.json` at each round start and passes `--round-start` to the gate.
+
+Checks:
+
+```text
+$ ./.venv/Scripts/python.exe -m pytest tests/test_team_gate.py tests/test_team_score.py tests/test_ai_bridge.py tests/test_build_review_page.py -q
+34 passed in 0.66s
+```
+
+```text
+$ PowerShell parser check
+PARSE OK: 0 errors
+```
+
+```text
+$ .\team_loop.ps1 -DryRun
+EXIT=0
+DRY RUN: ... claude.exe ... --model sonnet ... Edit(NEXT_TASK.md)
+DRY RUN: ... opencode.cmd run -m opencode/glm-5.3-flash-free ...
+DRY RUN: ... opencode.cmd run -m opencode/deepseek-v4.1-flash-free ...
+DRY RUN: ... team_gate.py --plan ... --baseline ... --round-start .../.team/round_start.json
+DRY RUN: ... claude.exe ... --model sonnet ...
+DRY RUN: ... opencode.cmd run -m opencode/glm-5.3-flash-free ...
+Stopped: dry run completed round 1
+```
+
+```text
+$ ./.venv/Scripts/python.exe scripts/team_gate.py --plan .team/specs/03_loop_rev3.md --baseline .team/baseline_score.json --round-start .team/round_start.json
+{"pass": true, "failures": []}
+EXIT=0
+```
+
+No commit made. The dry run also left its log at `.team/rev31_dryrun.txt` and, per existing script behavior, moved `NEXT_TASK.md` to `.team/previous_NEXT_TASK.md`.

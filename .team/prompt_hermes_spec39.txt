@@ -1,0 +1,22 @@
+Hermes, you are the Architect. WRITE ONE new file: .team/specs/39_shooter_fix_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "SHOOTER FIX SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing else, run nothing that writes. One to two pages.
+
+Read first: .team/specs/38_shooter_finder_spec.md (S1-S8 block + SCOTT APPROVED line on top), .team/specs/38_handcheck_rule.json, .team/specs/38_handcheck_results.json, .team/shot_detectors/rim_first_finder.py (_trace_walk_back, _holders_on_frame, retrace), .team/shot_detectors/shot_rules_measure.py (ball_inside_player), last 8 lines of .team/drift_log.md.
+
+Scott 2026-11-06: "Yes, fix the shooter first" (before the 3-point line / referee signal step).
+
+FACTS (spec 38 run, Proven, Claude Code): shooter found Adrian 75/116, Notus 22/36. Hand-check of a frozen sample: found right Adrian 15/20, Notus 9/17; orange right 3/5, 1/5. Errors:
+ E1 referee picked as shooter 4 times (BODD labelled a referee standing under the rim as "player"; referee boxes ARE saved in frames.json key "r" and in the live run).
+ E2 free throw: a lane player next to the shooter picked 4 times - walking backward, the ball passes in front of lane players on its way up and the first box it is "inside" wins.
+ E3 non-shot moments (dribbler in transition, hoop marker on a referee head or bench) 3 times - a shot-finder issue, not the trace.
+ E4 "two players hold" orange: Adrian 36 of 41 orange, Notus 14 of 14; in the sample often two BODD boxes on the SAME player, or the FT shooter plus a lane player.
+ E5 defender contesting picked once.
+
+WRITE fixes for E1, E2, E4 (E3 and E5: say plainly not fixed here, and why). Video only, no tags. Options to weigh, pick the simplest that fits:
+ F1 (E1) drop a player box that overlaps a referee box on the same frame (overlap measure and number "Scott decides before the run", proposed value).
+ F2 (E4) merge player boxes on one frame that overlap heavily (same body) into one before the hold test (number Scott decides, proposed).
+ F3 (E2, E5) a hold must LAST: the ball inside the same player's box on at least K detected ball frames in a row (or within a short run) before it counts; K Scott decides, proposed. Say how "same player" is matched across frames (box overlap; number Scott decides) - no tracker (ByteTrack/DeepSORT banned). Alternatively/also: keep walking past a short hold to the EARLIEST continuous hold before the break - say which and why.
+ Say which order the fixes run in, and what still goes orange.
+MEASURE: same as spec 38 (retrace from saved run37 files, no video; walk-off/equality gate not needed again but a gate that spec-38 outputs are reproduced with all new fixes OFF is required). New hand-check: a NEW frozen sample (seed 39, same 20 found + 5 orange per film rule) so it is not the spec-38 sample; written before reading numbers. Also re-score the spec-38 sample moments (report how many of the 13 disagree found + 10 orange-avoidable change). FT spot and 2PT/3PT distance as before.
+NUMBERS TABLE: each number source or "Scott decides before the run" + proposed value, said in plain words. No looser existing cutoffs (0.6 release factor, 3000 ms, 8-frame break unchanged).
+Rules: no core edits, no training, no banned trials (linear interpolation, ByteTrack, DeepSORT, early windows = OLLAMA.md:31-39 make window, wider column, hoop recenter), shot calls and make/miss untouched, finder reads no tags, one try then stop for Scott, Q4 blind last. Cursor edits rim_first_finder.py, rim_first_measure.py, test_rim_first.py only.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to check".

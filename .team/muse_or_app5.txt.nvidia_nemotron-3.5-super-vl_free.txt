@@ -1,0 +1,65 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md in 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are Muse: you 
+check the Vetter (Claude Code). The plan is 
+/mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_p
+lan.md; its first line is the Vetter's v5 VETTED stamp (viewer section amended; 
+one Vetter edit about helpers). Check against 
+/mnt/c/Users/scott/Documents/liberty-playbook/templates/playbook.html that every
+function named for copying exists at the stated line (use grep), that the plan 
+will make hand-drawn ink and coach order animate as in the program, that no 
+hidden play or source_image/court_frac/notes can reach dist/player, that nothing
+is committed to the public repo, that the live database is never written, and 
+that the Vetter's edit is correct. Do not edit or create any file. End with 
+exactly one line: MUSE: AGREE  or  MUSE: DISAGREE: <reason>
+📖 Read TEAM_RECOVERY.md  0.2s
+📖 Read MUSE.md  0.2s
+📖 Read AUTHORITY.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+📖 Read 10_jrhigh_player_app_plan.md  0.3s
+📖 Read playbook.html  0.3s
+📖 Read playbook.html L2400-2479
+📖 Read playbook.html L4690-4759
+📖 Read playbook.html L5890-5999
+📖 Read playbook.html L6750-6809
+📖 Read playbook.html L7030-7089
+📖 Read .gitignore
+
+────────────────────────────────────────
+☤ Hermes
+All 18 function/line claims check out in playbook.html, and dist/ is gitignored (.gitignore:7). Let me confirm the Vetter's two body edits (no leftover relative .venv python paths; no leftover "localhost on phone" line).
+────────────────────────────────────────
+
+🔎 Grep \.venv  0.3s
+🔎 Grep localhost on phone  0.3s
+🔎 Grep python\.exe  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+All checks verified. Report:
+
+Function/line claims (grep against templates/playbook.html) — all 18 confirmed at the stated lines: ANIM 724, renderCourt 842, renderStep 1353, positionsThrough 1068, syncPlayerTokens 1394, renderPlayerToken 1474, inkPathActions 1648, materializeInkActions 1671, renderSheetInk 1682, renderArrows 1714, beatToMovement 2423, pointAlongPolyline 4712, pointAlongTravel 4736, rewindPlay 5915, stepForwardPlay 5969, playSheetsDirectly 6778, playAnimation 7059. v4's fake names (animateGroup/playPhases/groupsOf/pointAlong) do not exist; v5 names the real engine.
+
+Animation fidelity: ink (inkPathActions/materializeInkActions/renderSheetInk) and coachOrder (whitelisted per choreography step) ship via the byte-for-byte copied engine; helpers called by playback code are copied unchanged and sync-checked, never rewritten — so hand-drawn ink and coach order animate as in the program.
+
+Privacy/containment: publish selects only visible plays, rebuilds dist/player from scratch (rmtree removes hidden/stale play JSONs — zero-visible case clean), play bundle whitelists id/name/category/team_key, step SQL omits source_image/court_frac/notes, choreography per-step whitelist drops source_image/court_frac; test asserts hidden play 2's JSON is absent and no leaked fields appear. Nothing reaches dist/player except whitelisted visible-play data.
+
+Public repo: dist/ is gitignored (.gitignore:7) so generated bundles are never committed; no commit step anywhere in the plan — publishing is local build + drag-to-hosting.
+
+Live database: _build_player_site runs only SELECTs; tests use tmp_path; test commands point LIBERTY_DATABASE at a DB copy outside the repo; plan says "never the live DB from a dev branch." The DB is never written.
+
+Vetter's body edits — both correct: all 7 python.exe invocations use the absolute main-repo path (C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe), no relative .\.venv\ leftovers; Stage 2 uses Chrome DevTools mobile view, no "open localhost on phone" line remains.
+
+Note: data/playbook/jrhigh_player_*.json gitignore is listed as a Stage 4 to-do, not yet in .gitignore — future action, not a current violation; dist/ containment already holds.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-92878c1faf616c25278fd7f975d657f470c593b5eb3271fb12ac4b27c20e4df0
+  hermes -c "Verify plan against files without editing"
+
+Session:        local-92878c1faf616c25278fd7f975d657f470c593b5eb3271fb12ac4b27c20e4df0
+Title:          Verify plan against files without editing
+Duration:       1m 15s
+Messages:       20 (1 user, 18 tool calls)

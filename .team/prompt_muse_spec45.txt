@@ -1,0 +1,9 @@
+Muse, you check the Vetter. Read-only: do not change any file.
+Read: .team/specs/45_film_scale_make_miss_spec.md (Claude Code's VETTED WITH CONDITIONS V1-V8 block at the top, then Hermes's spec), .team/shot_detectors/rim_first_make_miss.py (subcommands tracks/d1/vote), .team/shot_detectors/small_fixes_v6_copy.py lines 185-200, .team/shot_detectors/keep_ball_detections.py run_arc_and_rule_on_shot (~685) and apply_arc_replacements (~470), last 2 entries of .team/drift_log.md.
+Check that Claude Code did not miss or approve anything wrong:
+- Does the scale really reach decide_shot for v6 and d2v1 (keys copied except "result")?
+- Can the Adrian gate G1 (scale exactly 1.0, byte-match new_pred+new_reason on 109 adrian rows) truly prove Adrian is unchanged?
+- Any tag, label, scoreboard or truth read in the scale path? Any tuning after seeing a test number? Any edit outside the two wrapper files?
+- Is the Riverstone test truly blind for the make/miss rule (see V7 disclosure), with labels and the score script frozen first and the hand-check before the score?
+- Is the V6 stop-check (0.55-0.80) a fair stop, not hidden tuning?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

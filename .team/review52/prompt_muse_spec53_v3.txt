@@ -1,0 +1,9 @@
+You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit or create any file.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/53_referee_signals_spec.md (v3, by Hermes) against your own ITEM C changes in
+.team/review52/muse_round52_53.txt (C1 spec-36 cause, C2 pass bar incl. false fires on labelled true shots,
+C3 small-ref pose test as explicit first gate), Cursor's v1 audit .team/review52/cursor_ref53.txt, the NFHS
+reference .team/review52/nfhs_signals_reference.md and Scott's addendum .team/review52/addendum_ref53_scott.txt
+("Go with the book, but some wiggle room ... deduced with several factors"). Are all applied? Anything that
+blocks building the 3-clip prototype? Numbers left for Scott must be clearly marked.
+End with one line that STARTS with "MUSE: AGREE" or "MUSE: DISAGREE:".

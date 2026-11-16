@@ -1,0 +1,7 @@
+{
+ "frozen_by": "Claude Code",
+ "frozen_at": "2026-11-06, before spec 38 code or run",
+ "rule": "Per film (adrian Q1-Q3, notus Q1), from measure38 tag matches: moments with shooter status found -> group by tag eventtype 2PT/3PT/FT, take round-robin in that order, within each group order by random.Random(38).shuffle of the sorted t_ms list, until 20 (fewer if not available). Plus 5 tag-matched moments with shooter status orange, random.Random(38).sample of the sorted t_ms list. Claude Code views local still frames (release frame with shooter box drawn, plus release-10 and release+5 frames) and writes agree/disagree/unclear per moment to .team/specs/38_handcheck_results.json BEFORE reading measure38 shooter numbers.",
+ "agree_means": "found: the boxed player is the one who released the ball. orange: no single player clearly releases it in the window, or the program reason is correct.",
+ "scott_approved": "2026-11-06 'Yes' (20 + 5 per film)"
+}

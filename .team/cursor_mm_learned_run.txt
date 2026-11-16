@@ -1,0 +1,14 @@
+(1) Mix: **c first**, then **b** if seen films still fail; hold **a** — 116 makes / 3 games is too thin for a video net, and the proven bug is the fixed-pixel crop/pick, not the classifier.
+
+(2) LOGO is right. Leaks: tuning crop/rules on the held-out game; mixing tag-time clips with finder-time; treating Notus+GV as independent (same gym); using GV labels without a frozen hand-check; reading Riverstone before freeze.
+
+(3) Blind **Riverstone first** (same gym, finder done, score already frozen); then **one away** (HSB or Rimrock). Do not spend both in one try.
+
+(4) Guards: freeze labels/score before any look; train/eval on finder-aligned hoop-width crops only; report coach %; LOGO must beat scaled v6 on the held-out game before the blind; keep an unsure band so silent false makes stay rare.
+
+(5) Wrong/overstated: “exhausted” was Adrian-tuned recall, not all games; spec 45 scaled **rule** px, not the **v6 crop/pick**, so “scale failed” does not kill (c); jumping to (a) before fixing poisoned tracks skips the cheap proven fix.
+
+RECOMMEND: Do (c) on seen films only, then a hoop-normalized feature model (b) with LOGO, then one Riverstone blind with a coach band — do not start with a video classifier.
+
+MUSE: AGREE
+[cursor_ask] exit 0 at 08:25:36

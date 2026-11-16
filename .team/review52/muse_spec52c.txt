@@ -1,0 +1,172 @@
+[muse] model recursive/flint-v1.0:free 12:29:17
+Query: You are MUSE, the REVIEWER (not Hermes, not Cursor). READ-ONLY: do not 
+edit, create or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/52c_first_shot_sequence_prereg.md v1 (Hermes; model fix for 
+the first-shot-of-a-2-shot-sequence blind spot; Scott approved the team 
+designing it). Check against code (.team/mm_clip/extract_clips.py, trigger2.py 
+if present, train_clip.py, ensemble_predict.py, gate52.py) and specs 52a v3 / 
+52b v2.
+Coordinator (Claude Code) facts to verify, not trust:
+F1. Step 4 postproc52b.json as written in 52c has the same keys as 
+postproc52a.json and does NOT encode the 52b v2 rule (extras flagged only if 
+seed_disagreement corroborates). Is that a conflict with 52b, which says 
+postproc52b.json carries the new check rule? What exact key/value should it 
+have?
+F2. seq_follower is computed from ALL candidate t_ms (incl. label -1 and 0 
+rows). Share of candidates with another candidate within 6 s: adrian 0.25, gvg 
+0.47, hsb 0.18, notus 0.13, rimrock 0.45. In gvg/rimrock many followers are 
+non-shots, so the flag may be weak or confounded (scramble candidates cluster 
+too). Is that a design flaw, and is a cleaner pinned definition possible without
+labels at predict time?
+F3. Are train (clips npz t_ms) and predict (logo_preds T) candidate sets 
+identical, so the flag is computed the same way?
+F4. Is one binary scalar concatenated to a 512-d pooled feature likely to be 
+used at all after 5 epochs (head lr / init)? Any pinned detail needed (e.g. 
+feature scaling) chosen without looking at the 3 silent P values?
+F5. Is the 6000 ms reason honest and not picked from the 1160/2600/5233 gaps?
+Also check: build order, sha freeze, tests, no retune, fail -> stop for Scott, 
+disclosure.
+End with ONE line that starts exactly with: MUSE: AGREE | MUSE: AGREE WITH 
+CHANGES: <list> | MUSE: DISAGREE: <why>
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by locating and reading the spec and related files.
+────────────────────────────────────────
+
+📖 Read 52c_first_shot_sequence_prereg.md  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ 2>/dev/null  1.9s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ 2>/dev/null + 1 command  0.7s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read the related specs and postproc files in parallel.
+────────────────────────────────────────
+
+📖 Read 52b_check_rule_prereg.md
+📖 Read 52a_class0_restore_prereg.md
+📖 Read postproc52.json
+📖 Read postproc52a.json
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ | grep -i postproc + 1 command  0.5s
+
+────────────────────────────────────────
+☤ Hermes
+Important early observation: no postproc52b.json exists in .team/mm_clip/ (only postproc.py, postproc52.json, postproc52a.json, postproc_locked51.json). Let me now read the code files.
+────────────────────────────────────────
+
+📖 Read ensemble_predict.py
+📖 Read gate52.py
+📖 Read postproc.py
+📖 Read trigger2.py
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the training, extraction, and test files.
+────────────────────────────────────────
+
+📖 Read train_clip.py
+📖 Read extract_clips.py
+📖 Read test_mm52.py
+📖 Read candidates.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me check the review artifacts and outputs.
+────────────────────────────────────────
+
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/clips7a_sha.txt + 10 commands  0.3s
+📖 Read silent3_answers.json
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read gate52_report.json
+📖 Read muse_gate52a.txt  0.1s
+📖 Read cursor_gate52a.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the 52c-related spec drafts and review artifacts.
+────────────────────────────────────────
+
+📖 Read muse_spec52c.txt
+📖 Read cursor_spec52c.txt
+📖 Read hermes_spec52c.txt
+📖 Read hermes_spec52c_try1_failed.txt
+📖 Read hermes_spec52c_r1.txt
+
+────────────────────────────────────────
+☤ Hermes
+Let me verify hashes, check for missing artifacts, and look at the MUSE protocol.
+────────────────────────────────────────
+
+💻 $ sha256sum /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md + 10 commands  32.4s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -maxdepth 2 -iname 'MUSE*' -o -maxdepth 2 -iname '*OPERATIONAL*' -o -maxdepth 2 -iname '*AUTHORITY*' -o -maxdepth 2 -iname '*RECOVERY*' 2>/dev/null | grep -v Liberty_Shot_Outputs  0.3s
+💻 $ tail -80 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+📖 Read 52c_first_shot_sequence_prereg.md
+📖 Read 52b_check_rule_prereg.md
+📖 Read 52a_class0_restore_prereg.md
+📖 Read postproc52a.json
+📖 Read ensemble_predict.py
+📖 Read gate52.py
+📖 Read postproc.py
+📖 Read candidates.py
+📖 Read train_clip.py
+📖 Read extract_clips.py
+📖 Read trigger2.py
+📖 Read test_mm52.py  0.1s
+📖 Read muse_spec52c.txt
+📖 Read cursor_spec52c.txt
+📖 Read hermes_spec52c.txt
+📖 Read hermes_spec52c_try1_failed.txt
+✗ Read MUSE.md  0.2s [File not found: MUSE.md]
+📖 Read cursor_gate52a.txt  0.2s
+📖 Read gate52_report.json  0.2s
+📖 Read silent3_answers.json  0.3s
+📖 Read MUSE.md
+📖 Read muse_gate52a.txt
+📖 Read 52_label_audit_stable_ensemble_spec.md
+💻 $ grep -n -i -E 'MUSE|verdict|fail|stop|disclos|retune|pre-reg|review' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/AGENT_OPERATIONAL_PROTOCOL.md + 2 commands
+
+────────────────────────────────────────
+☤ Hermes
+MUSE — REVIEW of .team/specs/52c_first_shot_sequence_prereg.md v1 (Hermes, 2026-11-15), read-only, no files edited/created/rewritten, output = review text.
+
+SCOPE: reviewed spec 52c v1 against .team/mm_clip/extract_clips.py, trigger2.py, train_clip.py, ensemble_predict.py, gate52.py, postproc*.json, test_mm52.py, and specs 52a v3 / 52b v2. Coordinator F1-F5 verified, not trusted.
+
+VERIFIED THIS SESSION (independent of coordinator claims):
+- Spec freeze: sha256 of the spec = 0baa2eea0b214b7732b184f9d8987a25b5bf867e9fcda047f32b1fc270a6c48a, matching .team/review52/spec52c_v1_sha.txt content (form OK). Minor drift: spec text says .team/review52/spec52c_sha.txt, disk artifact is spec52c_v1_sha.txt — to be aligned.
+- Clip geometry vs code: T0=-0.88, STEP=0.08, N=32, K_TRIG=11, window [t-0.88, t+1.60]; frame k = t + T0 + k*STEP; crop 2.6x/3.0x -> 96x112 confirmed. Trigger semantics R_TRIG=1.0, LOOKBACK_S=1.2, ABOVE_HW=0.3, ABOVE_X_HW=3.0, MERGE_S=1.5 confirmed in trigger2.py (candidates.py MERGE_MS=1000 is the separate old-finder union merge, not a conflict).
+- First-of-sequence + silent facts confirmed: 92 first-shot rows at N=6000 (~15%); silents gaps 1160/2600/5233 ms; first-shot P(shot) 0.08-0.18 (all seeds <0.5), second 0.94-0.995; Scott-confirmed labels; labels52a sha d8d2acd4... verified; labels52_v2 sha 56f18cf0... frozen.
+- Gate52a FAIL reading confirmed against gate52_report.json: adrian PASS; notus FAIL silent; gvg FAIL checks+silent; hsb PASS; rimrock FAIL checks+silent; OVERALL FAIL; spread <=5; honest review 93.5-99.3; checks 150/77 > hard cap 20; pooled nonshot_rejected 0.886 (gvg 0.855).
+
+F1 - postproc52b vs 52b v2 (coordinator FACT): MUSE VERDICT - CONFLICT, CONFIRMED. postproc52b.json does not exist; the JSON written in 52c step 4 is identical in keys/values to postproc52a.json and carries no new check rule. 52b v2 requires corroborated_extra := band AND seed_disagreement. Code shot_list: auto flags DO apply flag_seed (seed disagreement -> check); EXTRAS are appended flat over [lo=0.2, thr=0.5) with NO corroboration gate. So the combined 52b+52c re-gate would run the flat-band check, not the pinned 52b v2 rule. Required before build: add review key (Cursor's pin) extras_require_seed_disagreement: true for postproc52b (absent/false for postproc52/postproc52a); wire shot_list extras gate; add 52b tests; delete the "shot_list UNCHANGED" line in 52c step 2.
+
+F2 - seq_follower over all candidates (coordinator FACT): MUSE VERDICT - CONFOUND REAL, NOT A KILL. Verified shares (adrian 0.253, gvg 0.469, hsb 0.178, notus 0.128, rimrock 0.447) match coordinator. On gvg most flagged rows are y in {-1,0} (128+71 vs 64 shots) -> scramble clusters. Design flaw real but manageable: mandatory per-film pin (F3); optional in-session-only via session.json; do not restrict to y in {1,2} at predict. Disclose residual confound.
+
+F3 - train vs predict candidate sets (coordinator FACT): MUSE VERDICT - NEEDS PIN. Same frozen source nominally (clips7a t_ms <-> logo_preds T), but must pin per-film seq; cross-film concat inflates flags (Cursor: hold-out gvg 217 cross-film-only vs 171 same-film-only). Train must use full-film T for follower lookup even though loss mask drops Y<0.
+
+F4 - binary into 512-d / 5 epochs (coordinator FACT): MUSE VERDICT - USAGE NOT GUARANTEED. Required pins (Cursor's): dropout on 512-d pool only, concat seq AFTER dropout (never dropped); seq float32 0/1 no scaling; new head Linear(513,3) (old Linear(512,3) checkpoints incompatible); seq=None -> zeros is API-only for new 513 models, not logo52a .pt load compat.
+
+F5 - 6000 ms reason (coordinator FACT): MUSE VERDICT - SOFTEN. Domain rationale (putback within possession resolves in seconds; >6s = new possession) is acceptable; claim "not chosen to include/exclude the 3 gaps" is weak since 6000 is the smallest round second covering rimrock's 5233 ms (4000 would miss). Soften wording; do not treat as blocker.
+
+SPEC-CONSISTENCY: MUSE FINDING - conflict: section 2.1 pins seq_follower window as (t, t+6000] (inclusive end); Item 4 step 3 test plan says "boundary at t+6000 exclusive". Must be fixed in a v2 before freeze/build.
+
+BUILD/DELIVERABLES STATUS: Step 0-1 sha content OK, filename to align. Step 2 incomplete (missing 52b shot_list + postproc wiring; must not leave "shot_list UNCHANGED"). Step 3 tests not yet extended (seq + boundary + head in_features 513 + predict_all seq + seq=None zeros + 52b extras tests). Step 4 postproc52b.json + its sha freeze not produced. Step 5 clips7a frozen OK; labels52a frozen OK. Steps 6-8 not yet executed (correct pre-reg state).
+
+RETUNE / FAIL-STOP / DISCLOSURE: fail->stop for Scott, no thr/floor/seed/epoch retune, silent definition unchanged, disclosure structure present — all OK; tighten per F2/F5 before approval.
+
+REQUIRED BEFORE SCOTT APPROVAL: amend 52c to v2 (extras key, per-film seq, boundary pin, dropout/concat pin, Linear(513,3), F5 soften, F2 disclose, sha filename fix), re-freeze sha, then build.
+
+MUSE: AGREE WITH CHANGES: F1 pin extras_require_seed_disagreement:true + wire shot_list corroboration + 52b tests; F3 pin per-film seq_follower (fix cross-film concat); F4 pin dropout-on-pool-then-concat / Linear(513,3) / seq=None-zeros-for-new-models; F5 soften 6000 ms honesty wording; F2 disclose scramble confound; fix section 2.1-vs-test boundary and spec52c sha filename; Step 2/3 add 52b + seq wiring before Scott approval.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2bccb2ae38fbfc7048ffd8505a6c9d3d0201ce5b1c4880bfcb954135367621a3
+  hermes -c "You are MUSE, the REVIEWER (not Hermes, not…"
+
+Session:        local-2bccb2ae38fbfc7048ffd8505a6c9d3d0201ce5b1c4880bfcb954135367621a3
+Title:          You are MUSE, the REVIEWER (not Hermes, not…
+Duration:       9m 24s
+Messages:       42 (1 user, 40 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE WITH CHANGES: F1 pin extras_require_seed_disagreement:true + wire shot_list corroboration + 52b tests; F3 pin per-film seq_follower (fix cross-film concat); F4 pin dropout-on-pool-then-concat / Linear(513,3) / seq=None-zeros-for-new-models; F5 soften 6000 ms honesty wording; F2 disclose scramble confound; fix section 2.1-vs-test boundary and spec52c sha filename; Step 2/3 add 52b + seq wiring before Scott approval.

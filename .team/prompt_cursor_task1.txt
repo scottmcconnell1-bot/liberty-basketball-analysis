@@ -1,0 +1,8 @@
+You are the Coder for the Liberty basketball project (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). You run inside a sandbox. FIRST read AUTHORITY.md and NEXT_TASK.md in full. NEXT_TASK.md (Task 1 step 1) is VETTED; do exactly what it says and nothing more, with these sandbox changes:
+- Create ONLY .team/shot_detectors/pixel_miss/measure_net_moved.py. Do not edit any other file. Never edit net_detector.py, ai_bridge.py, or any protected file in AUTHORITY.md; import and call them only.
+- The script must take an --out argument for the results folder (default C:\Users\scott\Documents\Liberty_Shot_Outputs on Windows). In the sandbox you cannot write there: for your own test run use --out .team/shot_outputs_test (inside the repo; it is never committed).
+- It must work with both Windows paths and the WSL paths /mnt/c/... (video paths, track files in C:\Users\scott\AppData\Local\Temp = /mnt/c/Users/scott/AppData/Local/Temp). Use pathlib; pick the form that exists.
+- You cannot run the Windows .venv python. Test with python3 (has numpy and cv2). The Claude checker will run the final measurement with the Windows venv.
+- Copy the crossing logic from ai_bridge.py run_saved_v6_rule (from line 908) exactly for the peak frame; absolute video frame = round(t/1000*fps) + ball-list offset; the no-crossing rule in NEXT_TASK.md applies to every shot without a crossing, makes and misses alike.
+- Tag files and track files are read-only. Do not commit, push, or change git. Do not install packages.
+When done, report: the exact command you ran, its console summary verbatim, how many shots used the no-crossing rule, and the files you created. If anything fails, say so plainly; never report a result you did not see.

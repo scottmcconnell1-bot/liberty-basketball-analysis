@@ -1,0 +1,33 @@
+Query: Muse, check Claude Code's verdict on 
+.team/specs/26_clip_moment_fix_spec.md (line 2 is the VETTED stamp with 
+conditions a-e). The rejected v1 and its stamp: 
+.team/specs/26_clip_moment_fix_spec_v1_REJECTED.md. Scott's goal: a review-page 
+clip must never show the next tagged shot; rule "a moment cannot belong to two 
+shots"; the program's make/miss results must not change. Check: does the v2 rule
+fix 39400 (anchor 1045, next 1048) without touching shots more than 23 frames 
+from neighbours; are the conditions right and enough; anything that breaks the 
+Golden Rules (no core file edits, no tuning after results, no banned trials, 
+applied_to_core false, Adrian Q4 never used to design). Write your reasons, then
+end with exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE".
+🌐 Browser cat -n .team/specs/26_clip_moment_fix_spec.md  1.4s
+💻 $ cat -n .team/specs/26_clip_moment_fix_spec.md  0.1s
+💻 $ cat -n .team/specs/26_clip_moment_fix_spec_v1_REJECTED.md
+💻 $ echo "=== Golden Rules / auth files ===" + 4 commands  12.0s
+💻 $ cat .team/muse_check_spec26.txt 2>/dev/null
+✗ $ echo "=== 39400 arithmetic ===" + 1 command [BLOCKED: Command flagged as dangerous (script...]
+
+────────────────────────────────────────
+☤ Hermes
+Review complete. Key findings: v2 fixes v1's contradictions (self-conflicting 1033/1037 arithmetic; negative gap -18 unhandled; WRONG 15 from WINDOW_BEFORE_START; "other pairs handled" NOT FOUND; OpenCode wrongly named coder). Conditions a-e all present and correct: (a) drops dead adjusted_anchors; (b) fixes the gray-decrease error noting 2417100/2753100 are off-page auto-misses; (c) corrects '>=25' to '>23'; (d) requires builder copy under test first (no core edit); (e) explicitly labels miss tag-time as NOT FOUND. 39400 (1045 -> 1048, gap=3): flagged, clip moves to tag frame, make/miss stays on original anchor 1045 — does not include 41900's moment. N=23 = 8+14+1 from existing page clip, not tuned. No banned trials, no Adrian Q4 design use, applied_to_core false.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2a8abf04c195febfa82bf0880d662f9b8df9c53a9438ae464cfdec6589b24438
+  hermes -c "Muse review clip moment spec v2"
+
+Session:        local-2a8abf04c195febfa82bf0880d662f9b8df9c53a9438ae464cfdec6589b24438
+Title:          Muse review clip moment spec v2
+Duration:       1m 37s
+Messages:       14 (1 user, 12 tool calls)

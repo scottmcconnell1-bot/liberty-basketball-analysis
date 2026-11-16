@@ -1,0 +1,40 @@
+## Spec 52 v2 review (read-only)
+
+**Verdict:** Items 1–4 and 6–9 from my v1 review are in v2 and match what should be built. Item 5 (fixed `E`) is only partly specified, so the gate and the frozen ensemble can still diverge.
+
+### Cursor v1 items → v2
+
+| # | Asked on v1 | In v2? |
+|---|-------------|--------|
+| 1 | unmatched → `-1` + adrian/notus rebuild | Yes — A / R1 |
+| 2 | honest (non-oracle) review score | Yes — E |
+| 3 | silent-reject = 0 lock gate | Yes — R7 |
+| 4 | all-shots e2e denominator | Yes — R7 |
+| 5 | buildable inner-split `E` | **Partial** — see below |
+| 6 | M-seed disagreement (M=3 / M=5) | Yes — D |
+| 7 | hard ≤20 checks, no truncate | Yes — R7 / R9 |
+| 8 | second-person spot-check before freeze | Yes — R3 |
+| 9 | HSB1 diagnostic-only + named deliverables | Yes — R2 / H |
+
+Claude V1–V4 are present (airball rule, sampler-only CE, seed-disagreement, inner-split direction).
+
+Current code still has the old bugs (`labels_tagmatch`/`labels_tags` far unmatched → `0`, GradScaler+loss weights, `postproc_locked51.json` floor 0.35, oracle `score()`). That is expected; v2 correctly tells the builder to change those.
+
+### Still wrong / incomplete (must fix)
+
+1. **`E` is bound only to final `fit`, not to the LOGO gate.**  
+   R5 ends with “final fit runs exactly E”. R7’s 3-seed LOGO numbers are never told to train the outer fold (4 games) for that same `E`. A builder can search `E` on the inner split, gate with `--epochs 18` (today’s default), then fit with `E` — gate and blind recipe diverge.  
+   **Fix:** After `E` is chosen: each outer LOGO fold trains on its 4 games for exactly `E` epochs (last weights), seeds 0–2; that is what R7 scores. Final fit on all 5 games also uses exactly `E`, seeds 0–4.
+
+2. **Item 5’s seed rule for the median was dropped.**  
+   V1 ask: `E = median` of the five fold best-epochs **over seeds 0–2**. V2: “median of 5 fold best-epochs” with no seed.  
+   **Fix:** Either `E = median` over 5 folds × seeds 0–2 (15 values), or explicitly “each fold’s epoch search uses seed 0 only; `E = median` of those 5.”
+
+3. **`miss-recall` is not defined, and `train_clip.report` has no such metric.**  
+   Without a formula, two builders pick different `E`. Given silent rejects, it must mean “miss kept as shot,” not class-1 argmax recall.  
+   **Fix:** For epoch selection, `miss_recall = mean(pred > 0 | Y == 1)`; tie-break `shots_correct_overall` as already written.
+
+Wording-only (not DISAGREE grounds): Disagreements section says “Cursor AGREE” though v1 was DISAGREE; “Next: Claude Code implements” vs Cursor-as-builder — neither changes the artifact.
+
+CURSOR: DISAGREE: bind E to outer LOGO train-on-4 (seeds 0-2) as well as final fit; define miss_recall = mean(pred>0|Y==1); state E median seed rule (seed 0 only, or over seeds 0-2).
+[cursor_wsl] exit 0 at 21:32:39

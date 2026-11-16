@@ -1,0 +1,13 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/29_bigger_wide_view_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "BIGGER WIDE VIEW SPEC v1 - not run". Plain markdown, no line-number prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your write tool refuses, say so plainly. Half a page.
+
+Scott 2026-11-03 on page_v4 (spec 28, read .team/specs/28_wide_view_combined_cards_spec.md): "I like the dual screens it is helpful. Except the top right screen is too small to see good details, so I couldn't make a judgement call on one shot." On 0:39.4 (39400, Shot 1 of the combined card) his note: "I cant tell if there was a first shot."
+
+FACTS: wide frames are written at 640 px wide (spec 28 correction 3, display only) and shown beside the close-up in a card of min width 340 px (make_review_queue_page.py CSS .wrap grid minmax(340px,1fr)). Source video is 1920x1080 (Claude Code: wide jpgs downscaled from it; NOT FOUND in code as a constant - read with cv2).
+
+PLAN (display only, changes no call, no new detection number):
+1. Wide frames written at full source width (no downscale) - say the disk cost: Claude Code counted 2083 files in page_v4 now; estimate the new size.
+2. Layout: the wide view is shown FULL card width ABOVE the close-up (not beside it); cards are one per row on wide screens (grid min width = the wide image's display width or 100%, state it); clicking the wide view opens it full-screen (same frame, same controls; Esc or click closes).
+3. Where: make_review_queue_page.py only, under --wide-combined (spec 28 behaviour otherwise unchanged; close-up frames byte-identical to page_v4).
+4. Tests: if any pure helper is added, test it; otherwise state that the check is the one run.
+5. One run to a NEW out dir: pass = close-up jpgs identical to page_v4; wide jpgs are source size; same cards and counts (gray 30, orange 9, 42 shots); page JS passes node --check.
+6. Roles: Claude Code vets, Muse checks, Cursor codes.

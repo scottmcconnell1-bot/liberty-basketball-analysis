@@ -1,0 +1,18 @@
+You are Hermes, the ARCHITECT on the Liberty basketball film project. Spec 52 v2 (.team/specs/52_label_audit_stable_ensemble_spec.md, copy at .team/review52/52_spec_v2_hermes.md) was re-reviewed: both reviewers confirm every v1 item is in v2, but each asks for precision fixes. Write v3, overwriting .team/specs/52_label_audit_stable_ensemble_spec.md. Change nothing else in substance. Edit no other file.
+
+Apply ALL of these exactly:
+CURSOR (.team/review52/cursor_spec52_v2.txt):
+C1. After E is chosen, each outer LOGO fold trains on its 4 games for exactly E epochs (last weights), seeds 0,1,2 - that is what the gate scores. Final fit on all 5 games also exactly E, seeds 0-4.
+C2. E search uses seed 0 only per fold; E = median of the 5 fold best-epochs.
+C3. miss_recall (for epoch selection) = mean(pred_class > 0 | Y == 1), i.e. a labelled miss kept as a shot; tie-break shots_correct_overall.
+MUSE (.team/review52/muse_spec52_v2.txt, last '☤ Hermes' block):
+M1. Renumber all requirements R1..Rn sequentially, one requirement per number, sections in order.
+M2. Pin postproc52.json schema exactly: {"shot_thr":0.5,"dedup_ms":800,"session_filter":false,"review":{"flag_below_thr_candidates_with_shot_prob_at_least":0.2,"flag_auto_shots_with_shot_prob_below":0.65,"flag_auto_shots_with_abs_pmake_minus_half_below":0.3,"flag_seed_disagreement":true}}.
+M3. Final fit and LOGO: lr 2e-4, batch size 8, AdamW wd 0.05, OneCycle pct_start 0.15 (as now).
+M4. Nested split wording: for outer fold k (held-out game k), the 4 remaining games: inner-train on 3, inner-val on the 4th (the inner-val game = the next game in the fixed order adrian, notus, gvg, hsb, rimrock after k, wrapping, skipping k); best epoch by C3 on inner-val.
+M5. Silent-reject diagnostic: per held-out game, over labelled misses: ensemble mean P(shot) < floor (0.2) AND all M seeds P(shot) < 0.5 -> silent reject; gate requires 0 on every game.
+M6. FACTS: silent zone after floor change is P(shot) in [0, 0.2).
+M7. Honest score implementable: when building the with-review list, first mark every true tag matched (one-to-one, 4 s) by a NON-flagged auto shot as used; flagged items may only match unused tags (nearest within 2 s).
+Also fix the Disagreements line: Cursor and Muse both DISAGREED on v1 and v2 and their items are applied; and state the builder is Cursor (Claude Code verifies).
+
+Keep under 180 lines. Final line exactly "HERMES: SPEC WRITTEN" or "HERMES: NO SPEC:" + reason.

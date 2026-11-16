@@ -1,0 +1,49 @@
+# Spec 52d Item 4 steps 5-6 — EXACT Windows commands (do NOT run from this Cursor build)
+# Spec sha verified: e4ebccffc73c618ca7ced167c437cc80fe739e090a3aea21c18c4c80ef51bf2b
+# GPU venv: C:\Users\scott\.venvs\liberty-gpu\Scripts\python.exe
+#
+# Candidates = the cand5 files whose t_ms match frozen clips7a / labels52a
+# (Proven this session: adrian.json, notus.json, gv.json, hsb.json|hsb_mv.json, rimrock_mv.json).
+# NOTE: *_mv.json does NOT match clips7a for adrian/notus/gvg (165/38/410 vs 166/39/561).
+# Spec template said <film>_mv.json; t_ms parity with clips7a requires the files below.
+#
+# Videos = same tokens as clips7 finder runs (Proven: rim_first/*/moments.json "video"):
+#   adrian  -> uploads\nfhs_gam0a66d85e12.mp4
+#   notus   -> uploads\LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4
+#   gvg     -> uploads\LIBERTY_H_v_GARDEN_VALLEY_A_20260809_221334.mp4  (cand = gv.json)
+#   hsb     -> uploads\LIBERTY_A_v_HSB_H_20260809_221334.mp4
+#   rimrock -> uploads\LIBERTY_A_v_RIMROCK_H_20260809_221334.mp4
+#
+# Labels = labels52a_class0_restore.json (sha d8d2acd4...); source prefix labels52a:
+# Window = --window 52d (T0=-0.88 STEP=0.16 WINDOW_END_S=6.0 N=44 K_TRIG=6); default clips7 unchanged.
+
+cd /d C:\Users\scott\Documents\liberty-basketball-analysis
+
+set PY=C:\Users\scott\.venvs\liberty-gpu\Scripts\python.exe
+set REPO=C:\Users\scott\Documents\liberty-basketball-analysis
+set OUT=C:\Users\scott\Documents\Liberty_Shot_Outputs\mm_clip
+set LAB=%REPO%\.team\review52\labels52a_class0_restore.json
+set CAND=%OUT%\cand5
+set CLIPS8=%OUT%\clips8
+set VID=%REPO%\uploads
+
+mkdir %CLIPS8% 2>nul
+
+REM ----- extract clips8 (52d window) from clips7a-matching cand5 + labels52a + same videos -----
+%PY% .team\mm_clip\extract_clips.py adrian %CAND%\adrian.json %VID%\nfhs_gam0a66d85e12.mp4 labels52a:%LAB% %CLIPS8%\adrian.npz --window 52d
+%PY% .team\mm_clip\extract_clips.py notus %CAND%\notus.json %VID%\LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 labels52a:%LAB% %CLIPS8%\notus.npz --window 52d
+%PY% .team\mm_clip\extract_clips.py gvg %CAND%\gv.json %VID%\LIBERTY_H_v_GARDEN_VALLEY_A_20260809_221334.mp4 labels52a:%LAB% %CLIPS8%\gvg.npz --window 52d
+%PY% .team\mm_clip\extract_clips.py hsb %CAND%\hsb.json %VID%\LIBERTY_A_v_HSB_H_20260809_221334.mp4 labels52a:%LAB% %CLIPS8%\hsb.npz --window 52d
+%PY% .team\mm_clip\extract_clips.py rimrock %CAND%\rimrock_mv.json %VID%\LIBERTY_A_v_RIMROCK_H_20260809_221334.mp4 labels52a:%LAB% %CLIPS8%\rimrock.npz --window 52d
+
+REM ----- sha freeze clips8 (write .team\review52\clips8_sha.txt BEFORE training) -----
+%PY% -c "import hashlib,pathlib; root=pathlib.Path(r'%CLIPS8%'); out=pathlib.Path(r'%REPO%\.team\review52\clips8_sha.txt'); films=['adrian','notus','gvg','hsb','rimrock']; lines=[(lambda f:(hashlib.sha256((root/(f+'.npz')).read_bytes()).hexdigest()+' *clips8/'+f+'.npz'))(f) for f in films]; print('\n'.join(lines)); out.write_text('\n'.join(lines)+'\n'); print('wrote', out)"
+
+REM ----- confirm t_ms arrays equal clips7a (same candidates; frames differ only) -----
+%PY% -c "import numpy as np,pathlib; a=pathlib.Path(r'%OUT%\clips7a'); b=pathlib.Path(r'%CLIPS8%'); films=['adrian','notus','gvg','hsb','rimrock']; ok=all(np.array_equal(np.load(a/(f+'.npz'))['t_ms'], np.load(b/(f+'.npz'))['t_ms']) for f in films); print({f:len(np.load(a/(f+'.npz'))['t_ms']) for f in films}); assert ok, 't_ms mismatch vs clips7a'; print('t_ms parity OK')"
+
+REM ----- train logo52d (E=5, seeds 0 1 2; speed guard aborts if s/step > 1.06) -----
+%PY% .team\mm_clip\train_clip.py logo %CLIPS8% %OUT%\runs\logo52d --films adrian notus gvg hsb rimrock --epochs 5 --seeds 0 1 2
+
+REM ----- gate (Item 4 step 7; run only after train finishes; postproc52b UNCHANGED) -----
+REM %PY% .team\mm_clip\gate52.py %OUT%\runs\logo52d\logo_preds.npz adrian=%REPO%\data\film_tags\jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json=tags notus=%REPO%\data\film_tags\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json=tags gvg=%REPO%\.team\review52\truth52_gvg.json=labels hsb=%REPO%\.team\review52\truth52_hsb.json=labels rimrock=%REPO%\.team\review52\truth52_rimrock.json=labels --postproc %REPO%\.team\mm_clip\postproc52b.json

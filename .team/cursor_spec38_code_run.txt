@@ -1,0 +1,28 @@
+Spec 38 is in the three allowed files. The backward walk is on for a live run, and the old one-frame trace is still there when `walk_back` is false.
+
+`.venv` is a Windows interpreter and did not run under WSL, so the tests used system Python:
+
+```text
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+```
+
+**68 passed in 2.00s.**
+
+**Proven:** that command, this session. The walk stops on a hole of more than 8 missing frames, the same count `split_runs` already uses for `MAKE_GAP_FRAMES`. A hold 20 frames before the in-flight start is found. Two players on one frame go orange with `hold_boxes`. A box marked `class: "referee"` is never the shooter. With no rise, the walk starts at the latest ball frame at or before the trigger. `--walk-off` retrace of a tiny saved run reproduced the moments and exited 0. A saved `ref_x` of 1.0 against a rebuilt 960 exited 2. An FT 1.5 hoop widths from the series median passes; 1.51 fails.
+
+**Functions added:** `_is_referee_box`, `_box_record`, `_trace_fields`, `_single_frame_fields`, `_window_ball_track`, `_holders_on_frame`, `_trace_single_frame`, `_trace_walk_back`, `_hoop_dict_from_h`, `rebuild_series_from_frames`, `_attach_saved_v6`, `_balls_and_players_from_frames`, `_ref_x_value`, `_saved_ref_by_series`, `_series_rows_differ`, `_print_series_gate`, `_trace_triple`, `_apply_shooter_trace`, `retrace_moments`, `run_retrace`, `floor_spot_hoop_widths`, `shooter_section`, `_render_shooter`, and the small measure helpers those call.
+
+**Functions changed:** `trace_shooter` (required `walk_back`), `emit_moments` (passes it through), `detect_span` (calls with `walk_back=True`), `build_arg_parser`, `main` in both files, `build_report`, `render_summary`.
+
+**Choices this prompt left open:**
+
+- The track-break gap is missing frames (`later - earlier - 1`). A hole of 8 continues. A hole of 9 is `track broken`. That matches `MAKE_GAP_FRAMES` in `split_runs`.
+- `walk_back` False still uses today's reasons, including `no player at release frame`, and still picks the nearest player when several boxes pass. Each result also carries `trace_mode`, `hold_boxes` (null), and `last_checked_frame` (null).
+- On the walk, orange sets `release_frame` to null and keeps the last examined frame in `last_checked_frame`. A found hold sets both to that frame. Two holders stop the walk on that frame. `hold_boxes` keeps player-list order.
+- A referee is skipped when `class` or `name` is `referee`. Live player rows have neither key. Retrace never reads saved `"r"` rows.
+- A series that fails the hoop check is not traced again. Its saved shooter fields stay, which is how a not-a-hoop moment survives `--walk-off`. Those moments do not get `trace_mode`.
+- Retrace walks the saved compact frames in frame order. Empty frames that were never written are not replayed. `ref_x` is the last hoop paired on that list. The new directory is still written when the gate returns 2.
+- Release-to-trigger seconds are `(trigger frame - release frame) / fps`, using `fps` on `moments.json`. Rows with no release frame are left out of that median. FT, distance, timing, and the review list use the existing shot matches. Found-by-series counts every moment with status `found`.
+- The FT median is the median x and the median y of the hoop-width spots. Distance is the hypotenuse. Pass is `<= 1.5`. Quartiles for 2PT and 3PT need at least two distances.
+- The 20-found plus 5-orange hand check is not coded. It is the still-frame check before a film run.
+[cursor_wsl] exit 0 at 11:47:12

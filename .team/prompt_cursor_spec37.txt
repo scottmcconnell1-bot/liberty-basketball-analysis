@@ -1,0 +1,18 @@
+You are the Coder. Implement spec 37 (.team/specs/37_rim_first_cue_fix_spec.md). Claude Code's VETTED WITH CONDITIONS block L1-L6 at the top OVERRIDES the Hermes v2 text below it where they differ. Muse AGREE. Scott approved the plan; every number is already Scott-approved or existing - add NO new number.
+
+Edit ONLY .team/shot_detectors/rim_first_finder.py and .team/shot_detectors/test_rim_first.py. Do NOT edit rim_first_measure.py or any other file. Do not commit. Do not run video or models. Do not delete existing functions or tests except the shot-call paths L4 removes (referee_holding, possible_fouled_miss) and tests that assert those two calls - replace those tests with "referee boxes present no longer change shot_call". Keep FOUL_REF_WINDOW_MS out of the call path; you may delete the constant.
+
+Exactly:
+1 SHOOT_AROUND_MIN_FRAMES = 12 (comment "Scott decided 2026-11-06, spec 37"). possible_shoot_around fires when the number of frames in [trigger_ms - TRACE_BEFORE_MS, trigger_ms] with >= SHOOT_AROUND_MIN_BALLS BODD balls is >= 12 (total, not consecutive). Use bisect on the sorted hot-frame list.
+2 Per-frame hoop filter, pure function filter_frame_hoops(hoops, film_hoop_w, w_min, w_max, same_hoop_widths) in this order (L5): drop boxes with w/film_hoop_w outside [0.5, 1.5] (inclusive kept); then collapse boxes whose centre distance hypot(dx, dy) <= same_hoop_widths * film_hoop_w (MISS_RIM_ZONE_WIDTHS 0.735, inclusive) keeping the highest conf; then the existing dedupe_hoops. If film_hoop_w is None, skip the band and collapse (keep current behaviour) and say so in a comment.
+3 detect_span: compute film_median_hoop_w(raw) right after the BODD pass; apply filter_frame_hoops to each raw frame's hoops BEFORE _hoop_samples_from_raw / build_hoop_carry / resolve_frame_hoops / assign_frame_hoops, so dropped boxes never pair, start a series, or feed the carry. frames.json "h" still saves the raw BODD hoops (audit); add per frame "hk" = indices of kept hoops only if cheap, otherwise skip and say so.
+4 Each moment stores run_first_frame and run_last_frame (first/last frame of the v6 run it came from).
+5 Cross-series same shot (L3), inside assign_shot_calls (add film_hoop_w and same_hoop_widths and gap as arguments): moments sorted by trigger frame; for each moment, if an EARLIER moment on a DIFFERENT series has hypot(hoop x diff, hoop y diff) <= same_hoop_widths * film_hoop_w and earlier.run_last_frame + gap (MAKE_GAP_FRAMES 8) >= this.run_first_frame -> same_shot_merged, merged_into_frame = the earliest such moment's trigger frame after resolving chains (if that earlier one was itself merged, point to what it was merged into). Same-series merge stays as today (release 0.6).
+6 Shot-call order (L4): not_a_hoop -> same_shot_merged -> possible_shoot_around -> shot. flags still lists every rule that fired.
+7 Keep the import-grep test that the finder imports no tag/scoreboard/db/sqlite module.
+
+Tests (L6), pure hand data: a 1.7x box starts no series and is not in the carry; same-frame boxes 0.73 widths apart -> one series, 0.74 widths apart -> two; cross-series merge positive; different hoop (1 width apart) not merged; runs 9 frames apart not merged, 8 frames apart merged; chain of three resolves to the earliest; shoot-around 11 frames -> shot, 12 -> orange, 12 frames of 3 balls AFTER the trigger -> shot; referee boxes holding the ball -> shot_call unchanged.
+
+Run and print exact command + result (python3 if .venv cannot run in your sandbox; say so):
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+End with: functions added/changed/removed, and any choice this prompt did not spell out.

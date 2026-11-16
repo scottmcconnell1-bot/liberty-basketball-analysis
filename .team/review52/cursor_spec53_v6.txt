@@ -1,0 +1,51 @@
+## Spec 53 v6 — Cursor re-review (read-only)
+
+**Proven** from `.team/specs/53_referee_signals_spec.md` v6, `.team/review52/cursor_spec53_v5.txt`, `.team/review52/scott_numbers53.txt`, and on-disk greps of the named modules.
+
+### 1) v5 required changes — mostly applied
+
+| v5 ask | v6 |
+|---|---|
+| Boolean fusion over DETECTABLE inputs only (no #4/#22/#18 pose primitives) | Status + table intro state this; `fouled_miss` / `waved_off` / `and_one` / `none` / `unknown` are boolean. **`violation` / `travel_inferred` is not** — still “#22 … fusion only, else unknown” with no detectable-input boolean |
+| `waved_off` when score cue omitted | Defined: omit score → do not auto-cancel → `"unknown"` under 0-false-fire |
+| One name `foul_ref_window_ms` | Fixed in §9 + both foul rows (no `fouled_ref_window_ms`) |
+| Drop violation “etc.” + precedence | “etc.” gone; order `and_one > fouled_miss > waved_off > violation > none > unknown` present |
+
+Muse wording (“FT setup / restart context”) and 3PT “by a margin” are in.
+
+### 2) Scott’s numbers — concrete enough to code
+
+| Binding | Spec | Codeable? |
+|---|---|---|
+| waved_off window | start ≤ **1000 ms** after rim/release; duration ≤ **1500 ms** | Yes |
+| foul window | `foul_ref_window_ms` = **1500** | Yes |
+| 3PT height | wrist above nose/eye **by a margin** (e.g. ≥ 0.25 × shoulder width) | Yes (lock the example as the fixed constant at build) |
+| small-ref gate | ≥ **80%** keypoint-found else OFF | Yes |
+| false fires | **0** labelled true-shot cancels/changes else OFF | Yes |
+
+### 3) Cue → source table — real files/functions
+
+| Named source | Check |
+|---|---|
+| `ft.stillness` / `decide_ft` in `ft_half_circle.py` | Real (`def stillness`, `def decide_ft`) |
+| `free_throw_line` / `maybe_free_throw` | Real **ft_reason strings**, not functions |
+| `scoreboard_clock.py` | Real (repo root) |
+| `scoreboard_pair_rises.py` | Real (`.team/shot_detectors/`) |
+| finder `release_frame` / `"r"` / `assign_shot_calls` | Real |
+| 48b `samples.json` clock holds | Real pattern (`game_session.py` writes it; Rimrock correctly has no board) |
+| `ref_signals.py` | Proposed new (OK) |
+
+### 4) Combination table — not fully pure-function codeable
+
+**Codeable as written:** `fouled_miss`, `and_one`, `waved_off` (with score present), `none`, `unknown`, plus precedence.
+
+**Blockers:**
+
+1. **`waved_off` vs Rimrock pass bar.** No-score rule → `"unknown"`. Cue table: Rimrock has no score track. Pass bar still wants `rimrock:253` → **waved_off / no shot**. Those two cannot both hold for a pure function.
+2. **`violation` / travel.** `travel_inferred` has no DETECTABLE boolean. Only codeable outcome is `unknown`, but pass bar wants `rimrock:77` → travel / no shot.
+3. **Fusion consistency (non-blocking but real):** DETECTABLE EVENTS cites fist via `arm_raised + play_stopped + ft_next + score_changed`; `fouled_miss` uses only `arm_raised + timing + play_stopped` — same pose as stop-clock #2, risk under the 0-false-fire bar.
+
+---
+
+**CURSOR: AGREE WITH CHANGES: reconcile waved_off-no-score→unknown with rimrock:253 pass category; write travel_inferred as a DETECTABLE boolean or set rimrock:77→unknown; optionally add ft_next to fouled_miss to match fist-fusion prose.**
+[cursor_wsl] exit 0 at 16:47:37

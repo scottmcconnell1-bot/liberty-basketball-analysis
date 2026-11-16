@@ -1,0 +1,82 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your reader fix plan v3 (NEXT_TASK.md) was REJECTED: read the 
+first line of .team/specs/09_notus_reader_fix_v3_REJECTED.md for the three 
+reasons. Rewrite the WHOLE of NEXT_TASK.md so the body carries those three 
+fixes; keep everything else from v3 as it is (it already fixes the v1 and v2 
+reasons). Do NOT open .team/specs/04_notus_holdout_truth.json or any 
+holdout_*.png. STRICT: create or edit ONLY NEXT_TASK.md. Do not create any other
+file; do not run code.
+📖 Read 09_notus_reader_fix_v3_REJECTED.md  0.1s
+📖 Read NEXT_TASK.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -15,12 +15,24 @@
+│
+│  ---
+│
+│ +## Rejection Reasons (from 09_notus_reader_fix_v3_REJECTED.md)
+│ +1. Step 1 takes the UNION of all seven segment regions. For a digit like 1 (two segments on) the five OFF segments are dark board, so the 10th percentile is pulled toward unlit pixels and the cutoff comes out too low. **Use only the regions of the segments that are ON for the eye-read digit (_SEVEN_SEGMENT gives which).**
+│ +2. **No stop point**: the coder must first save the fitting crops (e.g. under `.team/notus_fit_crops/`, listed in ## Files) and STOP; the Vetter writes the eye-read values to a file (name it in ## Files); only then does the coder measure. Step 0 may use those same eye-read values to know a tens digit is lit.
+│ +3. `data/roi/notus_scoreboard_rois.json` is untracked (no git history) and holds the approved boxes: **before any in-place change the coder copies it to `data/roi/notus_scoreboard_rois_approved_2026-10-26.json` (list it in ## Files).**
+│ +
+│ +---
+│ +
+│  ## Fix Plan
+│
+│  ### 0. Verify home/away TENS box positions (FIRST, before any mask change)
+│ +**Before any in-place change**, the coder copies `data/roi/notus_scoreboard_rois.json` → `data/roi/notus_scoreboard_rois_approved_2026-10-26.json`.
+│ +
+│  On **fitting frames only** (frames ≥60 s from every gate time and every holdout time):
+│ -- For each of the four scoreboard slots (home_tens, home_ones, away_tens, away_ones), crop the current `notus_scoreboard_rois.json` box on a fitting frame where the score is visibly changing (so tens digit is definitely lit).
+│ -- Measure mean V inside the box. If mean V ≈ 10 (same as blank), the box is misplaced — it is not covering the tens digit.
+│ +- The coder extracts ~10 fitting-frame crops per slot (home_tens, home_ones, away_tens, away_ones) where the score is visibly changing (so tens digit is definitely lit) and saves them under `.team/notus_fit_crops/`.
+│ +- **STOP**. The coder does not measure anything yet.
+│ +- The Vetter reads the saved crops by eye and writes the ground-truth digit value for each crop to `.team/notus_fit_crops/eye_read_values.json` (one entry per crop: `{"crop_path": "...", "slot": "home_tens", "digit": 3}`).
+│ +- The coder then uses those eye-read values to know which tens boxes are on a lit-digit frame. For each of the four scoreboard slots, on a fitting frame where the Vetter-confirmed tens digit is non-blank (digit ≥ 1), crop the current `notus_scoreboard_rois.json` box and measure mean V inside the box.
+│ +- If mean V ≈ 10 (same as blank), the box is misplaced — it is not covering the tens digit.
+│  - **If any box is wrong**: Re-measure its (x, y) on fitting frames by searching a bounded x,y shift (±8 px in x, ±6 px in y) around the current box center, keeping the measured w,h fixed, to maximize mean V when the tens digit is lit (e.g., score ≥ 10). Write corrected boxes back into `data/roi/notus_scoreboard_rois.json` (replacing the existing tens/ones boxes under `games/*/scores` and `default/scores`). The reader already loads this file via `load_rois()` — no code change needed. The coder does this re-measurement; the plan does not supply coordinates.
+│
+│  Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559  
+│ @@ -31,8 +43,7 @@
+│
+│  ### 1. Measure Notus red-digit colour on fitting frames ONLY (no gate/holdout frames)
+│  Using the (possibly corrected) ROI boxes from step 0 on fitting frames only:
+│ -- The Vetter reads ~10 fitting-frame crops per slot by eye to get the ground-truth digit value for each crop.
+│ -- For each crop where the Vetter-confirmed digit is non-blank, take the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box), union the seven regions, and collect pixels inside that union whose hue falls in the standard red wrap [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale). These are the "red-hue lit-segment pixels" — defined without any S/V cutoff.
+│ +- The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json` (written by the Vetter). For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (using `_SEVEN_SEGMENT[digit]` to know which indices). Union those ON-segment regions, and collect pixels inside that union whose hue falls in the standard red wrap [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale). These are the "red-hue lit-segment pixels" — defined without any S/V cutoff.
+│  - **Rule (fixed before measuring)**: Take the 10th percentile of V and the 10th percentile of S over all red-hue lit-segment pixels across all four slots and all fitting frames. These two numbers become the frozen `NOTUS_S_MIN` and `NOTUS_V_MIN`.
+│  - Write `NOTUS_S_MIN` and `NOTUS_V_MIN` to `data/roi/notus_red_thresholds.json` (keys: `s_min`, `v_min`). The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│
+│ @@ -108,7 +119,10 @@
+│  - `scripts/fit_notus_segments.py` — import and use `_notus_red_mask` for fitting; add 20 holdout times to `_sample_timestamps` exclusion
+│  - `data/roi/notus_red_thresholds.json` — created by step 1 measurement (keys: `s_min`, `v_min`)
+│  - `data/roi/notus_scoreboard_rois.json` — potentially corrected by step 0 (tens/ones boxes updated in place under `games/*/scores` and `default/scores`; reader loads it via existing `load_rois()`)
+│ +- `data/roi/notus_scoreboard_rois_approved_2026-10-26.json` — copy of original ROI file before any in-place change (step 0)
+│  - `data/roi/notus_segment_geometry.json` — regenerated by fitting script
+│ +- `.team/notus_fit_crops/` — fitting-frame crops saved by coder in step 0 (one per slot per frame)
+│ +- `.team/notus_fit_crops/eye_read_values.json` — Vetter's eye-read digit values for each crop (step 0 → step 1 handoff)
+│  - `tests/test_notus_digit_gate.py` — unchanged (validates the fix)
+│  - `tests/test_notus_holdout_gate.py` — created by coder (reads holdout truth, runs once after gate passes)
+│
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten NEXT_TASK.md incorporates all three v3 rejection fixes:
+
+1. Step 1 now uses only the ON-segment regions for the eye-read digit (_SEVEN_SEGMENT[digit]) instead of the union of all seven segments.
+
+2. Step 0 adds the mandatory stop point: coder saves fitting crops to .team/notus_fit_crops/, STOPs; Vetter writes eye-read values to .team/notus_fit_crops/eye_read_values.json; only then does the coder measure. Step 0 also uses those eye-read values to confirm tens digit is lit.
+
+3. Step 0 copies data/roi/notus_scoreboard_rois.json → data/roi/notus_scoreboard_rois_approved_2026-10-26.json before any in-place change; both files are listed in ## Files.
+
+Everything else from v3 is preserved unchanged.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-80ee1282881f3b31a5a5018383e5671a6246c9a56a2106289899964256cd403c
+  hermes -c "Rewrite NEXT_TASK.md with v3 rejection fixes"
+
+Session:        local-80ee1282881f3b31a5a5018383e5671a6246c9a56a2106289899964256cd403c
+Title:          Rewrite NEXT_TASK.md with v3 rejection fixes
+Duration:       2m 26s
+Messages:       8 (1 user, 6 tool calls)

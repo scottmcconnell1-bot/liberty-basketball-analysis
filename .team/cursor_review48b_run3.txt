@@ -1,0 +1,5 @@
+S6 tip window now matches `session_v3.build` (`max(lo, tip-8)..tip`, max legal clock); classification still tracks the design branches.  
+S7b is additive only: same drop rules, explicit reasons, `warnings` do not change periods/intervals; S9 limited to reference keys so extras do not break equality.  
+No conflict with design code; one small naming choice (`start_val` vs prose “start value”) is fixed by the design field.  
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 11:17:23

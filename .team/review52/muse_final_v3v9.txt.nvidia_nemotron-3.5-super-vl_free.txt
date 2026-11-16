@@ -1,0 +1,52 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+FINAL check. (1) .team/specs/52a_class0_restore_prereg.md v3: counts fix (Claude
+Code verified: adrian out-of-session rows are all also far-from-tag, so unique =
+26, not 32) (adrian unique 26, pool 277, oos
+definition 48b in_session(is_ft=True)), build order (Cursor builds 
+session_filter + gate path + tests + labels52a + sha
+first; Claude Code verifies; Muse + Cursor confirm; then training), R7 
+amendment, dissent record. (2)
+.team/specs/53_referee_signals_spec.md v9: pass bar only when the step is 
+enabled; violation wording.
+End with two lines:
+MUSE 52a: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (spec 53 v9)
+📖 Read 52a_class0_restore_prereg.md  0.1s
+📖 Read 53_referee_signals_spec.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE review — final check, read-only.
+
+Spec 52a v3 — verified against the pinned itemsCounts fix (lines 87–93): Confirmed in-text. Every adrian out-of-session y=-1 row is also >= 8 s from any coach tag ("oos is a subset of far; oos dists 47.8-176 s"), so unique adrian class-0 = 26, not 32 — the v2 "6 + 26 = 32" double-count is removed. Hold-out-gvg train pool = 277 (241 rimrock + 4 hsb + 26 adrian + 6 notus), not 283. Oos definition pinned to 48b in_session(is_ft=True); adrian y=-1 n=45 = 39 in-session + 6 oos. Internal arithmetic checks: adrian 26 class-0 + 19 staying -1 = 45; notus 6 + 3 = 9; pre-restore pool 245 vs post-restore 277. All consistent.
+
+Build order (lines 94–99): Pinned exactly as described — Cursor implements session_filter in ensemble_predict.shot_list + gate52 path (per-film session json mapping, omit scoring) + tests, writes labels52a + .team/pre52a_sha256.txt; Claude Code verifies; Muse + Cursor confirm; only then training.
+
+R7 amendment (lines 98–99): Stated explicitly — postproc52 session_filter false -> true for logo52a only; R7 lock re-frozen with new sha.
+
+Dissent record (lines 103–105): Muse and Cursor dissent (same-5 = diagnostic, blind R10 binding) is recorded; R10 blind on NOTUS_A / IDAHO_CITY / RIVERSTONE stays available after a pass.
+
+No substantive issues found in 52a v3.
+
+Spec 53 v9 — verified against the pinned items
+
+Pass bar only when the step is enabled (line 1): Confirmed — "the pass bar applies ONLY when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0 fails, the step stays OFF and no pass bar is read." This is consistent with the Step 0 gate at line 116 (>= 80% keypoint-found share; else referee step stays OFF) and the pass-bar paragraph at line 102.
+
+Violation wording (lines 69–70): Confirmed — the combination table's violation row states violation_travel = arm_raised (stop clock) followed within ~2 s by rotate_hands near the shot/putback time window AND play_stopped -> category "violation" -> that shot (and the putback it covers) is not a shot; "no other violation predicate in v8." Stale cross-version wording in the v9 change summary is a cosmetic artifact only; the operative table reads cleanly. The rest of the user's summary (fouled_miss/waved_off/and_one precedence, NFHS proxy limits, make/miss safety) matches the spec text.
+
+No blocking issues found in 53 v9.
+
+MUSE 52a: AGREE | AGREE WITH CHANGES: none | DISAGREE: none
+MUSE: AGREE | AGREE WITH CHANGES: none | DISAGREE: none   (spec 53 v9)
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-9cc2d65cb4a6e226ae37dc5aad1d67d0a1031b098e0665ee97d2c3eb50147764
+  hermes -c "MUSE final review specs 52a and 53"
+
+Session:        local-9cc2d65cb4a6e226ae37dc5aad1d67d0a1031b098e0665ee97d2c3eb50147764
+Title:          MUSE final review specs 52a and 53
+Duration:       50s
+Messages:       5 (1 user, 3 tool calls)

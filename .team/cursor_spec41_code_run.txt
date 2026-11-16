@@ -1,0 +1,19 @@
+Spec 41 line step is in. Ellipse path removed; geometry matches the calibration prototype (no coverage/support).
+
+**Command + result**
+```text
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q
+87 passed in 1.89s
+```
+(`.venv/bin/python` is not present on this WSL tree — Windows `.venv/Scripts` only — so `python3` was used.)
+
+**Functions added:** `erase_players`, `line_segments`, `keep_segments`, `ft_line`, `in_band`, `band_polygon`, `_feet`, `_undirected_angle_off`, `_adrian_darker_than_both_sides`, `_line_normal`, `_hoop_xy`
+
+**Functions changed:** `decide_ft` (hoop kw, paint_mask, line decision/reasons), `debug_image` (segments/line/band/feet), `_apply_ft_decision` (reason names), `annotate_free_throws` (`hoop=moment.get("hoop")`, new debug args), `ft_section` / `_render_ft` (`ft_line_not_found`, `non_ft_flagged`)
+
+**Functions removed:** `remove_straight`, `ransac_ellipse`, `feet_inside`, `_ellipse_axes`, `_local_points`, `ellipse_distance`, `_point_in_ellipse` (and `Ellipse` alias / ellipse constants)
+
+**Unchanged:** stillness / `is_still` / `still_frame_index` / `candidates` / `_cleaned_players`; shot calls, make/miss, hoop steps, trace, spec 39; `--ft-off` still matches the input trace
+
+**Choices not spelled out:** optional `paint_mask` for synthetic tests (replaces `region_mask`); kept `region_for` / `paint_in_region`; `non_ft_flagged` as `[{t_ms}]`; measure heading “Free throw line”; band polygon drawn with candidate height; views store pre-group kept segments. Not committed.
+[cursor_wsl] exit 0 at 10:50:02

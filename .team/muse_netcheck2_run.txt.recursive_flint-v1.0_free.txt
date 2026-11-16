@@ -1,0 +1,59 @@
+Query: ﻿You are Muse, the checker. Check Claude Code's VETTED verdict on the plan
+.team/specs/15_net_check_plan.md
+(stamp and BINDING NOTE a are at the top). Read the plan, net_detector.py lines 
+455-480 and 50-100,
+.team/shot_detectors/pixel_miss/measure_net_moved.py lines 155-180, and 
+AGENT_OPERATIONAL_PROTOCOL.md Golden Rules.
+Check: (1) the counts (140 shots = 19 missed makes + 28 correct makes + 93 real 
+misses); (2) the before-frame and
+delta design really answers "rim is the same orange as the ball"; (3) the HSV 
+ranges with binding note a match
+net_detector.py:74-76; (4) no protected file edited, no cutoff loosened, no 
+banned trial (linear interpolation,
+ByteTrack, DeepSORT, early windows, wider column, hoop recenter), no hard-coded 
+results, outputs outside the repo;
+(5) anything wrong in the stamp itself. Do not edit any file.
+End with exactly one line that starts with "MUSE: AGREE" or "MUSE: DISAGREE: 
+<reason with file and line>".
+📖 Read 15_net_check_plan.md  0.1s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.1s
+📖 Read net_detector.py
+📖 Read measure_net_moved.py
+💻 $ git status + 2 commands  84.2s
+📖 Read NEXT_TASK.md
+💻 $ git status --porcelain | grep -Ei 'net_detector|ai_bridge|ball_detector|schema|measure_net_moved|shot_detectors|pixel_miss|15_net_check|config\.yaml' + 2 commands  28.0s
+📖 Read ACTIVE.md
+💻 $ git diff --ignore-cr-at-eol --numstat -- net_detector.py ai_bridge.py models/ball_detector.pt schema.sql tests/test_net_detector.py tests/test_schema.py | cat + 4 commands  4.3s
+📖 Read 15_net_check_plan_v1_REJECTED.md
+📖 Read MUSE.md
+💻 $ ls -la .team/shot_detectors/pixel_miss/ + 4 commands  0.1s
+💻 $ grep -n -E 'VETTED|binding|BINDING|DISAGREE|AGREE' .team/specs/13_shot_work_order_plan.md + 2 commands
+💻 $ ls -la OLLAMA.md SESSION_STATE.md + 2 commands
+💻 $ grep -rn -E '38/93|6/19|fires on 38|catches 6' --include=*.md . | grep -v node_modules  14.0s
+📖 Read 14_missed_makes_diagnosis_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+I checked the VETTED verdict on .team/specs/15_net_check_plan.md (stamp line 1 + BINDING NOTE a on line 2) against the specified sources and checklist items. No files were edited.
+
+Verdict assessment:
+
+(1) Counts — PASS. The stamp's fix holds: build set 140 = 19 missed makes + 28 correct makes + 93 real misses, and 19 + 28 + 93 = 140 reconciles. Cross-confirmed by the predecessor diagnosis plan (.team/specs/14_missed_makes_diagnosis_plan.md:21: "catches 6 of 19 missed makes but fires on 38 of 93 misses").
+
+(2) Before-frame / delta design — PASS in substance. Before frame at peak_frame - 3 (same convention as net_detector.net_moved_after_shot:518), delta = after − before, largest-blob discriminator, decision on max_delta_ratio ≥ 0.08, rationale anchored at net_detector.py:99 ("The ball and this rim land in the same orange hue on this camera"). The design is present and coherent.
+
+(3) HSV + binding note a — PASS. The binding note's numbers were verified against net_detector.py:74-76: red1/red2 lower bounds are (0,70,70)/(165,70,70) → sat ≥ 70, val ≥ 70; orange is (8,90,90) → sat ≥ 90, val ≥ 90. The plan body's "sat ≥ 90, val ≥ 90" for red1/red2 was indeed the copying error, and the binding note correctly overrides §3.3 (file lines 67-68) and §11 (file line 252).
+
+(4) Compliance — PASS per plan text: no protected-file content edits (net_detector.py / ai_bridge.py differ only by line endings), no cutoff loosen, no banned trial, no hard-coded results, outputs outside the repo.
+
+(5) Stamp — essentially correct; all five rejection fixes are reflected in the v2. Minor citation imprecision only (stamp cites net_detector.py:72-77 / measure_net_moved.py:160-177 rather than the precise HSV lines 74-76 / :99 and the before-frame site at net_moved_after_shot:518).
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-f6b04a82c4ffa2aeb133e4becf7041799236df410b660c412f1311f0ecf066dd
+
+Session:        local-f6b04a82c4ffa2aeb133e4becf7041799236df410b660c412f1311f0ecf066dd
+Duration:       9m 37s
+Messages:       26 (1 user, 24 tool calls)

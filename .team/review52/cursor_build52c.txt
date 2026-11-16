@@ -1,0 +1,35 @@
+Spec SHA verified: `f5b4d5df…` matches `.team/review52/spec52c_v2_sha.txt`. Item 4 steps 2–4 built; no train, no gate.
+
+### What landed
+- **train_clip.py** — per-film `seq_follower` (`(t, t+6000]`), `SeqClipModel` (Dropout on pool → concat seq → Linear(513,3)), logo/fit/cross/choose_e wired
+- **ensemble_predict.py** — `predict_all(..., seq=None→zeros)`; `shot_list` extras only if `seed_disagreement` when `extras_require_seed_disagreement`
+- **postproc52b.json** + sha file; postproc52/52a unchanged (key absent)
+- **test_mm52.py** — 52c + 52b + logo52/logo52a byte-identical
+
+### Tests (WSL)
+318 passed, 3 skipped (no torch on system py; torch head checks re-run under hermes: pass), 3 holdout deselected + `q4_blind_test` ignored. Two more `test_verify_*` hit the same Windows `C:/…/holdout_names.json` path — deselect those too for a fully green WSL run.
+
+### Windows train (step 6 — do not run yet)
+```
+C:\Users\scott\.venvs\liberty-gpu\Scripts\python.exe C:\Users\scott\Documents\liberty-basketball-analysis\.team\mm_clip\train_clip.py logo C:\Users\scott\Documents\Liberty_Shot_Outputs\mm_clip\clips7a C:\Users\scott\Documents\Liberty_Shot_Outputs\mm_clip\runs\logo52c --films adrian notus gvg hsb rimrock --epochs 5 --seeds 0 1 2
+```
+
+### Changed files (sha256)
+| File | sha256 |
+|------|--------|
+| `.team/mm_clip/train_clip.py` | `4a29f4a4ad8ebe93a40a36ac4b54d25a8637d2fd3a727a195c7b78d2a4d13521` |
+| `.team/mm_clip/ensemble_predict.py` | `6814edbf00dadeef9e0d28422f47af874ef2bd660a6b272774bc193fea4e064d` |
+| `.team/mm_clip/test_mm52.py` | `0a086829a6c5bf937d8dec19953d1ddd0e35469668a5d630c90be16d33ad63d7` |
+| `.team/mm_clip/postproc52b.json` | `3a950337656cb96758c1d04f29c0013e7fe98ac39fb3e9ff3b1a4e92a3895f95` |
+| `.team/review52/spec52c_postproc52b_sha.txt` | `cd8d1a6b3fdfc09e900c8492f9fe1ed41004e655e20158e88d3e9f132c177c27` |
+
+Unchanged: postproc52 `150ff7e6…`, postproc52a `ec70b330…`.
+
+**CURSOR: BUILT**That background locate finished successfully: the SHA file is at `.team/review52/spec52c_v2_sha.txt` (not repo-root `review52/`). It already matched the approved spec (`f5b4d5df…`), and the 52c build (steps 2–4) is done.
+| `.team/mm_clip/postproc52b.json` | `3a950337656cb96758c1d04f29c0013e7fe98ac39fb3e9ff3b1a4e92a3895f95` |
+| `.team/review52/spec52c_postproc52b_sha.txt` | `cd8d1a6b3fdfc09e900c8492f9fe1ed41004e655e20158e88d3e9f132c177c27` |
+
+Unchanged: postproc52.json `150ff7e6…`, postproc52a.json `ec70b330…`.
+
+**CURSOR: BUILT**
+[cursor_wsl] exit 0 at 14:38:11

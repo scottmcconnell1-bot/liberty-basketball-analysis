@@ -1,0 +1,53 @@
+**Verdict:** Makes are stuck on weak near-rim ball evidence (not the Stage A rule). d2v1 sees more ball but flipped 5 tagged Adrian misses into makes. Raise makes by keeping denser detections **and** blocking short-track-style accepts.
+
+Proven sources this turn: prompt; `d2_results.json` / `d2_test_report.md`; `ball_arc/D1_Result_for_Scott.txt`; `scoreboard/pairs_report.md`; `ACTIVE.md`; `TEAM_RECOVERY.md` §6; `DETECTOR_PROPOSAL_REJECTION.md`; specs 17/18/23.
+
+Note: D1’s own write-up says the diagnostic `tracker_jumped_*` flag overcounts 1 px diffs; the honest recount was “14 of 19 never jumped,” and “ball not detected” was the main hole (`D1_Result_for_Scott.txt`). The 169 / 213 counts below are the diagnostic flags from your prompt / d2 report.
+
+---
+
+### Option 1 — d2v1 again, but ban short-path makes
+1. Keep d2v1 detections; only call make if the track also shows a full fall through the net column (or `net_moved_after_shot`). Do not accept the short-track make paths.
+2. On this data: d2v1 recovered 1792900 and 2962500, lost 48600, and called 5 misses makes — all Adrian, old reasons `short_track_left_net`×2, `ball_box_jump`, `short_net_depth`, `short_make_bodd_fail`; each had many arc replacements (9–20 frames). Those 5 are the gate fail. **Guess:** forcing full-column / net evidence blocks them; may keep some recoveries that already have a deep fall (1792900 was a short-net fix via real net detections per D1 write-up).
+3. Targets: mainly the detection hole behind `no_valid_crossing` (6) and thin tracks that become `column_ratio_low` / short-net; not a free pass for `ball_bounces_up` / `sideways_drift`.
+4. False-make risk: medium if the guard is vague. Guard: freeze the accept rule **before** scoring; no cutoff loosen; hard gate 0 on the 140; candidate weights only (not `models/ball_detector.pt`).
+5. Effort: ~1 day. From Scott: OK to re-score d2v1 under that fixed guard (one try, no tune-after).
+6. Fair test: build 140 must stay 0 false makes; report recovered/lost; then Adrian Q4 (18) blind once.
+
+### Option 2 — In-play / second-ball filter on D1 candidates (Scott’s idea)
+1. Before the arc pick, drop balls that are not the live game ball (rack, bench, sideline, warmup/halftime), using clock when readable plus simple motion/place checks.
+2. Spec 23 already says “in play” is decided **after** detection. d2v1 cut `ball_not_detected` 109→61 but raised jump flags 169→213 — more wrong boxes near the hoop. Filter candidates, don’t loosen the rule.
+3. Targets: jump/swap damage that feeds `no_valid_crossing`, `column_ratio_low`, `ball_box_jump`, `sideways_drift`.
+4. False-make risk: low if filter only **removes** candidates. Guard: when clock unread (Notus board parked; Adrian clock often weak), do nothing — fall back to today’s track. Never invent points (no interpolation).
+5. Effort: ~1–2 days. From Scott: confirm what counts as not-in-play; note FTs happen with clock stopped so clock-stopped ≠ ignore all shots.
+6. Fair test: same D1 pipeline, filter on/off; 0 false makes on 140; then Q4 once. **Guess:** alone may recover few makes; it mainly makes Option 1 safe.
+
+### Option 3 — Scoreboard CLEAN rise as make checker (Adrian)
+1. Video finds the attempt; a CLEAN score rise in the fixed 25 s window can confirm a make the ball rule missed.
+2. Stage C (`pairs_report.md`): time-only CLEAN 2/3 recovered 3 of the Adrian missed makes; with team-from-tag, 5; real misses with CLEAN 2/3 = 0. Adrian rises 43/43, final 51–26. Matches Scott’s “scoreboard counts makes” direction in `ACTIVE.md` (2026-10-26), with your note that it is checker / not the video stat machine.
+3. Targets: all Adrian rows among the 18, whatever the visual reason. Notus: board reader failed its gate (parked) — no claim there.
+4. False-make risk: ambiguous windows (many). Guard: CLEAN only (one shot in window); never flip on AMBIGUOUS; 1-pt rises optional/separate (Stage C left them out of the main CLEAN 2/3 count).
+5. Effort: ~0.5–1 day (logic already measured). From Scott: confirm checker use on Adrian; Notus stays parked until a new reader passes.
+6. Fair test: re-confirm 0 CLEAN false makes on build; Q4 blind (tags only for score, not for training).
+
+### Option 4 — Sound probe (Stage B from plan 18)
+1. Measure swish / rim / crowd around the shot peak as a second signal; do not change cutoffs.
+2. Both films have stereo sound (spec 17). Stage B not started (`TEAM_RECOVERY.md`). Independent of ball boxes.
+3. Targets: especially `no_valid_crossing` / sparse tracks where video has little ball.
+4. False-make risk: high if used alone (crowd, both teams). Guard: measurement-only first; later, only support a make when ball rule already almost-passed — never override a clear miss by sound alone until split is proven.
+5. Effort: ~1–2 days measure. From Scott: OK to decode audio offline; no new installs (plan 18 binding note).
+6. Fair test: report make vs miss score separation on 140 **before** any verdict flip; if weak, stop. Q4 only after a frozen rule.
+
+### Option 5 — Promote `net_moved_after_shot` only when the ball track is empty near the rim
+1. Core make is already `ball_through_rim` **or** `net_moved_after_shot`. When the ball track has almost no points at the rim, run net motion as the primary check for that attempt.
+2. D1: 117 of 323 frames on the 19 missed makes had no ball near the rim; one shot (801800) had none in 17 frames. Old net scan (ACTIVE history): 79 near tags and 72 with no tag — noisy alone.
+3. Targets: `no_valid_crossing` (6) and thin-track `column_ratio_low` (4).
+4. False-make risk: medium-high (player/net bump). Guard: only if ball evidence is sparse; rim lock required; time locked to the attempt; 0 false makes on 140 or stop. No wider column / hoop recenter.
+5. Effort: ~1–2 days. From Scott: OK to measure net on those sparse-ball missed makes first (count only).
+6. Fair test: count-only on the 18, then one frozen promote rule on 140, then Q4.
+
+---
+
+### Do first: **Option 1**
+d2v1 already moved the real bottleneck (more ball near the rim) and the gate fail has a clear shape (5 tagged misses that used to die on short-track reasons). Fix acceptance, don’t loosen cutoffs, don’t retune after seeing Q4. Pair with Option 2 if the five still slip through. Option 3 is the safest **Adrian** make lift if you want scoreboard as checker next; it does not fix Notus A1’s visual misses.
+[cursor_ask] exit 0 at 15:12:07

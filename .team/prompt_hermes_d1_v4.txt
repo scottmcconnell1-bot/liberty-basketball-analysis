@@ -1,0 +1,17 @@
+Hermes, you are the Architect. EDIT ONE file: .team/specs/19_d1_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Change line 1 to "D1 JOB SPEC v4 - nothing built". Keep every stamp at the top exactly as it is. Plain markdown, no line-number prefixes, no literal "\n". Create nothing else. If your write tool refuses, say so plainly.
+
+WHY: the v3 run stopped at the mapping check (BINDING NOTE g did its job): full-frame v6 at confidence 0.25 matched only 74 of 3800 saved ball points (1.95%). The frame mapping is right (best shift 0). The saved ball tracks were NOT made on full frames: they come from v6_ball() in collect_q4_bodd.py (read lines 106-145). Claude Code's read-only probe with that setup matched 81/81 Adrian and 99/100 Notus saved points. Scott said yes to this fix on 2026-10-30.
+
+Make ONLY these changes; leave everything else as written:
+
+1. "Model, ball class, confidence" section: the detection setup is v6_ball's, exactly: read frames in order with cap.read() starting at the tag frame (cap.set(CAP_PROP_POS_FRAMES, tag) once, then sequential reads - as v6_ball does), crop each frame to x hoop_x-260 .. hoop_x+260 and y hoop_y-200 .. hoop_y+240 (clamped to the frame), model.predict(crop, conf=0.28, imgsz=640, verbose=False), and add the crop's x0, y0 back to every box centre. Confidence is 0.28 (v6_ball's; higher than 0.25, never lower). Remove the claims that the tracks used full frames, no imgsz and 0.25. Keep the class name 'basketball'.
+
+2. Frames: the frames to extract stay the saved span UNION anchor-15 .. anchor+12 (note f), but because reading is sequential from the tag frame, also say: frames before the tag frame (when anchor-15 is earlier than the tag frame) are read the same way, starting the sequential read at the earliest frame needed.
+
+3. Keep ALL candidates v6_ball's model call returns (do not apply v6_ball's own single-pick, its 220 px box or its continuity weight - D1 keeps every detection and lets the arc choose). Then the near-hoop zone and top-3 cap exactly as now.
+
+4. Mapping check: unchanged (3 px, 90%), but it compares against these crop detections.
+
+5. Add one line to "Pass/stop rules": the shot count must be exactly 140 or the run stops (v3 code only warned).
+
+Every fact you add must come from a file you read; otherwise write "NOT FOUND - Claude Code to check".

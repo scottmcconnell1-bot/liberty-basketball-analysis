@@ -1,0 +1,9 @@
+Cursor, you WRITE CODE for .team/specs/27_flagged_clip_length_spec.md (VETTED by Claude Code, line 2 has the arithmetic and coder notes; Muse AGREE). Branch team/auto. Edit ONLY: .team/shot_detectors/clip_moment_fix.py, .team/shot_detectors/make_review_queue_page.py, .team/shot_detectors/test_clip_moment_fix.py. Do not run anything on video. Do not commit. Small, readable code, no dead code. If you hit a plan/usage limit, stop and say so plainly.
+
+Read first: spec 27 (all), spec 26, and the three files.
+
+1. clip_moment_fix.py: for each flagged shot also return clip_end = next shot's anchor_frame - 1 and next_gap_s = (t_next - t)/1000. Keep resolve_clip_centres's current returns working (tests still pass) - add a third return value or a small second function; pick the simpler and say which.
+2. make_review_queue_page.py, with --clip-moment-fix ON: a flagged shot's clip = frames (tag_frame - BEFORE) .. clip_end inclusive (any length; frame label "program's moment" stays at index BEFORE). If clip_end <= tag_frame + AFTER, append to the card note: " - next tag only X.X s later - may be the same shot tagged twice" (X.X = next_gap_s, one decimal). Unflagged clips unchanged. Flag OFF: clips unchanged.
+3. Storage key: KEY = 'coach_review_' + <out-dir folder name>, so every built page keeps its own calls (this changes review.html for flag off too - expected).
+4. Tests in test_clip_moment_fix.py: clip_end = next anchor - 1; next_gap_s; last shot / unflagged have no clip_end; plus a pure helper test for the too-short note and the storage key if you add helpers (keep video out of tests).
+Report: files changed, short summary, test command (.venv/Scripts/python.exe -m pytest .team/shot_detectors -q). Claude Code runs tests and the one run.

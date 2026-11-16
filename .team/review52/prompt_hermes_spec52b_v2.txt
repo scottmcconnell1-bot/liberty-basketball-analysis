@@ -1,0 +1,11 @@
+You are HERMES, the architect. Update .team/specs/52b_check_rule_prereg.md to v2 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Reviews: review52/muse_spec52b.txt and review52/cursor_spec52b.txt (both AGREE WITH CHANGES). Apply exactly:
+1. corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate; ball_near_rim / trajectory / referee_score cues
+   marked FUTURE (not built; referee = spec 53), not part of the rule.
+2. Disclosure: rule motivated by the observed gate52a check failure; values all carried over unchanged (thr 0.5, dedup
+   800, floor 0.2, weak 0.65, mm 0.3, seed flag) - do not call it a clean pre-registration unqualified.
+3. Silent definition unchanged (option i). State explicitly: 52b does NOT fix the 3 silents; Scott confirmed all 3
+   labels correct (review52/silent3/silent3_answers.json: each is the first shot of a 2-shot sequence); no labels52b
+   for them; silent fix = separate model-side workstream, not in this prereg; no sequence cue here.
+4. Refresh the stale next-step section. Status v2. End with "HERMES: PREREG WRITTEN".

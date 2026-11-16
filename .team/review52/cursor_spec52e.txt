@@ -1,0 +1,67 @@
+## Spec 52e v1 review (read-only)
+
+H1–H5 check out against on-disk preds and gate code. The two-stream direction matches Scott’s choice, but v1 is not honest or pinned enough to freeze as a binding same-5 gate.
+
+### H1 — Foreseeable outcome: CONFIRMED (Proven)
+
+From `logo52d/logo_preds.npz` ensemble P(shot) on the 3 silents:
+| film | t | P(shot) | re-open under long≥0.5? |
+|------|---|--------:|-------------------------|
+| notus | 252520 | 0.289 | no |
+| rimrock | 274807 | 0.111 | no |
+| gvg | 1158600 | 0.789 | yes |
+
+Matches the chain in the spec and `cursor_gate52d.txt`. Under the pinned rule, only gvg clears; notus + rimrock stay silent → `silent_eq_0` fails on 2 games unless a retrain moves those two a lot. Spec’s “Honest read” does **not** say this up front. Running that as a **binding** same-5 without stating the prior is not honest.
+
+### H2 — Silent-zone contamination disclosure: INADEQUATE (Proven)
+
+Contamination control correctly says seen preds + no free fusion weight. It does **not** say the rule was aimed at the known silent band, or that the likely same-5 result is already readable from logo52d. “Reverse-confound handling designed in via silent-zone gating” oversells: silent-zone re-open is also a class-0 backdoor (below).
+
+### H3 — Retrain vs reuse: UNPINNED (Proven / Inferred)
+
+Identical T/Y/F across logo52a/c/d. Retrain clips7a + clips8, R4, seeds 0 1 2 ≈ re-running 52a + 52d. Fusion of existing preds already forecasts the gate. Spec does not pin:
+- **reuse** (fuse logo52x + logo52d) vs **retrain**, and what retrain adds;
+- **which short**: clips7a + R4 no-seq → **logo52a**; 52c had seq (superseded). Pin **logo52a recipe / no seq**.
+
+### H4 — Fused P/PM plumbing: NOT PINNED (Proven; blocking)
+
+`gate52` / `shot_list` / `silent_reject_count` all read written `P`/`PM` (`ensemble_predict.py`). Spec says “final P/PM → gate52” but not:
+1. On re-open: is `P`/`PM` **long** vectors, or long shot-mass + short make/miss?
+2. On non-reopen not-shot: is written `P` **short only** (so notus 0.083 stays silent), or can long leak into the vector?
+3. How **weak / mm / seed_disagreement / extras_require_seed_disagreement** treat re-opens?
+
+Simulated fuse (short owns except silent∧long≥0.5; write long P/PM on re-open; `postproc52b`):
+
+| short | notus | gvg checks | rimrock | OVERALL |
+|-------|-------|------------|---------|---------|
+| logo52a+52d | silent 1 | **103** | checks 23, silent 1 | FAIL |
+| logo52c+52d | auto 87.1 + silent 1 | **43** | checks 23, silent 1 | FAIL |
+
+Re-opens are mostly **non-shots**: 52a+52d → 15 re-opens (10 Y=0, 1 Y=1=gvg silent, 4 Y=-1); 52c+52d → 33 (25 Y=0). Q2’s “may not create shots” is false as written — silent-zone re-open **creates** auto shots from short-rejected class-0 when long≥0.5 (gvg flood returns through the backdoor).
+
+Also: Scott’s line says short owns make/miss and long only shot vs not-shot; Q2/Q3 let **long** own make/miss on re-open. That contradicts the binding decision in the same file. Pin Scott’s split (long = shotness only).
+
+### H5 — Same-5 PASS expectation: NO (Proven)
+
+Short-only make/miss + short-only not-shot (except re-opens) returns rimrock/gvg toward short-stream level:
+- logo52c + postproc52b: rimrock **checks 21 > 20**, silent 1 (gate report).
+- logo52a alone under postproc52b (recomputed this session): rimrock checks **20** (edge PASS) but gvg checks **97**, silents on notus/gvg/rimrock.
+
+Fusion does not produce a credible same-5 PASS from existing preds. Spec should say expected same-5 FAIL (or diagnostic), not imply an open test.
+
+### Build order / sha / tests / binding
+
+- Order (sha → code → tests → train → gate → fail-stop): fine.
+- Sha already frozen: `spec52e_v1_sha.txt` = `285124b6…` matches file; name should match the step-1 name (`spec52e_sha.txt` vs versioned).
+- Tests plan OK; fusion tests do not exist yet (expected).
+- Gate facts typos: notus 28/31 → **29/31**; gvg 208 → **209**.
+- Same-5 vs R10 binding: correctly flagged for Scott — and given H1/H5, that decision should be forced before any train.
+
+---
+
+**Proven:** silent P(shot) from npz; gate reports 52a/c/d; fusion simulation under postproc52b; `silent_reject_count` / `shot_list` behavior; sha match; GPU probe numbers.  
+**Inferred:** retrain ≈ same basins as 52a/52d.  
+**Unknown:** whether a fresh retrain moves notus/rimrock long P across 0.5 (no evidence it will).
+
+CURSOR: AGREE WITH CHANGES: disclose foreseeable same-5 FAIL from logo52d (only gvg re-opens); disclose silent-zone rule is contaminated / aimed at known silents; pin short=logo52a recipe (no seq) and reuse-vs-retrain; pin exact fused P/PM per case + check/silent/extras treatment; pin Scott make/miss=short always (long=shotness only); fix silent-zone class-0 backdoor (or disclose it + expected gvg checks); Scott decides binding vs diagnostic before build; fix 28→29 / 208→209
+[cursor_wsl] exit 0 at 08:33:35

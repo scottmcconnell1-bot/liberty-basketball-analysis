@@ -1,0 +1,49 @@
+{
+  "game": "adrian",
+  "frame_idx": 17055,
+  "timestamp_ms": 682200,
+  "lines_detected": {
+    "left_sideline": true,
+    "right_sideline": true,
+    "baseline": true,
+    "ft_line": true,
+    "left_lane": true,
+    "right_lane": true,
+    "center_line": true,
+    "three_pt_arc": true,
+    "ft_circle": true
+  },
+  "line_segments_found": 28,
+  "inlier_segments": 4,
+  "reprojection_error_px": 0.0,
+  "condition_number": 10.249,
+  "homography_valid": true,
+  "H_img2court": [
+    [
+      -0.00587268,
+      0.02214865,
+      -6.05708403
+    ],
+    [
+      -0.02215545,
+      -0.14278787,
+      79.66242803
+    ],
+    [
+      0.00097299,
+      -0.00364974,
+      1.0
+    ]
+  ],
+  "hoop_img_xy": [
+    676.72,
+    452.905
+  ],
+  "scale_x_ft_per_px": 3.567935,
+  "scale_y_ft_per_px": 80.09508,
+  "half_court_y_ft": 28.0,
+  "court_length_ft": 66.5,
+  "court_half_width_ft": 18.25,
+  "success": true,
+  "analysis_seconds": 1.046
+}

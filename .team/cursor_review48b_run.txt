@@ -1,0 +1,6 @@
+1) Not fully. Guesses: board-type ref mean / MAD / 1.5× max-train (no design code); which frames fill that ref; `.npz` key layout; check-reader contact-sheet layout; whether `session_from_raw` must be an exact `eval_v3` port (needed for S9).
+2) Conflict: `digits48.py` Adrian crop `(0.12,0.72,0–0.30)` vs S1/`adrian48.py` `(0.24,0.80,0–0.28)`. Spec matches `adrian48`.
+3) Yes — porting `eval_v3` glue + `session_v3`/`stopstart48`/`zero_ends` equals all 4 `session_v3_*.json` key-for-key (read-only check).
+4) No — plan only edits `game_session.py` + `test_game_session.py` plus new `board_templates/*`.
+CURSOR: DISAGREE: board-type classifier is specified but not in design48b (must invent); resolve Adrian crop vs digits48 before build.
+[cursor_wsl] exit 0 at 11:12:25

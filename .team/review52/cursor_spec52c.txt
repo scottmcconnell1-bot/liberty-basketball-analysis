@@ -1,0 +1,91 @@
+## Spec 52c v1 — buildability review (read-only)
+
+**Verdict:** Buildable after pins. Diagnosis vs `extract_clips.py` / `trigger2.py` / clips7a is sound; the combined 52b+52c re-gate and a few seq pins are not.
+
+---
+
+### Proven / Inferred / Unknown
+
+**Proven**
+- Clip geometry matches code: `T0=-0.88`, `STEP=0.08`, `N=32`, `K_TRIG=11`; crop 2.6×/3.0× → 96×112 (`extract_clips.py`).
+- Trigger meaning matches `trigger2.py` (`R_TRIG=1.0`, `LOOKBACK_S=1.2`, `MERGE_S=1.5`).
+- Head today is `Dropout(0.5) → Linear(512, 3)` (`train_clip.py`); `predict_all(X, models)` has no `seq` (`ensemble_predict.py`).
+- Extras today: every in-session `lo ≤ P < thr` — no corroboration (`shot_list` ~155–163).
+- `postproc52b.json` does not exist; 52c’s Step-4 JSON == `postproc52a.json` keys/values.
+- Coordinator F2 shares match clips7a (all candidates, 6000 ms): adrian 0.253, gvg 0.469, hsb 0.178, notus 0.128, rimrock 0.447. On gvg, most flagged rows are y∈{−1,0} (128+71 vs 64 shots).
+- All 3 silents get flag=1 under that definition; gaps 1160 / 2600 / 5233.
+- Naive LOGO concat of multi-film `T` (hold-out gvg): 217 flags from **cross-film only** vs 171 same-film-only — must compute per film.
+- Spec internal conflict: §2.1 `(t, t+6000]` inclusive vs Step-4 tests “t+6000 exclusive”.
+- Fail→stop / no thr·floor·seed·epoch retune / disclosure of post-hoc motivation: present.
+
+**Inferred**
+- Same-5 logo path can share candidate `T` (clips7a → `logo_preds.npz`) **if** seq is per-film.
+- One untuned 0/1 into 512-d can learn in 5 epochs only if dropout does not zero it and the head sees it every step.
+
+**Unknown**
+- Whether seed-only extras (52b) bring gvg/rimrock checks ≤ 20 (correctly not estimated).
+- Whether seq raises the 3 silents above floor with all seeds ≥ 0.5.
+
+---
+
+### F1 — postproc52b vs 52b rule
+
+**Yes, conflict.** 52b v2 requires `corroborated_extra := band ∧ seed_disagreement`, code in `shot_list`, tests, and `postproc52b.json` carrying that rule. 52c copies 52a (flat band), says `shot_list` **UNCHANGED**, and still claims a combined 52b+52c re-gate — that re-gate would still count every band extra (gvg/rimrock check FAIL mode unchanged).
+
+52b never named the key (prior Cursor note: builder adds one). Exact pin:
+
+```json
+"review": {
+  "...carried-over keys...": "...",
+  "extras_require_seed_disagreement": true
+}
+```
+
+- `postproc52` / `postproc52a`: key absent or `false` (flat band preserved).
+- `postproc52b`: `true` → extras only if `seed_disagreement(PM, i)`.
+- Step 2 must include that `shot_list` change + 52b tests; delete “shot_list UNCHANGED”.
+
+---
+
+### F2 — seq_follower on all candidates
+
+**Confound is real, not a hard design kill.** Shares match; on gvg/rimrock the flag often marks scramble/−1 clusters. Label-free cleaner pins without peeking: (1) **per-film only** (required — see F3); (2) optional in-session-only via existing session.json (rimrock = no filter). Do not restrict to y∈{1,2} at predict. Disclose residual confound; keep all-candidates if Scott accepts weakness.
+
+---
+
+### F3 — train vs predict candidate sets
+
+**Same source on the logo re-gate path (clips7a `t_ms` ↔ `logo_preds` `T`), not automatically the same computation.** Must pin: `seq_follower` **per film** (one npz / `Fm == f`). Cross-film concat invents hundreds of false flags. Also pin inclusive end `(t, t+6000]` and fix the “exclusive” test line. `train()` drops `Y<0` for loss but follower lookup must still see full film `T` (incl. −1/0) — consistent with §2.1 if indexed that way.
+
+---
+
+### F4 — binary into 512-d / 5 epochs
+
+**Usage not guaranteed as written.** Pin without looking at silent P values:
+1. `Dropout(0.5)` on the **512-d pool only**; concat `seq` **after** dropout (never dropped).
+2. `seq` stays float32 0/1 — no scale fit to the 3 P’s.
+3. Clarify: new head is always `Linear(513,3)`; old `Linear(512,3)` checkpoints are incompatible; `seq=None → zeros` is API-only for **new** 513 models, not logo52a `.pt` load compatibility.
+
+---
+
+### F5 — 6000 ms honesty
+
+Domain “possession / putback within a few seconds” is fine. The claim it was **not** chosen to cover 1160/2600/5233 is weak: §1.3–1.4 list those gaps and a window table, and 6000 is the smallest round second that includes rimrock 5233 (4000 would miss it). Soften to: round possession bound; happens to cover all three; not tuned from silent P or gate %.
+
+---
+
+### Build order / sha / tests / gates
+
+| Item | Status |
+|------|--------|
+| Sha before code | OK in text; filename says `spec52c_sha.txt`, repo has `spec52c_v1_sha.txt` — align |
+| Step 2 file list | Incomplete — missing 52b `shot_list` + postproc key wiring |
+| Tests | Seq tests OK once boundary fixed; also need 52b corroboration tests |
+| No retune / fail→Scott | OK |
+| Disclosure | OK if F5 softened and F2 confound stated |
+| clips7a / labels52a frozen | OK |
+
+---
+
+CURSOR: AGREE WITH CHANGES: F1 pin extras_require_seed_disagreement:true + shot_list corroboration/tests (do not clone 52a or leave shot_list unchanged); F3 per-film seq + inclusive (t,t+6000] (fix exclusive test); F4 dropout on 512 only then concat, no silent-P scaling, 513 head incompat with old .pt; F5 soften 6000 honesty; disclose F2 non-shot confound (optional in-session-only); align sha filename; Step 2 include 52b code in the combined re-gate
+[cursor_wsl] exit 0 at 12:31:41

@@ -1,0 +1,13 @@
+**(1)** Prefer **A + C**: fix the learned score (drop F14/F15, per-film net-motion normalize, keep only the 4 stable hoop-width cues), but ship it as a **hidden-make coach pull**, not a second absolute auto band—LOGO already showed ranking works and calibrated p/band does not.
+
+**(2)** Honest test: freeze Riverstone labels first (finder already run, still blind), then one scored pass; do not re-score Adrian/Notus/GV as a pass bar.
+
+**(3)** Lock before any new number: feature list, normalize rule, model/band (or hybrid queue cap), Riverstone label sha, and “one try / no retune after.”
+
+**(4)** Claude missed that F14/F15 + fixed 0.80/0.20 with different make rates was doomed; “beat rules” can still drown the coach; B burns a scarce blind for n, not for the known calibration leak.
+
+Do **not** pick B or D as the next blind spend; D is the season fallback if Riverstone fails.
+
+RECOMMEND: Spec 48 = corrected features + hybrid coach-queue use of the score, judged once on Riverstone with labels frozen first.  
+MUSE: AGREE
+[cursor_ask] exit 0 at 11:09:09

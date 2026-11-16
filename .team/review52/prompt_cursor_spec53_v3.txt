@@ -1,0 +1,9 @@
+You are CURSOR, the builder/auditor. Check buildability against the code (rim_first_finder.py, frames.json "r" boxes, ensemble_predict.py, ultralytics pose in the GPU env). READ-ONLY: do not edit or create any file.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/53_referee_signals_spec.md (v3, by Hermes) against Muse ITEM C changes in
+.team/review52/muse_round52_53.txt (C1 spec-36 cause, C2 pass bar incl. false fires on labelled true shots,
+C3 small-ref pose test as explicit first gate), your own v1 audit .team/review52/cursor_ref53.txt, the NFHS
+reference .team/review52/nfhs_signals_reference.md and Scott's addendum .team/review52/addendum_ref53_scott.txt
+("Go with the book, but some wiggle room ... deduced with several factors"). Are all applied? Anything that
+blocks building the 3-clip prototype? Numbers left for Scott must be clearly marked.
+End with one line that is "CURSOR: AGREE" or "CURSOR: AGREE WITH CHANGES: ..." or "CURSOR: DISAGREE: ...".

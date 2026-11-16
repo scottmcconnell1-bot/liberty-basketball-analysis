@@ -1,0 +1,329 @@
+timestamp=2026-10-27T18:48:44.506Z level=INFO run=bbba450b message="creating instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:48:44.507Z level=INFO run=bbba450b message=fromDirectory directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:48:44.651Z level=INFO run=bbba450b message=bootstrapping directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:48:44.656Z level=INFO run=bbba450b message=loading path="C:\\Users\\scott\\.config\\opencode\\config.json"
+timestamp=2026-10-27T18:48:44.656Z level=INFO run=bbba450b message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.json"
+timestamp=2026-10-27T18:48:44.656Z level=INFO run=bbba450b message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.jsonc"
+timestamp=2026-10-27T18:48:44.714Z level=INFO run=bbba450b message="all LSPs are disabled"
+timestamp=2026-10-27T18:48:44.714Z level=INFO run=bbba450b message="all formatters are disabled"
+timestamp=2026-10-27T18:48:44.714Z level=INFO run=bbba450b message=init
+timestamp=2026-10-27T18:48:44.828Z level=INFO run=bbba450b message=created id=ses_e814e7de3ffedE4HdpF0IecQKZ slug=shiny-squid version=1.19.4 projectID=c30576cc07b2b528a2eede275372519a4312e3b4 directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" path="" workspaceID=undefined parentID=undefined title="New session - 2026-10-27T18:48:44.828Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1793126924828 time.updated=1793126924828
+timestamp=2026-10-27T18:48:44.835Z level=INFO run=bbba450b message="event connected"
+timestamp=2026-10-27T18:48:44.864Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=0
+timestamp=2026-10-27T18:48:45.181Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=true agent=title mode=primary
+timestamp=2026-10-27T18:48:45.185Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+[0m
+> build · gemma4:cloud
+[0m
+timestamp=2026-10-27T18:48:45.445Z level=INFO run=bbba450b message=tracking hash=adf2f2ebab6bb56d9dc8a6a6bebbb1b2f42e9481 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:45.450Z level=INFO run=bbba450b message="shell tool using shell" shell="C:\\Program Files\\Git\\usr\\bin\\bash.exe"
+timestamp=2026-10-27T18:48:45.454Z level=INFO run=bbba450b message=init count=1
+timestamp=2026-10-27T18:48:45.614Z level=INFO run=bbba450b message="watcher backend" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" platform=win32 backend=windows
+timestamp=2026-10-27T18:48:45.618Z level=INFO run=bbba450b message="project copy refresh started" projectID=c30576cc07b2b528a2eede275372519a4312e3b4
+timestamp=2026-10-27T18:48:46.004Z level=INFO run=bbba450b message="project copy refresh done" projectID=c30576cc07b2b528a2eede275372519a4312e3b4 updated=[] removed=[]
+timestamp=2026-10-27T18:48:46.056Z level=INFO run=bbba450b message="booting location services" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" workspaceID=undefined
+timestamp=2026-10-27T18:48:46.058Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb183790011XfLzvaVV5bscO
+timestamp=2026-10-27T18:48:46.059Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:46.061Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:48.351Z level=INFO run=bbba450b message=evaluated permission=read pattern=TEAM_RECOVERY.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:48:48.357Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\TEAM_RECOVERY.md"
+[0m→ [0mRead TEAM_RECOVERY.md
+timestamp=2026-10-27T18:48:48.453Z level=INFO run=bbba450b message=evaluated permission=read pattern=AGENTS.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:48:48.458Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\AGENTS.md"
+[0m→ [0mRead AGENTS.md
+timestamp=2026-10-27T18:48:48.573Z level=INFO run=bbba450b message=evaluated permission=read pattern="scripts\\measure_notus_red_thresholds.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:48:48.578Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\measure_notus_red_thresholds.py"
+[0m→ [0mRead scripts/measure_notus_red_thresholds.py
+timestamp=2026-10-27T18:48:48.692Z level=INFO run=bbba450b message=evaluated permission=read pattern=scoreboard_clock_720p.py action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:48:48.695Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+[0m→ [0mRead scoreboard_clock_720p.py
+timestamp=2026-10-27T18:48:49.029Z level=INFO run=bbba450b message=tracking hash=d8bc52d9150f2d8f57697999f9a8b9ace186c8ce cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:49.248Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=1
+timestamp=2026-10-27T18:48:49.511Z level=INFO run=bbba450b message=tracking hash=2cfa336857bd97d5d01d0f96187b58661d270387 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:49.525Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb19361001m5SjDT7Jm1DtwH
+timestamp=2026-10-27T18:48:49.525Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:49.526Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:50.420Z level=INFO run=bbba450b message=evaluated permission=read pattern=scoreboard_clock.py action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T18:48:50.428Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock.py"
+[0m→ [0mRead scoreboard_clock.py
+timestamp=2026-10-27T18:48:50.712Z level=INFO run=bbba450b message=tracking hash=b75e80d3eeeac5f7347effed0f8c21d35582af46 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:50.969Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=2
+timestamp=2026-10-27T18:48:51.210Z level=INFO run=bbba450b message=tracking hash=c9c7e1204fb23f25a0299c95d99202d60477e63c cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:51.221Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb19a1a001kvMbCzqFQF6p7C
+timestamp=2026-10-27T18:48:51.221Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:51.222Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:52.092Z level=INFO run=bbba450b message=evaluated permission=edit pattern=scoreboard_clock_720p.py action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:52.093Z level=INFO run=bbba450b message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+timestamp=2026-10-27T18:48:52.095Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scoreboard_clock_720p.py"
+[0m
+[0m← [0mEdit scoreboard_clock_720p.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scoreboard_clock_720p.py
+@@ -14,10 +14,8 @@
+ from pathlib import Path
+ from typing import Any
+ 
+ import numpy as np
+-
+-import numpy as np
+ import cv2
+ 
+ from scoreboard_clock import (
+     _digit_groups,
+
+[0m
+timestamp=2026-10-27T18:48:53.676Z level=INFO run=bbba450b message=evaluated permission=edit pattern="scripts\\measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:53.677Z level=INFO run=bbba450b message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\measure_notus_red_thresholds.py"
+timestamp=2026-10-27T18:48:53.680Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\measure_notus_red_thresholds.py"
+[0m← [0mEdit scripts/measure_notus_red_thresholds.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
+@@ -3,24 +3,22 @@
+ import json
+ from pathlib import Path
+ 
+ ROOT = Path(".")
+-_SEVEN_SEGMENT = {
+-    0: ("a", "b", "c", "d", "e", "f"),
+-    1: ("b", "c"),
+-    2: ("a", "b", "g", "e", "d"),
+-    3: ("a", "b", "g", "c", "d"),
+-    4: ("f", "g", "b", "c"),
+-    5: ("a", "f", "g", "c", "d"),
+-    6: ("a", "f", "g", "e", "c", "d"),
+-    7: ("a", "b", "c"),
+-    8: ("a", "b", "c", "d", "e", "f", "g"),
+-    9: ("a", "b", "c", "d", "f", "g"),
+-}
++from scoreboard_clock import _SEVEN_SEGMENT
+ 
+ def get_on_segments(digit):
+     if digit is None: return []
+-    return _SEVEN_SEGMENT.get(digit, [])
++    # _SEVEN_SEGMENT maps a pattern string to a digit string ("abcfg" -> "9")
++    # build the ON segments of a digit as the letters common to EVERY pattern that maps to that digit
++    digit_str = str(digit)
++    patterns = [p for p, d in _SEVEN_SEGMENT.items() if d == digit_str]
++    if not patterns: return []
++    
++    common = set(patterns[0])
++    for p in patterns[1:]:
++        common &= set(p)
++    return sorted(list(common))
+ 
+ def main():
+     # Load eye-read values
+     with open(".team/notus_fit_crops/eye_read_values.json", "r") as f:
+
+[0m
+timestamp=2026-10-27T18:48:54.274Z level=INFO run=bbba450b message=evaluated permission=edit pattern="scripts\\measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:54.274Z level=INFO run=bbba450b message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\measure_notus_red_thresholds.py"
+timestamp=2026-10-27T18:48:54.276Z level=INFO run=bbba450b message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\measure_notus_red_thresholds.py"
+[0m← [0mEdit scripts/measure_notus_red_thresholds.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py
+@@ -139,12 +139,12 @@
+     on_segs = get_on_segments(digit)
+     mask_off = np.zeros((h, w), dtype=np.uint8)
+     for seg, s_box in segments_norm.items():
+         if seg not in on_segs:
+-            x0 = int(s_box[0] * w / 100)
+-            y0 = int(s_box[1] * h / 120)
+-            x1 = int(s_box[2] * w / 100)
+-            y1 = int(s_box[3] * h / 120)
++            x0 = int(s_box[0] * w)
++            y0 = int(s_box[1] * h)
++            x1 = int(s_box[2] * w)
++            y1 = int(s_box[3] * h)
+             mask_off[y0:y1, x0:x1] = 1
+ 
+ hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+ off_pixels = hsv[mask_off == 1]
+
+[0m
+timestamp=2026-10-27T18:48:54.575Z level=INFO run=bbba450b message=tracking hash=6a002b932a8559ae3f8cc693988c22734fd6499e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:54.843Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=3
+timestamp=2026-10-27T18:48:55.073Z level=INFO run=bbba450b message=tracking hash=2c143ad7fd48d6b3c9aaf4c4a50f7fd9c62ca409 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:55.082Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb1a93c001JzY4d89bNslCX1
+timestamp=2026-10-27T18:48:55.083Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:55.084Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:56.006Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts/measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:56.006Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:56.006Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe -m pytest tests/test_notus_digit_gate.py -q" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe scripts/measure_notus_red_thresholds.py && .\.venv\Scripts\python.exe scripts/fit_notus_segments.py && .\.venv\Scripts\python.exe -m pytest tests/test_notus_digit_gate.py -q
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T18:48:56.329Z level=INFO run=bbba450b message=tracking hash=cbfa5ebf3150c76b76950af67d88d1e5ce2e514d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:56.567Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=4
+timestamp=2026-10-27T18:48:56.805Z level=INFO run=bbba450b message=tracking hash=06279c5ee12cdb0e1c9dff2644813ae141417ead cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:56.813Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb1aff8001uSNzymK55vEHkb
+timestamp=2026-10-27T18:48:56.813Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:56.814Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:57.414Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts/measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:57.414Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:57.414Z level=INFO run=bbba450b message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe -m pytest tests/test_notus_digit_gate.py -q" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe scripts/measure_notus_red_thresholds.py && .\.venv\Scripts\python.exe scripts/fit_notus_segments.py && .\.venv\Scripts\python.exe -m pytest tests/test_notus_digit_gate.py -q
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+timestamp=2026-10-27T18:48:57.715Z level=INFO run=bbba450b message=tracking hash=45200a17885c4022d868ed82580e18b6ec9a1b0a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:57.972Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=5
+timestamp=2026-10-27T18:48:58.220Z level=INFO run=bbba450b message=tracking hash=e06ed256e8df3dc34a796f23f94041f6a9df1bb9 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:58.227Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb1b5750018XyKgG7Jff0U9m
+timestamp=2026-10-27T18:48:58.228Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:58.229Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:48:58.922Z level=INFO run=bbba450b message=evaluated permission=bash pattern="\"./.venv/Scripts/python.exe\" scripts/measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:58.922Z level=INFO run=bbba450b message=evaluated permission=bash pattern="\"./.venv/Scripts/python.exe\" scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:48:58.922Z level=INFO run=bbba450b message=evaluated permission=bash pattern="\"./.venv/Scripts/python.exe\" -m pytest tests/test_notus_digit_gate.py -q" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m"./.venv/Scripts/python.exe" scripts/measure_notus_red_thresholds.py && "./.venv/Scripts/python.exe" scripts/fit_notus_segments.py && "./.venv/Scripts/python.exe" -m pytest tests/test_notus_digit_gate.py -q
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\measure_notus_red_thresholds.py", line 7, in <module>
+    from scoreboard_clock import _SEVEN_SEGMENT
+ModuleNotFoundError: No module named 'scoreboard_clock'
+[0m
+timestamp=2026-10-27T18:48:59.340Z level=INFO run=bbba450b message=tracking hash=3b444548edf5f2cda2fecb01b06170ac4865f9c7 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:59.586Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=6
+timestamp=2026-10-27T18:48:59.820Z level=INFO run=bbba450b message=tracking hash=544b0e28afbbef2ec8e4e10aa2e90bec8866aaba cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:48:59.828Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb1bbc3001HLijxNoVOxp3fU
+timestamp=2026-10-27T18:48:59.828Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:48:59.829Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:49:01.963Z level=INFO run=bbba450b message=evaluated permission=bash pattern="PYTHONPATH=. \"./.venv/Scripts/python.exe\" scripts/measure_notus_red_thresholds.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:49:01.963Z level=INFO run=bbba450b message=evaluated permission=bash pattern="PYTHONPATH=. \"./.venv/Scripts/python.exe\" scripts/fit_notus_segments.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T18:49:01.963Z level=INFO run=bbba450b message=evaluated permission=bash pattern="PYTHONPATH=. \"./.venv/Scripts/python.exe\" -m pytest tests/test_notus_digit_gate.py -q" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mPYTHONPATH=. "./.venv/Scripts/python.exe" scripts/measure_notus_red_thresholds.py && PYTHONPATH=. "./.venv/Scripts/python.exe" scripts/fit_notus_segments.py && PYTHONPATH=. "./.venv/Scripts/python.exe" -m pytest tests/test_notus_digit_gate.py -q
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_142.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_1518.30s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_1922.10s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_2161.00s.png: h=30, w=26, mask_on_sum=207
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_2565.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3133.50s.png: h=30, w=26, mask_on_sum=255
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3537.30s.png: h=30, w=26, mask_on_sum=282
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3941.10s.png: h=30, w=26, mask_on_sum=255
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_546.00s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_950.00s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_1518.30s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_1922.10s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_2161.00s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_2565.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3133.50s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3537.30s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3941.10s.png: h=30, w=26, mask_on_sum=171
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_546.00s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_950.00s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_142.00s.png: h=30, w=26, mask_on_sum=255
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_1518.30s.png: h=30, w=26, mask_on_sum=282
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_1922.10s.png: h=30, w=26, mask_on_sum=255
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_2161.00s.png: h=30, w=26, mask_on_sum=255
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_2565.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3133.50s.png: h=30, w=26, mask_on_sum=96
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3537.30s.png: h=30, w=26, mask_on_sum=198
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3941.10s.png: h=30, w=26, mask_on_sum=198
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_546.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_950.00s.png: h=30, w=26, mask_on_sum=186
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_1922.10s.png: h=29, w=25, mask_on_sum=90
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_2161.00s.png: h=29, w=25, mask_on_sum=90
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_2565.00s.png: h=29, w=25, mask_on_sum=90
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3133.50s.png: h=29, w=25, mask_on_sum=171
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3537.30s.png: h=29, w=25, mask_on_sum=171
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3941.10s.png: h=29, w=25, mask_on_sum=171
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1041.30s.png: h=29, w=23, mask_on_sum=222
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1416.00s.png: h=29, w=23, mask_on_sum=158
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1626.00s.png: h=29, w=23, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2165.10s.png: h=29, w=23, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2375.00s.png: h=29, w=23, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2750.00s.png: h=29, w=23, mask_on_sum=99
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_292.30s.png: h=29, w=23, mask_on_sum=134
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_3289.60s.png: h=29, w=23, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_3499.00s.png: h=29, w=23, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_502.00s.png: h=29, w=23, mask_on_sum=134
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_1626.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2165.10s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2375.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2750.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_3289.60s.png: h=28, w=22, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_3499.00s.png: h=28, w=22, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1041.30s.png: h=29, w=23, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1416.00s.png: h=29, w=23, mask_on_sum=163
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1626.00s.png: h=29, w=23, mask_on_sum=163
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2165.10s.png: h=29, w=23, mask_on_sum=163
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2375.00s.png: h=29, w=23, mask_on_sum=158
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2750.00s.png: h=29, w=23, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_292.30s.png: h=29, w=23, mask_on_sum=158
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_3289.60s.png: h=29, w=23, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_3499.00s.png: h=29, w=23, mask_on_sum=163
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_502.00s.png: h=29, w=23, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1041.30s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1416.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1626.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2165.10s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2375.00s.png: h=28, w=22, mask_on_sum=75
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2750.00s.png: h=28, w=22, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_3289.60s.png: h=28, w=22, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_3499.00s.png: h=28, w=22, mask_on_sum=147
+Crop .team\notus_fit_crops\jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_502.00s.png: h=28, w=22, mask_on_sum=75
+FROZEN_THRESHOLDS: {'h_min': 169, 'h_max': 27, 's_min': 89, 'v_min': 153}
+REPORT-ONLY: Game A1 off-segment share: 0.0000%
+REPORT-ONLY: Game A off-segment share: 1.5645%
+jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334: 365 non-gate slot masks from 155 frames
+jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334: 154 non-gate slot masks from 139 frames
+wrote data\roi\notus_segment_geometry.json
+F                                                                        [100%]
+================================== FAILURES ===================================
+____________________________ test_notus_digit_gate ____________________________
+
+    def test_notus_digit_gate() -> None:
+        rois = load_rois(ROI_FILE)
+        rows = _truth_rows()
+        assert len(rows) == 20, f"expected 20 answer-key crops, found {len(rows)}"
+    
+        captures: dict[str, cv2.VideoCapture] = {}
+        results: list[tuple[str, int, int, int | None, int | None, bool]] = []
+        try:
+            for game_id, crop_name, expected in rows:
+                config = game_rois(rois, game_id)
+                sample = _sample_for_crop(config, crop_name)
+                capture = captures.get(game_id)
+                if capture is None:
+                    capture = cv2.VideoCapture(str(ROOT / config["video"]))
+                    if not capture.isOpened():
+                        raise RuntimeError(f"cannot open {config['video']}")
+                    captures[game_id] = capture
+                frame = _read_frame(capture, int(sample["timestamp_ms"]), float(config["fps"]))
+                cells = config.get("scores") or {}
+                got_home = _read_score(frame, cells.get("home") or {})
+                got_away = _read_score(frame, cells.get("away") or {})
+                expected_home, expected_away = expected
+                ok = got_home == expected_home and got_away == expected_away
+                results.append((crop_name, expected_home, expected_away, got_home, got_away, ok))
+        finally:
+            for capture in captures.values():
+                capture.release()
+    
+        _print_table(results)
+        failures = [row for row in results if not row[5]]
+>       assert not failures, f"{len(failures)} of {len(results)} gate rows failed"
+E       AssertionError: 12 of 20 gate rows failed
+E       assert not [('notus_A1_01_606s', 2, 11, None, 11, False), ('notus_A1_05_2221s', 13, 19, None, 14, False), ('notus_A1_09_3836s', 2..., 5, 2, None, None, False), ('notus_A_01_562s', 11, 4, 11, None, False), ('notus_A_02_936s', 13, 8, 13, 6, False), ...]
+
+tests\test_notus_digit_gate.py:100: AssertionError
+---------------------------- Captured stdout call -----------------------------
+crop                     exp home exp away got home got away   \n---------------------------------------------------------------\nnotus_A1_00_202s                0        4        0        4  \u2713\nnotus_A1_01_606s                2       11     None       11  \u2717\nnotus_A1_02_1010s               4       11        4       11  \u2713\nnotus_A1_03_1413s               5       14        5       14  \u2713\nnotus_A1_04_1817s              10       15       10       15  \u2713\nnotus_A1_05_2221s              13       19     None       14  \u2717\nnotus_A1_06_2625s              15       25       15       25  \u2713\nnotus_A1_07_3028s              21       30       21       30  \u2713\nnotus_A1_08_3432s              29       38       29       38  \u2713\nnotus_A1_09_3836s              29       40     None       40  \u2717\nnotus_A_00_187s                 5        2     None     None  \u2717\nnotus_A_01_562s                11        4       11     None  \u2717\nnotus_A_02_936s                13        8       13        6  \u2717\nnotus_A_03_1311s               16        9       16     None  \u2717\nnotus_A_04_1686s               16       11       16     None  \u2717\nnotus_A_05_2060s               16       15       16        5  \u2717\nnotus_A_06_2435s               19       15       19       15  \u2713\nnotus_A_07_2810s               23       17       27       17  \u2717\nnotus_A_08_3184s               25       21     None       21  \u2717\nnotus_A_09_3559s               36       21     None       21  \u2717
+=========================== short test summary info ===========================
+FAILED tests/test_notus_digit_gate.py::test_notus_digit_gate - AssertionError...
+1 failed in 1.05s
+[0m
+timestamp=2026-10-27T18:49:14.244Z level=INFO run=bbba450b message=tracking hash=b11c8a938b23fee1dc0e140bb8698c438f2a0569 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:49:14.466Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=7
+timestamp=2026-10-27T18:49:14.701Z level=INFO run=bbba450b message=tracking hash=8c0a982d4e54bd854fb37982d1f4f31ca8792f57 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:49:14.709Z level=INFO run=bbba450b message=process session.id=ses_e814e7de3ffedE4HdpF0IecQKZ messageID=msg_17eb1f5e3001os2iF4IW7gOy8I
+timestamp=2026-10-27T18:49:14.709Z level=INFO run=bbba450b message=stream providerID=ollama modelID=gemma4:cloud session.id=ses_e814e7de3ffedE4HdpF0IecQKZ small=false agent=build mode=primary
+timestamp=2026-10-27T18:49:14.710Z level=INFO run=bbba450b message="llm runtime selected" llm.runtime=ai-sdk llm.provider=ollama llm.model=gemma4:cloud
+timestamp=2026-10-27T18:49:21.677Z level=INFO run=bbba450b message=tracking hash=4976c714388d4d604468f5763353f4afc265df00 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:49:21.895Z level=INFO run=bbba450b message=loop session.id=ses_e814e7de3ffedE4HdpF0IecQKZ step=8
+timestamp=2026-10-27T18:49:21.896Z level=INFO run=bbba450b message="exiting loop" session.id=ses_e814e7de3ffedE4HdpF0IecQKZ
+timestamp=2026-10-27T18:49:21.899Z level=INFO run=bbba450b message="disposing instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"

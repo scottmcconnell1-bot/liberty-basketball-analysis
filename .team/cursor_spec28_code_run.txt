@@ -1,0 +1,25 @@
+Spec 28 is implemented on `team/auto`. Not committed. No video run.
+
+### Files changed
+- `.team/shot_detectors/clip_moment_fix.py`
+- `.team/shot_detectors/make_review_queue_page.py`
+- `.team/shot_detectors/test_clip_moment_fix.py`
+
+### Summary
+- **`group_flagged_chains`** — adjacent anchors within `CONFLICT_FRAMES` chain into one group; singles stay length 1.
+- **`group_clip_extent`** — `first = round(t_first/1000*fps) - before`, `last = max(anchor) + after` (correction 1: group 2 ends at 60515, length 96).
+- **`--wide-combined`** (default off) — off path stays page_v3; on: every card gets a 640px-wide whole-frame view synced to the close-up; 2+ conflict shots → one orange card with Shot 1/2… rows, header, and “Same shot, tagged twice” (`duplicate` for all but last).
+- Export is one row per shot; summary ignores `duplicate`. Storage key still per out-dir. End print: gray/orange cards, combined first/last/length, shots on page.
+- Pure helpers: `duplicate_calls_for_group`, `count_summary_makes`.
+
+### Tests
+```text
+.venv/Scripts/python.exe -m pytest .team/shot_detectors -q
+```
+Proven here (WSL `python3`, same tests): **20 passed** in `test_clip_moment_fix.py` (grouping pair/chain/none, extent with larger first-shot anchor, duplicate export/summary).
+
+**Proven / Inferred / Unknown**
+- Proven: 20 pure tests pass; `--wide-combined` defaults False.
+- Inferred: off path matches page_v3 (same show rules / clip windows; JPEG write factored into a helper).
+- Unknown: live gray/orange/combined counts until a real `--wide-combined` page build (not run).That check confirmed you were on `team/auto` with the three target files present. Spec 28 coding and the 20 pure tests were already finished in this session; nothing else to do from that shell job.
+[cursor_wsl] exit 0 at 15:10:06

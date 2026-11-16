@@ -1,0 +1,450 @@
+Query: You are HERMES, the architect. Revise 
+.team/specs/52d_context_clip_prereg.md v2 -> v3 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+NEW FACT (coordinator random-input probe, review52/gpu_probe52d.txt; r2plus1d_18
++ Dropout/Linear(512,3) head, AdamW, bf16 autocast, input 112x96):
+ T=32 bs8: 3938 MiB, 0.46 s/step (today's recipe; ~40 min logo run)
+ T=87 bs8: 9621 MiB > 8150 MiB card -> Windows spills to shared memory, 21 
+s/step (~46x slower, days). No OOM error is raised on Windows, so the v2 "OOM ->
+STOP" rule would never fire. v2 pin is NOT buildable.
+ T=44 bs8 (STEP 0.16, same -0.88..+6.0 s span): 5176 MiB, 0.53 s/step (~45-50 
+min run)
+ T=87 bs4: 5239 MiB, 0.55 s/step per 4 clips (~2x run time; bs change = R4 
+recipe change)
+Do: pick ONE buildable setup and pin it with a reason not taken from results. 
+Options: (a) STEP 0.16 / N=44 / bs 8 (keeps R4 bs; but halves frame rate on the 
+shot itself, and time-shift +-2 frames becomes +-0.32 s - pin whether the aug 
+stays at +-2 frames or becomes +-1); (b) N=87 / bs 4 (keeps frame rate; recipe 
+change to bs and maybe lr); (c) other (e.g. 32 dense frames at STEP 0.08 over 
+-0.88..+1.60 plus coarse tail frames to +6.0 s, total <=48). State the trade-off
+on make/miss accuracy honestly.
+Replace the OOM-only STOP with a speed guard: if measured train s/step > 2x the 
+probe value for the pinned setup (or shared-memory spill seen), STOP for Scott.
+Keep all other v2 content. Sha file .team/review52/spec52d_v3_sha.txt. Mark v3. 
+End with "HERMES: PREREG V3 WRITTEN".
+📖 Read 52d_context_clip_prereg.md  0.2s
+📖 Read gpu_probe52d.txt  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/  1.9s
+✗ $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/spec52d_v2_sha.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/spec52d_v1_sha.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/clips8_sha.txt  0.1s [exit 1]
+✗ $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i -E '52d|sha' + 3 commands  0.2s [exit 1]
+📖 Read hermes_spec52d_v3.txt  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ + 2 commands  0.1s
+💻 $ grep -n -E 'bs|batch|seconds|shift|aug|epoch|lr|clip|window|seq|head|pool|dropout|linear|512' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py
+📖 Read extract_clips.py
+💻 $ sed -n 95,200p /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py
+💻 $ sed -n 1,95p /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py + 2 commands  0.1s
+💻 $ grep -n -E 'class |def |self\.fc|fc =|backbone|Linear|Dropout|pool|bs|predict\(' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py | sed -n 1,140p  0.1s
+💻 $ grep -n -E 'N =|K_TRIG|WINDOW_END|STEP|T0|bs|batch|seconds|shift|aug|87|44|32|drop|Linear|512|513|pool' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/test_mm52.py  0.1s
+💻 $ git status --short + 2 commands  31.0s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -maxdepth 2 -iname '*AUTHORITY*' -o -maxdepth 2 -iname '*OPERATIONAL*' -o -maxdepth 2 -iname 'NEXT_TASK*' 2>/dev/null | grep -v node_modules  0.3s
+💻 $ grep -n -E 'K_TRIG|WINDOW|N =|clip|window|87|44|32|extract|frames' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/test_mm52.py
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/AUTHORITY.md + 2 commands  0.1s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md + 2 commands  0.2s
+💻 $ grep -n '`' .team/specs/52d_context_clip_prereg.md + 3 commands  0.1s
+💻 $ sed -n '1,60p' .team/specs/52d_context_clip_prereg.md | cat -n
+💻 $ cat -A .team/review52/spec52d_v2_sha.txt + 4 commands  0.1s
+💻 $ sed -n '100,135p' .team/specs/52d_context_clip_prereg.md | cat -A | sed -n '1,40p' | cut -c1-200
+💻 $ sed -n '185,240p' .team/specs/52d_context_clip_prereg.md  0.1s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+⚠ Compression summary failed: Network connection lost.. Inserted a fallback context marker.
+💻 $ sed -n '240,320p' .team/specs/52d_context_clip_prereg.md  0.2s
+💻 $ sed -n '60,100p' .team/specs/52d_context_clip_prereg.md
+💻 $ grep -n 'DISCLOSED as accepted\|Expected effect\|== 0 per game\|OVERALL PASS required' .team/specs/52d_context_clip_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+Now I'll apply the v2 → v3 revisions to the spec. First batch of edits (title, status + v3 AMEND block, binding decision, inputs):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -1,4 +1,4 @@
+│ -# Spec 52D - Temporal Context Clip Model Fix (PRE-REGISTERED) v2
+│ +# Spec 52D - Temporal Context Clip Model Fix (PRE-REGISTERED) v3
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-15
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -7,9 +7,24 @@
+│
+│  ## Status
+│
+│ -PRE-REGISTERED (v2). The change set below is frozen BEFORE any code change or training.
+│ +PRE-REGISTERED (v3). The change set below is frozen BEFORE any code change or training.
+│  This is the binding pre-registration for the temporal-context model fix chosen by Scott
+│  (2026-11-15) after the Spec 52C v2 binding same-5 re-gate FAILED.
+│ +
+│ +- v3 AMENDS the v2 pre-registration (Hermes, 2026-11-15; v2 sha review52/spec52d_v2_sha.txt =
+│ +  97c56272c910ac98c106c3b90f73a06b08a79677fb731e6b6fc5235293b97f23; superseding the v2 change
+│ +  set below). Changes applied here (binding, before Scott approves / Cursor builds / training):
+│ +  G7 (blocking, NEW): the v2 PIN is NOT buildable on the RTX 5060 8151 MiB card (8150.56 MiB).
+│ +  Coordinator random-input GPU probe (review52/gpu_probe52d.txt; r2plus1d_18 + Dropout/Linear(512,3)
+│ +  head, AdamW, bf16 autocast, input 112x96): T=32 bs8 train peak 3938 MiB, 0.46 s/step (today's
+│ +  recipe; ~40 min logo run); T=87 bs8 train peak 9621 MiB > 8150 MiB -> Windows spills to shared
+│ +  memory, 21.148 s/step (~46x slower, days); NO OOM error is raised on Windows, so the v2 "OOM ->
+│ +  STOP" rule would never fire; v2 pin NOT buildable. T=44 bs8 (STEP=0.16, same -0.88..+6.0 s span):
+│ +  5176 MiB, 0.53 s/step (~45-50 min run); T=87 bs4: 5239 MiB, 0.55 s/step per 4 clips (~2x run
+│ +  time; bs change = R4 recipe change).
+│ +  G8 (binding, NEW): ONE buildable setup pinned below (v3 pin; Item 1.4); the v2 G1 STOP rule is
+│ +  REPLACED by the v3 speed guard (measured train s/step > 2x the probe value for the pinned setup,
+│ +  or shared-memory spill seen -> STOP for Scott).
+│
+│  - v2 AMENDS the v1 pre-registration (Hermes, 2026-11-15; v1 sha review52/spec52d_v1_sha.txt =
+│    a008283e11b04ec96ef5381f4ae713fb979d7f67377873eb8c301340dcbd8482; superseding the Muse +
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -60,6 +60,9 @@
+│    clip), not a 1-bit flag.
+│  - Pre-registered; Muse + Cursor review; Scott approves; then the SAME-5 re-gate is the
+│    binding pass/fail (Scott 'A'); later R10 blind films: NOTUS_A, IDAHO_CITY, RIVERSTONE.
+│ +- v3 binding pin (2026-11-15, pre-registration): the ONE buildable setup of Item 2 is PINNED
+│ +  HERE (option (a): STEP=0.16 / N=44 / bs 8; see Item 1.4); the v2 pin (N=87 / bs 8) was NOT
+│ +  buildable (G7). The SAME-5 re-gate remains the binding pass/fail on the v3 pin.
+│
+│  ## Inputs read this session (no source changed by this spec)
+│
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -76,6 +76,8 @@
+│    (FROZEN; not changed by this spec)
+│  - .team/review52/silent3/silent3_answers.json (Scott's label confirmation)
+│  - .team/review52/clips7a_sha.txt
+│ +- .team/review52/gpu_probe52d.txt (coordinator random-input GPU probe; v3 G7 source)
+│ +- .team/review52/spec52d_v3_sha.txt (this spec, v3; written at Item 4 step 1)
+│  - .team/mm_clip/extract_clips.py, train_clip.py, ensemble_predict.py, gate52.py, test_mm52.py
+│  - .team/mm_clip/postproc52.json, postproc52a.json, postproc52b.json
+│  - Liberty_Shot_Outputs/mm_clip/clips7a/, runs/logo52a/, runs/logo52c/, runs/choose_e52/,
+
+────────────────────────────────────────
+☤ Hermes
+Now the Item 1 / Item 2 / Item 3 edits (decision, pinned values, G2, GPU block, clips8, recipe):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -122,15 +122,20 @@
+│    Old window ends +1.60 s -> only gvg's second shot fell inside; notus and rimrock never
+│    saw it. For 2 of the 3 silents the model never saw the follow-up inside its input.
+│
+│ -### 1.3 DECISION (PINNED NOW): option (a) - longer/shifted temporal window.
+│ -
+│ -DECISION: option (a) longer clip window. Rationale: the 52c finding was that the deficit
+│ +### 1.3 DECISION (PINNED NOW, v3): option (a) - longer/shifted temporal window (v3 buildable pin).
+│ +
+│ +DECISION: option (a) longer clip window, AMENDED by the v3 buildable pin (Hermes, 2026-11-15;
+│ +v3 sha .team/review52/spec52d_v3_sha.txt). Rationale: the 52c finding was that the deficit
+│  was informational - the post-shot seconds were not in the clip and a sequence flag cannot
+│  carry what is not present. A longer window puts the post-shot seconds into the clip; it is
+│  the minimal, single input change (no fusion, no second backbone). Chosen over option (b)
+│  (second context clip): a second clip/backbone + fusion would add head Linear(1024,3) or a
+│  shared-backbone-twice design for the same possession arc, at higher memory / time cost for
+│  information a single longer window already contains.
+│ +
+│ +PIN (v3, ONE buildable setup; G8): STEP=0.16 / N=44 / bs 8 (train + predict) over the same
+│ +WINDOW_END_S = 6.0 s; see Item 1.4. The v2 pin (N=87 / STEP=0.08 / bs 8) was NOT buildable
+│ +(G7) and is superseded here by this v3 pin.
+│
+│  ### 1.4 Pinned values (THIS SPEC IS THE FREEZE)
+│
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -140,16 +140,24 @@
+│  ### 1.4 Pinned values (THIS SPEC IS THE FREEZE)
+│
+│  - T0 = -0.88 s (UNCHANGED; release/flight context anchor).
+│ -- STEP = 0.08 s (UNCHANGED; frame resolution; K_TRIG = int(round(-T0 / STEP)) = 11 UNCHANGED).
+│ -- WINDOW_END_S = 6.0 s (NEW; was +1.60 s). Reason: a putback / second shot is the same
+│ +- STEP = 0.16 s (PINNED NOW, v3 - buildable pin; was 0.08 s in v2). Reason: the full-span
+│ +  uniform grid at STEP=0.08 (N=87) is NOT buildable at the R4 batch size on the RTX 5060
+│ +  (G7: probe T=87 bs8 peak 9621 MiB > 8150 MiB card; shared-memory spill; 21.148 s/step;
+│ +  ~46x slower, days; no OOM raised on Windows). N=44 at STEP=0.16 keeps the same window span
+│ +  [t_trig - 0.88, t_trig + 6.0] s. Cost pinned (v3, G8): frame rate on the shot halves
+│ +  (STEP 0.16); aug re-pinned to +-1 frame (was +-2; +-1 frame at STEP=0.16 = +-0.16 s physical
+│ +  jitter - same R4 jitter, NOT +-0.32 s).
+│ +- WINDOW_END_S = 6.0 s (UNCHANGED; was +1.60 s). Reason: a putback / second shot is the same
+│    possession's rebound-and-putback arc; 6.0 s is a round upper bound that strictly covers
+│    all three observed gaps (1160 / 2600 / 5233 ms; max gap 5233 ms < 6000 ms). Disclosed: the
+│    6.0 s end did use the max observed gap as a floor of the pin; the round-up is the domain
+│    reason, not a result-derived number.
+│ -- N = 87 frames (NEW; derived): N = int(round((WINDOW_END_S - T0) / STEP)) + 1
+│ -  = int(round(6.88 / 0.08)) + 1 = 87. Frame k time = t_trig - 0.88 + k*0.08; last frame at
+│ -  t_trig + 6.0 s. Frame resolution (80 ms) preserved.
+│ -- K_TRIG = 11 (UNCHANGED; trigger = rim-contact frame).
+│ +- N = 44 frames (PINNED NOW, v3 - was 87; derived): N = int(round((WINDOW_END_S - T0) / STEP)) + 1
+│ +  = int(round(6.88 / 0.16)) + 1 = 44. Frame k time = t_trig - 0.88 + k*0.16; last frame at
+│ +  t_trig + 6.0 s. Frame resolution now 160 ms (halved from the v2 80 ms; pinned, not tuned).
+│ +- K_TRIG = int(round(-T0 / STEP)) = 6 (PINNED NOW, v3; derived from the pinned T0=-0.88 and
+│ +  STEP=0.16; was 11 at STEP=0.08; the trigger frame is now one 0.16 s grid step past the rim-
+│ +  contact moment t_trig + 0.08; pinned as the trigger anchor, disclosed).
+│  - Crop: UNCHANGED (hoop-centred, 2.6 x hoop width x 3.0 x hoop width, resize 96 x 112,
+│    BGR uint8). Reason: the deficit is temporal, not spatial; the extra seconds stay rim-centred
+│    and interpretable (second shooter / putback / scramble) while the hoop track holds.
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -181,9 +181,9 @@
+│  - DISCLOSURE G2 (v2, accepted now, not switched after results): the r2plus1d backbone ends in
+│    a global average pool over the clip; with the pinned window (N=87, ~6.9 s; [t_trig - 0.88,
+│    t_trig + 6.0]) the shot itself is ~2.5 s of the ~6.9 s window, so the pooled feature dilutes
+│ -  the shot cue. DISCLOSED as accepted for this pin; dense N=87 / STEP=0.08 is ACCEPTED NOW
+│ -  (frozen), not to be switched after results (STEP=0.16 / 32-dense + coarse-tail alternatives
+│ -  remain future options only).
+│ +  the shot cue. DISCLOSED as accepted for this pin; dense N=44 / STEP=0.16 (v3 pin) is
+│ +  ACCEPTED NOW (frozen), not to be switched after results (N=87 / STEP=0.08 / bs4, and the
+│ +  32-dense + coarse-tail alternatives, remain future options only).
+│  - Head in the R4 layout (Sequential(Dropout(0.5), Linear(512,3))) is architecture-compatible with
+│    the R4 / ens51 / final51 checkpoints; fresh training on clips8 is still pinned (no checkpoint
+│    reuse).
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -219,7 +219,7 @@
+│
+│  ## Item 2 - Pin the GPU / memory / run-time cost and the clip rebuild (PINNED)
+│
+│ -### 2.1 GPU / memory / run-time cost (PINNED, v2 - G1 FIX)
+│ +### 2.1 GPU / memory / run-time cost (PINNED, v3 - G1 FIX / G7 + G8)
+│
+│  - NVIDIA GeForce RTX 5060, 8151 MiB (~8 GiB) GPU-0, CUDA 13.2, driver 595.61, 8 W TGP; 33C;
+│    Windows GPU venv.
+🔧 Patch .team/specs/52d_context_clip_prereg.md
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -233,6 +233,18 @@
+│    train_clip.predict default bs=16 is not used for 52d); on CUDA OOM -> STOP for Scott, no
+│    silent bs change (a bs change would alter the R4 recipe). Random-input GPU memory probe (no
+│    data, no training) by the coordinator: review52/gpu_probe52d.txt; cite its result if present.
+│ +- G7 (v3, blocking, NEW): the v2 PIN is NOT buildable (see Status / Item 1.4). Probe
+│ +  (review52/gpu_probe52d.txt; random input, no project data, no training; r2plus1d_18 +
+│ +  Dropout/Linear(512,3) head, AdamW, bf16 autocast, input 112x96): T=32 bs8 train peak
+│ +  3938 MiB, 0.46 s/step (today's recipe; ~40 min logo run); T=87 bs8 train peak 9621 MiB >
+│ +  8150 MiB card -> Windows spills to shared memory, 21.148 s/step (~46x slower, days); NO OOM
+│ +  error is raised on Windows, so the v2 OOM -> STOP rule would never fire; v2 pin NOT buildable.
+│ +  T=44 bs8 (STEP=0.16, same -0.88..+6.0 s span): 5176 MiB, 0.53 s/step (~45-50 min run); T=87
+│ +  bs4: 5239 MiB, 0.55 s/step per 4 clips (~2x run time; bs change = R4 recipe change).
+│ +- G8 (v3, binding, NEW): ONE buildable setup pinned (v3 pin; Item 1.4): STEP=0.16 / N=44 /
+│ +  bs 8 (train + predict). Speed guard REPLACES the v2 OOM-only STOP: if measured train s/step
+│ +  > 2x the probe value for the pinned setup (T=44 bs8 probe 0.53 s/step -> 1.06 s/step) or
+│ +  shared-memory spill seen -> STOP for Scott; no silent bs change (bs stays 8 PINNED, R4).
+│
+│  ### 2.2 Clip rebuild (PINNED): new clips dir from the SAME candidates and labels52a
+│
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -225,7 +225,7 @@
+│    Windows GPU venv.
+│  - Current logo run: ~40 min for 15 model-fits (E=5, seeds 0 1 2, same-5 LOGO, clips7a) on
+│    this GPU (logo52a 2357 s, logo52c 2376 s ~ 39.3 / 39.6 min).
+│ -- clips8 (N=87) vs clips7a (N=32): larger inputs -> memory / time increase. PIN: same GPU,
+│ +- clips8 (v3 pin: N=44 frames; v2 pin was N=87) vs clips7a (N=32): larger inputs -> memory / time increase. PIN: same GPU,
+│    env and recipe; re-measure (train writes res["seconds"]; report) and budget ~100-120 min for
+│    the 15 fits on this GPU (linear scaling: 2376 s x 87/32 ~ 107 min; the v1 ~60-75 min budget was
+│    wrong - corrected here per G1).
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -225,10 +225,11 @@
+│    Windows GPU venv.
+│  - Current logo run: ~40 min for 15 model-fits (E=5, seeds 0 1 2, same-5 LOGO, clips7a) on
+│    this GPU (logo52a 2357 s, logo52c 2376 s ~ 39.3 / 39.6 min).
+│ -- clips8 (v3 pin: N=44 frames; v2 pin was N=87) vs clips7a (N=32): larger inputs -> memory / time increase. PIN: same GPU,
+│ -  env and recipe; re-measure (train writes res["seconds"]; report) and budget ~100-120 min for
+│ -  the 15 fits on this GPU (linear scaling: 2376 s x 87/32 ~ 107 min; the v1 ~60-75 min budget was
+│ -  wrong - corrected here per G1).
+│ +- clips8 (v3 pin: N=44 frames; v2 pin was N=87) vs clips7a (N=32): larger inputs -> memory /
+│ +  time increase. PIN: same GPU, env and recipe; re-measure (train writes res["seconds"]; report)
+│ +  and budget ~100-120 min for the 15 fits on this GPU (linear scaling: 2376 s x 44/32 ~ 68 min;
+│ +  the v1 ~60-75 min budget was wrong - corrected here per G1; the v2 107 min estimate was for
+│ +  the unbuildable N=87).
+│  - G1 pins (v2, binding): train bs 8 PINNED (R4 recipe value); predict bs PINNED to 8 (the
+│    train_clip.predict default bs=16 is not used for 52d); on CUDA OOM -> STOP for Scott, no
+│    silent bs change (a bs change would alter the R4 recipe). Random-input GPU memory probe (no
+
+────────────────────────────────────────
+☤ Hermes
+Now the Item 3 recipe edits:
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -267,9 +267,12 @@
+│
+│  - R4 recipe UNCHANGED: bf16 autocast without GradScaler; WeightedRandomSampler
+│    w = 1/max(cnt, 1); plain CE + label_smoothing 0.05 (no class weights); soft augmentation;
+│ -  lr 2e-4, bs 8, AdamW wd 0.05, OneCycle pct_start 0.15; time-shift +-2 frames.
+│ +  lr 2e-4, bs 8, AdamW wd 0.05, OneCycle pct_start 0.15; time-shift +-1 frame (PINNED NOW, v3;
+│ +  was +-2 frames in v2; +-1 frame at STEP=0.16 = +-0.16 s physical jitter, same R4 jitter; NOT
+│ +  +-2 frames = +-0.32 s).
+│  - G1 pins (v2, binding): train bs 8 PINNED; predict bs PINNED to 8; on CUDA OOM -> STOP for
+│ -  Scott, no silent bs change.
+│ +  Scott, no silent bs change. (v3 G8 REPLACES that STOP with the speed guard; bs stays 8 PINNED,
+│ +  R4; the v3 pin changes STEP/N/aug, not bs.)
+│  - E = 5 pinned (not choose_e).
+│  - Seeds 0 1 2.
+│  - Runs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52d/
+
+────────────────────────────────────────
+☤ Hermes
+Now the Item 4 build/test/run order, Item 8 stop rule, Item 5 honest read, and the closing marker:
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -287,8 +287,8 @@
+│  0. Prerequisite: this spec written and sha-frozen (step 1) BEFORE any code change or
+│     training. Muse + Cursor review; Scott approves; then the re-gate runs.
+│
+│ -1. Sha freeze (this spec, v2):
+│ -   sha256 of .team/specs/52d_context_clip_prereg.md -> .team/review52/spec52d_v2_sha.txt
+│ +1. Sha freeze (this spec, v3):
+│ +   sha256 of .team/specs/52d_context_clip_prereg.md -> .team/review52/spec52d_v3_sha.txt
+│     (form: <sha256> *specs/52d_context_clip_prereg.md).
+│
+│  2. Code changes (.team/mm_clip/only):
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -293,8 +293,8 @@
+│
+│  2. Code changes (.team/mm_clip/only):
+│     - extract_clips.py: window parameterized (T0 / STEP / WINDOW_END_S / N); 52d values
+│ -     pinned (T0 = -0.88, STEP = 0.08, WINDOW_END_S = 6.0, N = 87; OUT_W/OUT_H/crop UNCHANGED);
+│ -     K_TRIG = int(round(-T0 / STEP)) = 11.
+│ +     pinned (T0 = -0.88, STEP = 0.16, WINDOW_END_S = 6.0, N = 44; OUT_W/OUT_H/crop UNCHANGED);
+│ +     K_TRIG = int(round(-T0 / STEP)) = 6.
+│     - train_clip.py: 52d model = single pooled clip -> nn.Dropout(0.5) -> nn.Linear(512, 3) head
+│       (PIN EXACTLY AS R4 per G4 fix; fc = Sequential(Dropout(0.5), Linear(512, 3)); NO seq, NO
+│       concat, NO pool dropout); forward(x) single input, no seq, no concat; train/predict
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -307,7 +307,7 @@
+│  3. Tests (GPU-free where possible; run on the Windows .venv per existing convention; WSL
+│     fallback: python3 -m pytest .team/mm_clip/test_mm52.py -q, deselect the 3 Windows-path
+│     holdout_names tests):
+│ -   - Extend .team/mm_clip/test_mm52.py: window N = 87 / K_TRIG = 11; single-input head =
+│ +   - Extend .team/mm_clip/test_mm52.py: window N = 44 / K_TRIG = 6; single-input head =
+│       Dropout(0.5) -> Linear(512,3) (PIN EXACTLY AS R4 per G4 fix); no seq, no concat; train/predict
+│       seq=None; R4 recipe unchanged (incl. Dropout(0.5)); 52b check-rule tests unchanged.
+│     - Run pytest .team/mm_clip/test_mm52.py -q -> all pass before training.
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -338,8 +338,11 @@
+│     Writes runs/logo52d/gate52_report.json.
+│
+│  8. Fail -> STOP for Scott: no thr/floor/seed/epoch retune, no extra runs, no tuning on the
+│ -   3 silents; Scott decides the next step. Pass -> Scott gate; R10 blind films (NOTUS_A,
+│ -   IDAHO_CITY, RIVERSTONE) later as the stronger test.
+│ +   3 silents; Scott decides the next step. Stop rule (v3, G8, REPLACES the v2 OOM-only STOP):
+│ +   if measured train s/step > 2x the probe value for the pinned setup (T=44 bs8 probe
+│ +   0.53 s/step -> 1.06 s/step) or shared-memory spill seen -> STOP for Scott; no silent bs
+│ +   change. Pass -> Scott gate; R10 blind later (NOTUS_A, IDAHO_CITY, RIVERSTONE) as the stronger
+│ +   test.
+│
+│  ## Item 5 - Honest read
+│
+🔧 Patch .team/specs/52d_context_clip_prereg.md
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -353,4 +353,13 @@
+│  test: ensemble auto >= 90%, seed spread <= 5, honest review >= 90%, checks <= 20 hard, silent_reject
+│  == 0 per game, OVERALL PASS required.
+│
+│ +Honest trade-off on make/miss accuracy (v3 pin; binding pass is the SAME-5 re-gate on the
+│ +v3 pin): the v3 PINNED setup (STEP=0.16 / N=44 / bs 8) halves the frame rate on the shot itself
+│ +(~2.5 s shot -> ~16 frames vs ~31 at STEP=0.08; aug time-shift re-pinned to +-1 frame = +-0.16 s
+│ +physical jitter) and samples the post-shot tail at 160 ms. The make/miss accuracy trade-off is
+│ +stated honestly: the expected effect is mechanism-only (longer context now present), the
+│ +accuracy delta is unmeasured (no training has run; the v2 probe was random-input only), and the
+│ +pinned STEP=0.16 / N=44 vs STEP=0.08 / N=87 / bs4 vs dense+coarse-tail alternatives are pins,
+│ +not tuned numbers. No make/miss accuracy claim is made from this pin.
+│ +
+│  HERMES: PREREG V2 WRITTEN
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -362,4 +362,4 @@
+│  pinned STEP=0.16 / N=44 vs STEP=0.08 / N=87 / bs4 vs dense+coarse-tail alternatives are pins,
+│  not tuned numbers. No make/miss accuracy claim is made from this pin.
+│
+│ -HERMES: PREREG V2 WRITTEN
+│ +HERMES: PREREG V3 WRITTEN
+
+────────────────────────────────────────
+☤ Hermes
+All edits landed. Now let me verify the full revised file:
+────────────────────────────────────────
+
+📖 Read 52d_context_clip_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+The spec reads coherently. Two small coherence touch-ups (v2 window-size reference in Item 1.5, budget wording in Item 2.1):
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -179,11 +179,11 @@
+│    dropout. Head in_features = 512 (Linear in_features; Dropout(0.5) precedes it). Bare
+│    Linear(512,3) would be a recipe change - NOT pinned.
+│  - DISCLOSURE G2 (v2, accepted now, not switched after results): the r2plus1d backbone ends in
+│ -  a global average pool over the clip; with the pinned window (N=87, ~6.9 s; [t_trig - 0.88,
+│ -  t_trig + 6.0]) the shot itself is ~2.5 s of the ~6.9 s window, so the pooled feature dilutes
+│ -  the shot cue. DISCLOSED as accepted for this pin; dense N=44 / STEP=0.16 (v3 pin) is
+│ -  ACCEPTED NOW (frozen), not to be switched after results (N=87 / STEP=0.08 / bs4, and the
+│ -  32-dense + coarse-tail alternatives, remain future options only).
+│ +  a global average pool over the clip; with the pinned window (v2 pin N=87, ~6.9 s; v3 pin
+│ +  N=44, ~5.5 s; [t_trig - 0.88, t_trig + 6.0]) the shot itself is ~2.5 s of the ~6.9 s window, so
+│ +  the pooled feature dilutes the shot cue. DISCLOSED as accepted for this pin; dense N=44 /
+│ +  STEP=0.16 (v3 pin) is ACCEPTED NOW (frozen), not to be switched after results (N=87 / STEP=0.08
+│ +  / bs4, and the 32-dense + coarse-tail alternatives, remain future options only).
+│  - Head in the R4 layout (Sequential(Dropout(0.5), Linear(512,3))) is architecture-compatible with
+│    the R4 / ens51 / final51 checkpoints; fresh training on clips8 is still pinned (no checkpoint
+│    reuse).
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -227,9 +227,9 @@
+│    this GPU (logo52a 2357 s, logo52c 2376 s ~ 39.3 / 39.6 min).
+│  - clips8 (v3 pin: N=44 frames; v2 pin was N=87) vs clips7a (N=32): larger inputs -> memory /
+│    time increase. PIN: same GPU, env and recipe; re-measure (train writes res["seconds"]; report)
+│ -  and budget ~100-120 min for the 15 fits on this GPU (linear scaling: 2376 s x 44/32 ~ 68 min;
+│ -  the v1 ~60-75 min budget was wrong - corrected here per G1; the v2 107 min estimate was for
+│ -  the unbuildable N=87).
+│ +  and budget ~100-120 min per fit for the 15 fits on this GPU (linear scaling: 2376 s x 44/32
+│ +  ~ 68 min; the v1 ~60-75 min budget was wrong - corrected here per G1; the v2 107 min estimate
+│ +  was for the unbuildable N=87).
+│  - G1 pins (v2, binding): train bs 8 PINNED (R4 recipe value); predict bs PINNED to 8 (the
+│    train_clip.predict default bs=16 is not used for 52d); on CUDA OOM -> STOP for Scott, no
+│    silent bs change (a bs change would alter the R4 recipe). Random-input GPU memory probe (no
+
+────────────────────────────────────────
+☤ Hermes
+Now the sha freeze (v3) and final verification:
+────────────────────────────────────────
+
+💻 $ sha256sum .team/specs/52d_context_clip_prereg.md
+💻 $ printf '%s *specs/52d_context_clip_prereg.md\n' "052fd15a0f78c1da74b698b9267c8e504406f8cce78a0b47edc1f12308824ae4" + 2 commands
+✗ $ wc -c .team/review52/spec52d_v1_sha.txt .team/review52/spec52d_v2_sha.txt .team/review52/spec52d_v3_sha.txt + 3 commands  0.2s [exit 1]
+💻 $ git status --short + 4 commands  90.1s
+💻 $ git status --short -- .team/specs/52d_context_clip_prereg.md .team/review52/spec52d_v3_sha.txt .team/review52/spec52d_v2_sha.txt + 2 commands  0.5s
+
+────────────────────────────────────────
+☤ Hermes
+Done — .team/specs/52d_context_clip_prereg.md revised v2 → v3, sha-frozen, marked.
+
+What changed (docs-only; no source/tests touched, so no pytest run warranted):
+
+- Chosen buildable pin (ONE setup): option (a) — STEP = 0.16 s / N = 44 / bs 8 (train + predict), same T0 = −0.88 s and WINDOW_END_S = 6.0 s.
+- Why not (b) (N=87 / bs 4): bs change = R4 recipe change + ~2x run time.
+- v3 AMEND block added (G7 + G8): G7 — v2 pin NOT buildable (probe T=87 bs8 → 9621 MiB > 8150 MiB card, Windows shared-memory spill, 21.148 s/step, no OOM raised on Windows, so v2 OOM→STOP could never fire). G8 — ONE buildable setup pinned (STEP=0.16 / N=44 / bs 8); speed guard REPLACES the v2 OOM-only STOP: measured train s/step > 2× the pinned-setup probe value (T=44 bs8 → 0.53 s/step, guard at >1.06 s/step) or shared-memory spill seen → STOP for Scott; bs stays 8 PINNED (R4).
+- Pinned consequences written: aug time-shift re-pinned to ±1 frame (was ±2; ±1 @ STEP=0.16 = ±0.16 s physical jitter, same R4 jitter, NOT ±0.32 s); K_TRIG = int(round(−T0/STEP)) = 6 (was 11; trigger frame now one grid step past rim contact, pinned/disclosed); N = 44 frames (was 87); Item 2.1/2.2/3/4 step 1–3 (sha freeze → .team/review52/spec52d_v3_sha.txt, extract N=44/K_TRIG=6, tests N=44/K_TRIG=6) updated to the v3 pin.
+- Honest make/miss trade-off: v3 pin halves shot frame rate / samples tail at 160 ms; expected effect mechanism-only; accuracy delta unmeasured (random-input probe only); alternatives (N=87/bs4, dense+coarse-tail) remain future options, not tuned.
+- Sha freeze: 052fd15a0f78c1da74b698b9267c8e504406f8cce78a0b47edc1f12308824ae4 *specs/52d_context_clip_prereg.md → written to .team/review52/spec52d_v3_sha.txt (99 bytes, format identical to v1/v2).
+- End marker: HERMES: PREREG V3 WRITTEN.
+
+Next step would be the same-5 re-gate on the v3 pin (Muse/Cursor review → Scott approval → training) — not started, per your instruction to edit this file only.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d9ac170aa3866b8fb27523fdf3e91cfaadb54f24704739389cd13bb709de5908
+  hermes -c "You are HERMES, the architect. Revise… #3"
+
+Session:        local-d9ac170aa3866b8fb27523fdf3e91cfaadb54f24704739389cd13bb709de5908
+Title:          You are HERMES, the architect. Revise… #3
+Duration:       16m 33s
+Messages:       71 (1 user, 69 tool calls)
+[hermes] exit 0 at 19:28:16

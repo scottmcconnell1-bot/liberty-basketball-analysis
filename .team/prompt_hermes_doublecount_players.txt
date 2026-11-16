@@ -1,0 +1,26 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/25_doublecount_and_player_motion_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "DOUBLE-COUNT FIX + PLAYER MOTION SPEC v1 - not run". Plain markdown, no line-number prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your write tool refuses, say so plainly.
+
+Scott 2026-11-02: "ask Hermes to plan both the double-count fix and a measurement script for player movement after each shot, we need to implement these Python scripts cleanly."
+
+FACTS (Claude Code checked this session):
+- Fall-through guard (spec 24) ran once: FAIL. 140 build shots: makes_right 20, misses_called_makes 5; Adrian Q4: 1/5 makes, 1 false make. Results: C:/Users/scott/Documents/Liberty_Shot_Outputs/q4_guard/.
+- Scott reviewed 10 rim clips blind (6 the program wrongly called makes + 4 real makes) and called all 10 right. His notes (scratchpad copy; key points): misses -> "players went for a rebound", "players aggressively compete for possession", "net didn't move", "ball didn't disappear behind the rim / rim disappeared behind the ball", "severe trajectory change"; makes -> "players didn't compete for the ball, run down the court", "ball disappears behind the front bar of the rim, not the back", "huge net movement", referee signal.
+- DOUBLE COUNT: false make Adrian t=39400 (tag 0:39.4 2PT Miss, 21 Colman) -> 0:40.0 OffRebound 51 Peterson -> t=41900 (0:41.9 2PT Make, 40 Dayley). For t=39400 the D1 anchor_frame is 1045 (41.8 s, anchor_reason "crossing"); for t=41900 it is 1048. So the miss borrowed the next shot's make. Tag file: data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json (rows: start, eventtype 2PT/3PT/FT, result). Adrian video 25 fps.
+- Track layout: each saved track's "ball" is (frame_offset, x, y) for 80 frames from the tag frame (collect_q4_bodd.py v6_ball, range(80)); build tracks C:/Users/scott/AppData/Local/Temp/v6_tracks.json (Adrian) and v6_tracks_notus_q1.json. Decision: .team/shot_detectors/small_fixes_v6_copy.py decide_shot; D1 report: .team/shot_detectors/keep_ball_detections.py (peak_from_track, frames_to_extract, run_arc_and_rule_on_shot, step_arc_rule_report). Read them.
+- Players: C:/Users/scott/AppData/Local/Temp/BODD_yolov8n_0001.pt has classes {0 basketball, 1 hoop, 2 player, 3 referee} (Claude Code loaded it). The camera PANS, so raw image motion includes camera motion.
+- Rules in force: no core file edits (ai_bridge.py, event_generator.py, court_memory.py, net_detector.py, ...), models/ and ball_confidence 0.28 unchanged, applied_to_core false, no looser cutoff, banned: linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter. Adrian Q4 (18 shots) is the only blind test: never used to design anything. One run, no tuning after results.
+
+WRITE TWO PARTS:
+PART 1 - Double-count fix (test-copy only, default-OFF switch):
+- Rule in plain words: a moment after the NEXT tagged shot's tag time cannot be used to judge this shot. Define exactly: cut frame offset = round((t_next - t)/1000*fps), t_next = next shot tag (2PT/3PT/FT, any team) in the same film; ball/bodd points at or after the cut are dropped before decide_shot and before D1 anchor/frame picking. It can only remove frames.
+- Say where it plugs in (function names), the switch/flag names, and tests (switch off = today's results exactly; a hand-made pair of shots 2.5 s apart; a shot with no next shot unchanged).
+- First a count only: how many of the 140 build shots have a next shot within 80 frames.
+- One run: 140 build shots and Adrian Q4, with the current model (v6, D1) and with d2v1; pass = misses_called_makes == 0 AND makes_right >= today's for that model. Fix these numbers now.
+- Note: an untagged game has no tags; say that later the next DETECTED shot plays this role (out of scope now).
+PART 2 - Player motion measurement (measure only, changes no call):
+- For each of the 140 build shots: run BODD on frames from the shot moment (D1 anchor_frame, or tag frame if none) to +3.0 s. Per frame: player boxes and the hoop box; positions measured RELATIVE TO THE HOOP in that frame (to cancel camera pan); hoop missing in a frame -> frame skipped and counted.
+- Measures (fix them now, no others): (a) number of players within 2 hoop-widths... choose distances only from numbers already in the code (name the line) or state them as Scott-decided-in-advance; (b) average change in player distance to the hoop over the window (moving toward vs away); (c) count of players moving away vs toward.
+- Output: one JSON + one markdown table per shot and a makes-vs-misses summary (median, min, max of each measure). NO threshold, NO rule, NO call change. Output only under C:/Users/scott/Documents/Liberty_Shot_Outputs/player_motion/ (refuse to overwrite).
+- Adrian Q4 is not measured in this step.
+PART 3 - Files, tests, who: new files only under .team/shot_detectors/; name each; tests for each; Claude Code vets, Muse checks; Scott names the coder; Hermes and Muse check the diff.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - Claude Code to check".

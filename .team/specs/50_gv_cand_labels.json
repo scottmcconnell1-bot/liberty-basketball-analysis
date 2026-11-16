@@ -1,0 +1,270 @@
+{
+ "moments": {
+  "620320": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "958480": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1236560": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "1443280": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1655120": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1686840": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "2165360": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "2571800": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "2946520": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "2957440": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "2978080": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "3395560": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "3615440": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "3697960": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "3705960": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "3711320": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "3716600": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "3732160": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "3776280": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "3994680": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "4002080": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "4093640": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "4096560": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "4113120": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "4118880": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "4241480": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "4312640": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "4389760": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "4597640": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "4644200": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5021160": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "5270240": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5438680": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "5506040": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5511000": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5514560": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5521560": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5532400": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5542920": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5566040": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5573280": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5585960": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5591480": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5762080": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5775840": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5913240": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "5936640": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "6502280": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "6584440": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "6810760": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "7155680": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "7220960": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "7814560": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  }
+ },
+ "meta": "Claude Code 2026-11-12 visual labels of trigger2-only candidates (cand5), tracked crops"
+}

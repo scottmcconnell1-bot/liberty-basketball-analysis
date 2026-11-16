@@ -1,0 +1,21 @@
+`is_referee_player` now holds the tested box fixed and counts a nearby frame when a referee box sits inside it. No player matching.
+
+**Proven**
+
+- `is_referee_player(box, frame, refs_by_frame, window, min_frames, inside)` counts frames `g` in `[frame - window, frame + window]` where some referee box `q` has `inside_fraction(box, q) >= inside`. The tested box geometry is the same on every frame. True when that count is at least `min_frames`.
+- Constants unchanged: `REF_INSIDE` 0.5, `REF_WINDOW_FRAMES` 12, `REF_MIN_FRAMES` 5. `MERGE_IOU` stays. The walk, shot calls, and make/miss paths are unchanged. The walk cache still keys `(frame, rounded box)` and now calls the new signature.
+- `MATCH_IOU` is removed. After this change nothing else used it (the old match step was its only caller).
+- The test that relied on player matching is `test_referee_player_needs_five_frames_and_ignores_a_partial_ref`. It now has no player boxes: 5 frames inside the fixed box is True, 4 is False, and a referee with `inside_fraction` 0.4 is not counted. The `MATCH_IOU == 0.5` line in `test_spec39_iou_inside_fraction_and_same_body_merge` was dropped with the constant.
+
+```
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+```
+
+`72 passed in 2.14s`
+
+Not committed. No video or model run.
+
+**Inferred:** Notus 194720 and 273920 were low because those frames were labeled referee only, so the old player-box match never fired. This count uses the fixed box, which is the case Claude Code measured (a referee inside the held box on 8 and 12+ of the ±12 frames).
+
+**Unknown:** Whether those two picks now drop on a real run. This session did not run video.
+[cursor_wsl] exit 0 at 13:16:27

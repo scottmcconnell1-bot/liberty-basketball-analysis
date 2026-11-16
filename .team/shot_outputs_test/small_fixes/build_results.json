@@ -1,0 +1,6825 @@
+{
+  "identity": "IDENTITY: 140/140 same",
+  "results_path": "/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json",
+  "n_shots": 140,
+  "expected": {
+    "build": 140,
+    "makes": 47,
+    "rule_right": 28,
+    "missed_makes": 19,
+    "real_misses": 93
+  },
+  "summaries": [
+    {
+      "label": "baseline_all_off",
+      "makes_right": 28,
+      "missed_makes": 19,
+      "misses_called_makes": 0,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [],
+      "hard_gate_ok": true
+    },
+    {
+      "label": "A7_alone",
+      "makes_right": 28,
+      "missed_makes": 19,
+      "misses_called_makes": 0,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [
+        {
+          "t": 755400,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "short_net_depth",
+          "new_pred": false,
+          "new_reason": "ball_box_jump"
+        },
+        {
+          "t": 2529600,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "short_net_depth",
+          "new_pred": false,
+          "new_reason": "ball_starts_well_below"
+        }
+      ],
+      "hard_gate_ok": true
+    },
+    {
+      "label": "A8_alone",
+      "makes_right": 28,
+      "missed_makes": 19,
+      "misses_called_makes": 0,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [
+        {
+          "t": 774600,
+          "film": "notus_a1",
+          "gt_make": true,
+          "old_pred": false,
+          "old_reason": "ball_went_up",
+          "new_pred": false,
+          "new_reason": "ball_box_jump"
+        }
+      ],
+      "hard_gate_ok": true
+    },
+    {
+      "label": "A4_alone",
+      "makes_right": 25,
+      "missed_makes": 22,
+      "misses_called_makes": 1,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [
+        {
+          "t": 338700,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "sideways_drift",
+          "new_pred": true,
+          "new_reason": null
+        },
+        {
+          "t": 590900,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        },
+        {
+          "t": 2607300,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        },
+        {
+          "t": 2914500,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        }
+      ],
+      "hard_gate_ok": false
+    },
+    {
+      "label": "C4_alone",
+      "makes_right": 28,
+      "missed_makes": 19,
+      "misses_called_makes": 0,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [],
+      "hard_gate_ok": true
+    },
+    {
+      "label": "all_four",
+      "makes_right": 25,
+      "missed_makes": 22,
+      "misses_called_makes": 1,
+      "recovered_missed_make_t": [],
+      "verdict_changes": [
+        {
+          "t": 774600,
+          "film": "notus_a1",
+          "gt_make": true,
+          "old_pred": false,
+          "old_reason": "ball_went_up",
+          "new_pred": false,
+          "new_reason": "ball_box_jump"
+        },
+        {
+          "t": 338700,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "sideways_drift",
+          "new_pred": true,
+          "new_reason": null
+        },
+        {
+          "t": 590900,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        },
+        {
+          "t": 755400,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "short_net_depth",
+          "new_pred": false,
+          "new_reason": "tracker_swap_bodd_ball"
+        },
+        {
+          "t": 2529600,
+          "film": "adrian",
+          "gt_make": false,
+          "old_pred": false,
+          "old_reason": "short_net_depth",
+          "new_pred": false,
+          "new_reason": "ball_starts_well_below"
+        },
+        {
+          "t": 2607300,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        },
+        {
+          "t": 2914500,
+          "film": "adrian",
+          "gt_make": true,
+          "old_pred": true,
+          "old_reason": null,
+          "new_pred": false,
+          "new_reason": "sideways_drift"
+        }
+      ],
+      "hard_gate_ok": false
+    }
+  ],
+  "per_run": {
+    "baseline_all_off": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.25
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball",
+        "details": {
+          "reason": "tracker_swap_bodd_ball",
+          "spatial_gap": 177.2,
+          "frame_gap": 1
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 147.9961395263672,
+          "last_y": 146.06824493408203
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 413.8,
+          "x_at_180": 400.9,
+          "column_ratio": 1.0,
+          "max_jump": 55.7,
+          "is_short_make": false,
+          "sideways": 0.211
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 149.8052749633789,
+          "last_y": 145.25786590576172
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 199.51348114013672,
+          "hoop_y": 136.3
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 171.4
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 21,
+          "x_at_80": 463.8,
+          "x_at_180": 456.4,
+          "column_ratio": 1.0,
+          "max_jump": 38.2,
+          "is_short_make": false,
+          "sideways": 0.116
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 215.3
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up",
+        "details": {
+          "cross_idx": 25,
+          "x_at_80": 353.1,
+          "x_at_180": null,
+          "column_ratio": 0.8,
+          "max_jump": 35.8,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "ball_bounces_up"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 280.3
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.25
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 181.3191146850586,
+          "last_y": 165.85052490234375
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net",
+        "details": {
+          "cross_idx": 16,
+          "x_at_80": 871.1,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 23.2,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_track_left_net"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 0,
+          "x_at_80": 871.6,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 0,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 605.8,
+          "x_at_180": null,
+          "column_ratio": null,
+          "max_jump": 21.6,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 17,
+          "x_at_80": 628.8,
+          "x_at_180": 631.3,
+          "column_ratio": 1.0,
+          "max_jump": 27.4,
+          "is_short_make": false,
+          "sideways": 0.025
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up",
+        "details": {
+          "cross_idx": 18,
+          "x_at_80": 1080.6,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 28.9,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "ball_bounces_up"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 5,
+          "x_at_80": 1232.5,
+          "x_at_180": 1254.9,
+          "column_ratio": 1.0,
+          "max_jump": 32.0,
+          "is_short_make": false,
+          "sideways": 0.216
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 259.56919860839844,
+          "last_y": 190.53411483764648
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track",
+        "details": {
+          "reason": "short_combined_track"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 321.5039520263672,
+          "hoop_y": 216.3
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.333
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "sideways_drift",
+        "details": {
+          "cross_idx": 40,
+          "x_at_80": 929.2,
+          "x_at_180": 976.5,
+          "column_ratio": 1.0,
+          "max_jump": 35.4,
+          "is_short_make": false,
+          "sideways": 0.432,
+          "vetoed": true,
+          "veto_reason": "sideways_drift"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up",
+        "details": {
+          "cross_idx": 2,
+          "x_at_80": 903.9,
+          "x_at_180": null,
+          "column_ratio": 0.5,
+          "max_jump": 38.4,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "ball_bounces_up"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 16,
+          "x_at_80": 1340.1,
+          "x_at_180": 1333.3,
+          "column_ratio": 0.75,
+          "max_jump": 28.1,
+          "is_short_make": false,
+          "sideways": 0.069
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 8,
+          "x_at_80": 1103.0,
+          "x_at_180": 1082.2,
+          "column_ratio": 1.0,
+          "max_jump": 31.0,
+          "is_short_make": false,
+          "sideways": 0.196
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net",
+        "details": {
+          "cross_idx": 14,
+          "x_at_80": 1139.1,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 28.3,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_track_left_net"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 82.1
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 274.4636535644531,
+          "last_y": 268.80867767333984
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 9,
+          "x_at_80": 1105.9,
+          "x_at_180": 1112.8,
+          "column_ratio": 1.0,
+          "max_jump": 36.5,
+          "is_short_make": false,
+          "sideways": 0.064
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 8,
+          "x_at_80": 1182.5,
+          "x_at_180": 1220.8,
+          "column_ratio": 0.5,
+          "max_jump": 30.9,
+          "is_short_make": false,
+          "sideways": 0.386
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 358.20989990234375,
+          "hoop_y": 263.4
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 309.14083099365234,
+          "hoop_y": 238.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 16,
+          "x_at_80": 851.8,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 27.6,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net",
+        "details": {
+          "cross_idx": 7,
+          "x_at_80": 584.6,
+          "x_at_180": null,
+          "column_ratio": null,
+          "max_jump": 42.1,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_track_left_net"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.333
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 10,
+          "x_at_80": 1063.0,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 28.1,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 15,
+          "x_at_80": 1219.2,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 26.5,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail",
+        "details": {
+          "cross_idx": 26,
+          "x_at_80": 830.5,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 33.8,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_make_bodd_fail",
+          "bodd_ratio": 1.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 818.4,
+          "x_at_180": 829.2,
+          "column_ratio": 1.0,
+          "max_jump": 35.0,
+          "is_short_make": false,
+          "sideways": -0.1
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 8,
+          "x_at_80": 1144.6,
+          "x_at_180": 1154.2,
+          "column_ratio": 1.0,
+          "max_jump": 29.7,
+          "is_short_make": false,
+          "sideways": 0.093
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 388.2085266113281,
+          "hoop_y": 238.8
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 7,
+          "x_at_80": 981.3,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 24.5,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball",
+        "details": {
+          "reason": "tracker_swap_bodd_ball",
+          "spatial_gap": 474.5,
+          "frame_gap": 2
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball",
+        "details": {
+          "reason": "tracker_swap_bodd_ball",
+          "spatial_gap": 330.1,
+          "frame_gap": 1
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 15,
+          "x_at_80": 1321.2,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 31.7,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 10,
+          "x_at_80": 846.3,
+          "x_at_180": 837.7,
+          "column_ratio": 1.0,
+          "max_jump": 29.5,
+          "is_short_make": false,
+          "sideways": -0.075
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 36,
+          "x_at_80": 1089.4,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 23.4,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 331.35662841796875,
+          "hoop_y": 201.9
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 79.2
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 97.4
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net",
+        "details": {
+          "cross_idx": 34,
+          "x_at_80": 782.2,
+          "x_at_180": null,
+          "column_ratio": null,
+          "max_jump": 39.1,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_track_left_net"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim",
+        "details": {
+          "cross_idx": 6,
+          "x_at_80": 1114.1,
+          "x_at_180": 1072.0,
+          "column_ratio": null,
+          "max_jump": 52.9,
+          "is_short_make": false,
+          "sideways": 0.481,
+          "vetoed": true,
+          "veto_reason": "x_at_180_outside_rim"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net",
+        "details": {
+          "cross_idx": 6,
+          "x_at_80": 694.8,
+          "x_at_180": null,
+          "column_ratio": null,
+          "max_jump": 44.0,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "short_track_left_net"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 360.0851135253906,
+          "hoop_y": 230.8
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 1161.9,
+          "x_at_180": 1202.3,
+          "column_ratio": 0.0,
+          "max_jump": 26.7,
+          "is_short_make": false,
+          "sideways": -0.399
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.333
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 15,
+          "x_at_80": 1317.5,
+          "x_at_180": 1362.3,
+          "column_ratio": 1.0,
+          "max_jump": 22.2,
+          "is_short_make": false,
+          "sideways": 0.221
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 797.5,
+          "x_at_180": 843.5,
+          "column_ratio": 1.0,
+          "max_jump": 30.7,
+          "is_short_make": false,
+          "sideways": 0.421
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 9,
+          "x_at_80": 783.7,
+          "x_at_180": 746.2,
+          "column_ratio": 0.75,
+          "max_jump": 31.8,
+          "is_short_make": false,
+          "sideways": 0.341
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 10,
+          "x_at_80": 1130.9,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 49.6,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth",
+        "details": {
+          "reason": "short_net_depth"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low",
+        "details": {
+          "reason": "column_ratio_low",
+          "column_ratio": 0.0
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 5,
+          "x_at_80": 1241.8,
+          "x_at_180": 1263.7,
+          "column_ratio": 0.0,
+          "max_jump": 26.9,
+          "is_short_make": false,
+          "sideways": 0.315
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up",
+        "details": {
+          "cross_idx": 9,
+          "x_at_80": 973.3,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 25.6,
+          "is_short_make": true,
+          "vetoed": true,
+          "veto_reason": "ball_bounces_up"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 6,
+          "x_at_80": 1241.0,
+          "x_at_180": 1241.6,
+          "column_ratio": 1.0,
+          "max_jump": 31.8,
+          "is_short_make": false,
+          "sideways": 0.006
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 11,
+          "x_at_80": 830.7,
+          "x_at_180": null,
+          "column_ratio": 1.0,
+          "max_jump": 24.3,
+          "is_short_make": true
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift",
+        "details": {
+          "cross_idx": 0,
+          "x_at_80": 1334.0,
+          "x_at_180": 1533.4,
+          "column_ratio": 0.75,
+          "max_jump": 0,
+          "is_short_make": false,
+          "sideways": 1.204,
+          "vetoed": true,
+          "veto_reason": "sideways_drift"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below",
+        "details": {
+          "reason": "ball_starts_well_below",
+          "first_y": 330.2492218017578,
+          "hoop_y": 262.3
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up",
+        "details": {
+          "reason": "ball_went_up",
+          "first_y": 432.9366149902344,
+          "last_y": 318.1692581176758
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 109.5
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump",
+        "details": {
+          "reason": "ball_box_jump",
+          "max_jump": 101.4
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null,
+        "details": {
+          "cross_idx": 10,
+          "x_at_80": 877.6,
+          "x_at_180": 887.4,
+          "column_ratio": 1.0,
+          "max_jump": 28.3,
+          "is_short_make": false,
+          "sideways": 0.095
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing",
+        "details": {
+          "reason": "no_valid_crossing"
+        }
+      }
+    ],
+    "A7_alone": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track"
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail"
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim"
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      }
+    ],
+    "A8_alone": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track"
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail"
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim"
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      }
+    ],
+    "A4_alone": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track"
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail"
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim"
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      }
+    ],
+    "C4_alone": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track"
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail"
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim"
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      }
+    ],
+    "all_four": [
+      {
+        "film": "notus_a1",
+        "t": 55400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 64200,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 95600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 142600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 159300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 192100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "notus_a1",
+        "t": 212300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 234700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 240800,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 252500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 256700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "notus_a1",
+        "t": 272400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 279100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "notus_a1",
+        "t": 303700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 325900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 357500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 370600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "notus_a1",
+        "t": 380800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 422700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 433900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 480200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "notus_a1",
+        "t": 483400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 591100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 598300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 646800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 693500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 696300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 761800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "notus_a1",
+        "t": 774600,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "notus_a1",
+        "t": 784400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "notus_a1",
+        "t": 883400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 21300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 39400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 41900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 48600,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 88400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 120800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 134600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 167200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 186000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 190200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_combined_track"
+      },
+      {
+        "film": "adrian",
+        "t": 217000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 236400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 250200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 268500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 280200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 335500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 338700,
+        "gt_make": false,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 342800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 373700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 389900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 461000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 501900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 515000,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 530600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 536900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 566900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 590900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 638300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 666800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 674100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 705200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 717000,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 728800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 755400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 787500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 801800,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 832400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 846800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 856200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 896600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 912600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 936200,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 949300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 958200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1091600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1166800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_make_bodd_fail"
+      },
+      {
+        "film": "adrian",
+        "t": 1181700,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1217300,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1231400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1433200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1437100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1461000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1476600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1488500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1515700,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1557200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "tracker_swap_bodd_ball"
+      },
+      {
+        "film": "adrian",
+        "t": 1582000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1600900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1603900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1708100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1716300,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 1748400,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 1760400,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 1771900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 1776500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1792900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 1836700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 1901500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 1929800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "x_at_180_outside_rim"
+      },
+      {
+        "film": "adrian",
+        "t": 2399600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2408500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2417100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2419200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2441900,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_track_left_net"
+      },
+      {
+        "film": "adrian",
+        "t": 2447200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2455600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2473800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2479100,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2486900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2504800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2508600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2529600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 2553900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2586500,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2607300,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2622000,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2653200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2670800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2738600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "short_net_depth"
+      },
+      {
+        "film": "adrian",
+        "t": 2747200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2753100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2764600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2870400,
+        "gt_make": true,
+        "pred": false,
+        "reason": "column_ratio_low"
+      },
+      {
+        "film": "adrian",
+        "t": 2888800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 2914500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2928600,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_bounces_up"
+      },
+      {
+        "film": "adrian",
+        "t": 2939100,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2951900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 2962500,
+        "gt_make": true,
+        "pred": false,
+        "reason": "sideways_drift"
+      },
+      {
+        "film": "adrian",
+        "t": 2975800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_starts_well_below"
+      },
+      {
+        "film": "adrian",
+        "t": 3020800,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_went_up"
+      },
+      {
+        "film": "adrian",
+        "t": 3045900,
+        "gt_make": true,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3095700,
+        "gt_make": true,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3154100,
+        "gt_make": false,
+        "pred": false,
+        "reason": "ball_box_jump"
+      },
+      {
+        "film": "adrian",
+        "t": 3256200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3269900,
+        "gt_make": true,
+        "pred": true,
+        "reason": null
+      },
+      {
+        "film": "adrian",
+        "t": 3291500,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      },
+      {
+        "film": "adrian",
+        "t": 3314200,
+        "gt_make": false,
+        "pred": false,
+        "reason": "no_valid_crossing"
+      }
+    ]
+  },
+  "applied_to_core": false
+}

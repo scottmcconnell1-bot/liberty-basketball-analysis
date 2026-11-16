@@ -1,0 +1,37 @@
+Query: Muse, check Claude Code's VETTED stamp (line 2) on 
+.team/specs/30_clip_seconds_spec.md: Scott-decided clip lengths 2.0 s before / 
+1.5 s after for the coach review page (display only). Check the arithmetic (25 
+fps: 50 / 38 frames; groups 935..1086, 60378..60539, 68778..68874; 36 normal 
+cards x 89 frames) and Golden Rules. Reasons, then exactly one line: "MUSE: 
+AGREE" or "MUSE: DISAGREE".
+📖 Read 30_clip_seconds_spec.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+📖 Read AUTHORITY.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+The spec and both protocol files are read. Let me verify the arithmetic computationally before judging the stamp.
+────────────────────────────────────────
+
+✗ Exec fps = 25 [This code is not allowed in an unattended session — it did not run.]
+
+────────────────────────────────────────
+☤ Hermes
+Reasons:
+
+1. Stamp & attribution (line 2): "VETTED by Claude Code, 2026-11-03", numbers attributed to Scott and decided before the run, display only — matches your framing (2.0 s / 1.5 s). ✓
+2. Frame math: 2.0 × 25 = 50 before-frames; 1.5 × 25 = 37.5 → Python round(37.5) = 38 (banker's rounding, half to even). ✓ Inclusive span anchor −50 .. +38 = 50 + 38 + 1 = 89 frames/card. ✓
+3. Group arithmetic: 935..1086 = 152; 60378..60539 = 162; 68778..68874 = 97 (each last − first + 1). Extents check against [tag − 50, max(anchor) + 38]: group 1 tag 985→935, max anchor 1048→1086; group 2 tag 60428→60378, anchor 60501→60539; group 3 tag 68828→68778, anchor 68836→68874. Combined total 152 + 162 + 97 = 411. ✓4. Card math: 36 normal × 89 = 3204; 3204 + 411 = 3615 total — matches your "36 normal cards x 89 frames" and line 2's correction (30 gray + 6 orange = 36 normal + 3 combined = 39 page cards). ✓
+5. Golden Rules: display-only change; no ai_bridge.py cutoff loosening; no banned trials (no interpolation/ByteTrack/DeepSORT/early windows); no protected-file edits (models/ball_detector.pt untouched); VETTED stamp present per the audit filter. ✓Minor spec noise (not in the stamp, non-blocking): lines 11–13 still carry the superseded 39-normal/3471-frame/3882-total figures, contradicting line 2's correction; "~3.5×" should be ≈3.07× (3615/1179) under the corrected count.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a699fb228f9da13dc93d731c2bbd3f5953e899f866e3b249c4a500873072f4fa
+  hermes -c "Verify VETTED stamp on clip seconds spec"
+
+Session:        local-a699fb228f9da13dc93d731c2bbd3f5953e899f866e3b249c4a500873072f4fa
+Title:          Verify VETTED stamp on clip seconds spec
+Duration:       1m 6s
+Messages:       8 (1 user, 6 tool calls)

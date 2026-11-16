@@ -1,0 +1,118 @@
+**CURSOR: DISAGREE** — Spec 52A v1 is not train-ready. Full audit: `.team/review52/cursor_prereg52a.txt`.
+
+**O1 Proven:** Paths `/mnt/c/Users/Documents/...` do not exist (missing `scott`). Correct root is `/mnt/c/Users/scott/Documents/...`.
+
+**O2 Proven:** Under the pinned 48b out-of-session rule:
+| film | class-0 after restore |
+|------|------------------------|
+| adrian | **6** (matches Hermes) |
+| notus | **0** (Hermes’s **9** contradicts the rule — all 9 `-1` are in-session; 48b drops 0) |
+| hsb | **4** (no new restores) |
+| gvg / rimrock | unchanged 145 / 241 |
+
+Hold-out gvg train class-0 = **251** (241 rimrock + 10 others ≈ **96% rimrock**). This does not fix D1 as a training fix. Predict-time filter is what can cut gvg warm-up false shots/checks.
+
+**O3 Proven:** All restore `t_ms` already in `clips7`; no new extract for the 6 adrian rows. Notus “9” has no pinned source.
+
+**O4 Proven:** `gate52`/`ensemble_predict` do not implement `session_filter` today (`postproc52` still false). If wired like old `postproc.py`, filtered rows are **omitted** from the shot list (not scored as “not a shot”); a filtered real shot hurts **recall**. HSB miss `t=2631233` is out of session → recall risk. Rimrock/hsb session notes are otherwise correct.
+
+**O5:** Fixed far-from-tag rule on in-session `-1` (e.g. ≥8 s from any coach tag) yields ~26 adrian + ~6 notus class-0 without peeking — the only (a)-compatible way to add meaningful multi-gym negatives.
+
+**CURSOR: DISAGREE:** fix paths; notus 9 contradicts 48b rule (rule→0); post-restore class-0 = 6/0/4 (still ~96% rimrock w/ gvg held out — does not fix D1 by train); pin gate52 session_filter wiring + scoring (omit≠not-a-shot; HSB 2631233 recall risk); add fixed far-from-tag class-0 or stop claiming multi-gym D1 fix — resubmit v2.
+ession). hsb class-0 count
+          after rule = 4 (spec omitted the after count; before=after).
+  gvg/rimrock: kept unchanged per spec (if rule were applied to gvg labels,
+          174 of 198 y=-1 are out-of-session -> y0 would become 319; spec
+          correctly freezes them instead).
+
+Hold-out gvg train class-0 AFTER this restore:
+  rimrock 241 + adrian 6 + hsb 4 + notus 0 = 251
+  = 241/251 (~96%) still rimrock. Claude's "~241 + ~15" is the right order;
+  exact others = 10, not ~15.
+
+Does this fix D1? Unlikely as a training fix. D1 was seeds 0/2 calling
+113–137/145 GV not-shots a shot because not-a-shot was learned from one gym.
+Adding 6 Mustangs-gym warm-ups (+4 hsb already present) does not create
+multi-gym class-0 diversity. The predict-time session filter (Item 2) is the
+part that can cut gvg checks/false shots (gvg has 174 y=-1 + 1 y0 out of
+session among cand5 labels; 0 real shots out of session on gvg).
+
+=== O3 clips coverage — PROVEN ===
+clips7 t_ms == labels52_v2 t_ms for all five films (0 missing, 0 extra).
+The 6 adrian out-of-session restores are ALREADY in clips7; no new extract
+needed for those rows. If Hermes intends notus y0=9 from some other moment
+list not in labels/clips7, that source + extract + t_ms are NOT pinned.
+Under the written 48b rule, notus needs no new clips and gets y0=0.
+
+=== O4 predict-time filter scoring / session availability — PROVEN gaps ===
+Session availability: adrian/notus/gvg (as gv/) 48b OK; hsb hybrid49 OK;
+rimrock none -> no filter (spec correct).
+
+Wiring: ensemble_predict.py / gate52.py do NOT read session_filter or call
+in_session/filter_moments today. postproc52.json still has
+"session_filter": false; test_mm52.py asserts False. Old postproc.py (not the
+gate path) drops out-of-session rows from the predicted shot list via
+keep &= in_session(..., is_ft=True).
+
+Scoring effect if wired like postproc.py (must be stated in prereg; currently
+is NOT):
+  - Filtered candidates are OMITTED from the auto shot list (not emitted).
+  - They are NOT scored as model "not a shot" / class-0 argmax.
+  - A filtered REAL shot is simply missing -> counts against auto recall
+    (unmatched truth). It does not create a silent_reject by itself.
+  - A filtered non-shot reduces false shots / below-thr extras / checks.
+
+HSB risk: labelled miss t=2631233 sits in the gap 2624000–2712000 (neither
+interval nor ft_window). Filter would drop that real shot -> -1 on HSB
+recall. Adrian/notus: 0/127 and 0/31 coach tags out of session (safe).
+GVG: 0 real shots out of session; ~175 non-shot/-1 candidates droppable.
+
+Item 2 vs Item 3 conflict: filter is a required change, but postproc52 flag
+and gate wiring are not pinned; "unchanged" recipe text does not say how
+session_filter becomes true for logo52a.
+
+=== O5 alternative within (a), no peeking — PROVEN option ===
+In-session untagged (y=-1) far from any coach tag, threshold FIXED now
+(not from logo52 preds):
+
+  adrian -1 n=45; dist>=8s -> 26; >=15s -> 18; >=30s -> 7
+  notus  -1 n=9;  dist>=8s -> 6;  >=15s -> 4;  >=30s -> 1
+
+Example fixed rule (illustrative, must be pinned before labels write):
+  "y=-1 AND min|t - coach_shot_t| >= 8000 ms -> y=0; else stay -1"
+  yields adrian ~26 + notus ~6 class-0 from the SAME gyms as the D1 hole,
+  still without looking at logo52. Can combine with 48b out-of-session->0
+  (adrian then 6 out-of-session ∪ far-in-session). Still no rimrock/gvg
+  label edits. This is the only path inside (a) that actually adds
+  multi-gym (Mustangs + Liberty-home/Notus) class-0 at meaningful size.
+  Risk: some far -1 may be untagged real shots (R1 amendment already moved
+  unmatched to -1 for that reason) — pin the gap and accept residual noise,
+  or keep them -1 and rely on predict-time filter only (then stop claiming
+  a class-0 training fix for D1).
+
+=== Buildable? ===
+NO as written: wrong output paths; notus expected count contradicts the
+pinned rule; gate session filter not specified on the code path that
+gate52 actually runs; D1 training claim overstated vs computed counts.
+
+Required before AGREE / train:
+  1) Fix all paths to .../Users/scott/Documents/...
+  2) Reconcile notus: either y0=0 under 48b rule, or a different pinned
+     source with exact t_ms list (no logo52 peeking).
+  3) State exact post-restore class-0 counts: adrian 6, notus 0, hsb 4,
+     gvg 145, rimrock 241 (under current rule + keep gvg/rimrock).
+  4) Pin how session_filter is enabled in the gate52 path (ensemble_predict
+     + postproc52 + tests), and state scoring: drop from shot list; real
+     shot filtered = recall miss.
+  5) Either add a fixed far-from-tag class-0 rule (O5) large enough to
+     matter for D1, OR reframe Item 1 as tiny restore and Item 2 as the
+     primary gvg-checks lever — and accept that D1 may still fail.
+  6) Call out HSB t=2631233 recall risk under the filter.
+
+No peeking found in the rule text itself ("No row may be chosen by looking
+at logo52 predictions" is good). The failure is that the pre-registered
+*numbers* do not match the pre-registered *rule*, and the fix size does
+not match the claimed D1 remedy.
+
+CURSOR: DISAGREE: fix paths; notus 9 contradicts 48b rule (rule yields 0); class-0 after restore = adrian6/notus0/hsb4 (still ~96% rimrock when gvg held out — does not fix D1 by training); pin gate52 session_filter wiring + scoring (omit≠not-a-shot; HSB miss 2631233 recall risk); add fixed far-from-tag class-0 or stop claiming multi-gym D1 fix — then resubmit v2.
+[cursor_wsl] exit 0 at 16:40:55

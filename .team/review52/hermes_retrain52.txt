@@ -1,0 +1,104 @@
+Query: TEAM INPUT REQUEST - spec 52, after Scott's label check (read-only; do 
+not edit any file)
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner) asked that Hermes, Muse and Cursor be part of this decision. Read:
+- .team/specs/52_label_audit_stable_ensemble_spec.md (spec 52 v3, approved by 
+all)
+- .team/drift_log.md (last 8 lines, 2026-11-14)
+- .team/review52/spot_check_52_answers.json (Scott's 89 answers, notes included)
+- .team/review52/relabel.txt (Claude Code's relabel decisions) and 
+labels52_v2.json
+
+WHAT HAPPENED
+1. R2: Claude Code re-audited 729 rows on tiny rim crops: 0 miss<->not-shot 
+flips, 18 small changes.
+2. R3: Scott checked 89 rows on video. Agreement on Claude's unchanged rows: 
+58/71 = 81.7% (fails the 10% bar).
+   Main error: real shots (airballs, putbacks, layups) labelled not-a-shot or 
+unknown. Also 4 'miss' rows Scott
+   says are not shots: warm-up shot, shot waved off for travel, shooting fouls 
+(ref signal).
+3. Scott set a binding rule: fouled missed attempts, waved-off shots and warm-up
+shots do NOT count as shots;
+   putbacks are separate shots; airballs count.
+4. Claude Code relabelled (wide-court sheets -1.5..+2.5 s + tight rim zoom) 
+every row the old LOGO model found
+   borderline or disagreed with (229 rows), applied Scott's answers and rule, 
+and an auto rule (class-0 row within
+   2.5 s of a labelled shot -> -1 duplicate). Result labels52_v2: gvg 0/1/2 = 
+145/146/72, hsb 4/89/51,
+   rimrock 241/88/35; adrian/notus coach tags (unmatched -> -1).
+5. A second 130-item check page was built. Scott WAIVED it: "retrain now and 
+lets review. otherwise we are in an
+   indefinite loop of me looking at film and you giving me more clips." Labels 
+frozen (sha in drift_log).
+   choose_e (R5) is now running on clips7.
+6. Scott also asked: how is his input helping? Honest answer given: the model 
+learns only from labels; his
+   89 answers are in the labels; much earlier input went into hand rules later 
+dropped; no model trained on
+   today's input yet.
+
+QUESTIONS (answer each briefly, concrete)
+Q1. Is retraining now on labels52_v2 without the second check acceptable? What 
+risk does the waiver add, and how
+    should the gate/blind result be read because of it?
+Q2. Scott's rule (fouled / waved-off misses are not shots) cannot be seen by a 
+ball+rim clip model. How should the
+    gate and the blind test treat these: score them as not-shots, exclude them, 
+or route them to coach review?
+    Recommend one.
+Q3. To stop the endless review loop: propose the minimum, bounded human role 
+from here on (who looks at what, how
+    many items, one time) that still lets a blind result stand for the >=90% 
+goal.
+Q4. Anything in the plan (choose_e -> 3-seed LOGO gate -> 5-seed final -> blind 
+on >=2 new films) that must change
+    now? Only real issues.
+
+End with one line: <NAME>: AGREE (retrain now, plan as is) | AGREE WITH CHANGES:
+<list> | DISAGREE: <reason>
+
+────────────────────────────────────────
+☤ Hermes
+I'll read the referenced files first to ground the answers.
+────────────────────────────────────────
+
+📖 Read 52_label_audit_stable_ensemble_spec.md  0.2s
+📖 Read drift_log.md  0.2s
+📖 Read spot_check_52_answers.json  0.2s
+📖 Read relabel.txt  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+Let me get the last 8 lines of the drift log and the labels file.
+────────────────────────────────────────
+
+📖 Read drift_log.md L348-397
+📖 Read labels52_v2.json
+
+────────────────────────────────────────
+☤ Hermes
+Read-only files confirmed; nothing edited.
+
+Q1. Retrain now on labels52_v2: acceptable. Scott's waiver was the binding call, and it was coherent — the R2 v2 relabel was the direct fix response to R3's concrete failure modes (Claude under-called shots from rim crops; mis-applied not-a-shot rule), and his 89 answers + rule + auto-duplicate rule were folded in before the freeze (labels52_v2 sha 56f18cfa..., clips7 shas in drift_log). Risk the waiver adds: the 130-item second check never ran, so residual borderline label error is unquantified and now baked into training. Read the gate/blind accordingly: the blind (R10) is now the binding verification; a pass stands under the waiver; a fail is ambiguous (label error vs model error) and should trigger bounded diagnosis, not open-ended label re-litigation.
+
+Q2. Recommend scoring fouled / waved-off / warm-up attempts as not-shots in the e2e denominator via the frozen labels (they are -1 under Scott's binding rule), and routing any whistle-blind model firing on them through the postproc52 flags / honest coach check. Not exclude them from checks, not make them coach-only scoring buckets — the all-shots denominator wants not-a-shot predictions there, and a firing model is a false shot to be caught by review.
+
+Q3. Minimum bounded human role: Scott reviews, in one pass, (a) the single upcoming blind run's results and (b) only the flagged coach items from that run, inside the gate's own caps (<=20 checks/game, band flags, honest-review one-to-one). No proactive film review. If blind passes -> ship. If it fails -> he reviews the failing subset once and labels, then retrain; the loop is now failure-driven, not open-ended.
+
+Q4. No structural change needed to choose_e -> 3-seed LOGO gate -> 5-seed final -> blind on >=2 new films. Real issues to close now: (1) final-blind film inventory — HSB1 was consumed as an out-of-sample check, so confirm >=2 genuinely new unseen films remain; (2) make the fouled/waved-off not-a-shot handling explicit in the gate's e2e all-shots denominator before the blind; (3) the waiver is already recorded as the freeze basis in drift_log — do not re-litigate labels.
+
+HERMES: AGREE (retrain now, plan as is) | AGREE WITH CHANGES: <explicit not-a-shot gate treatment for fouled/waved-off; final-blind film inventory check> | DISAGREE: none
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-769bd6e1353bc1aa2c48c4f502d7f0d91020694b80e08907dbb3f7f758d53cc4
+  hermes -c "TEAM INPUT REQUEST - spec 52, after Scott's…"
+
+Session:        local-769bd6e1353bc1aa2c48c4f502d7f0d91020694b80e08907dbb3f7f758d53cc4
+Title:          TEAM INPUT REQUEST - spec 52, after Scott's…
+Duration:       1m 40s
+Messages:       10 (1 user, 8 tool calls)
+[hermes] exit 0 at 12:21:30

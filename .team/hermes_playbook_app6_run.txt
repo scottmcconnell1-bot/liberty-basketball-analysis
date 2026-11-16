@@ -1,0 +1,140 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-playbook (branch 
+team/playbook). You are the Architect. Your Jr High player app plan was 
+REJECTED: read the first line of 
+.team/specs/10_jrhigh_player_app_plan_v3_REJECTED.md for the four reasons (v1 
+and v2 reasons are on the first line of _v1_REJECTED.md and _v2_REJECTED.md; 
+keep those fixed). Check column names in schema.sql and the real JSON shape in 
+data/playbook/choreography/101.json before writing code, and read Scott's 
+requirements in .team/specs/10_jrhigh_requirements_scott.md (every numbered item
+must be met). Rewrite the WHOLE plan .team/specs/10_jrhigh_player_app_plan.md so
+its body carries every fix (do not copy any REJECTED line into it); keep the 
+good parts (staged delivery, Stage 1 testable on Scott's PC, eye-check list per 
+stage, no schema change, JSON file for the visibility list). The player app must
+be a separate static site built locally from ONLY the visible plays (outside the
+main app static/ tree, not committed to the public repo), so it can run with no 
+main program. Include a heading exactly ## Files for Stage 1. STRICT: create or 
+edit ONLY .team/specs/10_jrhigh_player_app_plan.md. Do not create any other file
+and do not run code that writes files.
+ IMPORTANT: the plan file does not exist now (the old version is saved as 
+_v3_REJECTED.md). CREATE it fresh with your write tool. If any tool reports an 
+error or refusal, say so plainly; never report a file as written unless the 
+write succeeded. Then read it back and confirm it contains step_number, 
+positions_json, and the per-step choreography whitelist.
+📖 Read 10_jrhigh_player_app_plan_v3_REJECTED.md  0.2s
+📖 Read 10_jrhigh_player_app_plan_v1_REJECTED.md  0.2s
+📖 Read 10_jrhigh_player_app_plan_v2_REJECTED.md  0.2s
+📖 Read 10_jrhigh_requirements_scott.md  0.3s
+📖 Read schema.sql  0.3s
+📖 Read 101.json  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the context. Let me create the corrected plan.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md  0.2s
+│ .team/specs/10_jrhigh_player_app_plan.md
+│ @@ -0,0 +1,431 @@
+│ +# Jr High Player App — Staged Plan
+│ +
+│ +**Goal:** A separate PLAYER app for Jr High team. Shows ONLY animated plays Scott picks. Players/parents use on phones. Scott draws/edits in main program; playbook unchanged. Sync ONE-WAY: main → player. Delivery: installable web app (PWA: Add to Home Screen, own icon, full screen, works offline after first load, iPhone/Android, no app store). Publishing: Scott marks plays as "Visible to players" and clicks Publish; app updates next open. Hidden plays are NOT shipped at all (not merely hidden in UI). Privacy: minors — no logins, no names, no analytics, no data collected; plays only; optional team code (soft lock on static host). Target ready: Jan 4, 2027.
+│ +
+│ +**Key existing pieces to reuse:**
+│ +- `blueprints/playbook.py`: share routes `/play/share/<token>` and `/play/share/<token>/choreography` are public, no auth
+│ +- `playbook_choreography.py`: sticky choreography JSON at `data/playbook/choreography/{play_id}.json`
+│ +- Animation: inline SVG/JS in `templates/playbook.html` (lines 624–2500+) and `static/js/playbook-export.js` (video recording)
+│ +- Plays table has `team_key` (jh_boys, jh_girls, hs_boys, hs_girls) — already in DB via additive ALTER
+│ +- Export: `/playbook/export/<id>` returns play + steps JSON
+│ +
+│ +**Schema decision:** NO schema.sql change. Visibility list kept in a JSON file (`data/playbook/jrhigh_player_visibility.json`). If Scott later wants multi-team or metadata, that becomes a gate.
+│ +
+│ +**Animation code trade-off:** The animation engine (~1900 lines in `playbook.html` inline script) is copied into `static/js/player-viewer.js` for Stage 1 so the player app is a standalone static site with no Flask dependency. This means fixes in the main program do NOT automatically reach the player app. Mitigation: a shared-source check script (`scripts/check_animation_sync.py`) compares the copied functions against the source in `playbook.html` and flags drift. If Scott confirms `playbook.html` animation behavior is stable, we can later extract a single shared JS module loaded by both; until then, copy + check is the contract.
+│ +
+│ +---
+│ +
+│ +## Stage 1 — Smallest Working Slice (Export ALL + Visibility Toggle + Phone Viewer)
+│ +
+│ +**What it does:** Scott sees ALL plays in the main program with a "Visible to players" toggle per play. Clicking "Publish to Player App" builds a static site in `dist/player/` containing ONLY visible plays. A tiny viewer page (`dist/player/player.html`) reads the bundle and animates using copied animation code. Testable on Scott's PC by serving `dist/player/` via `python -m http.server` on localhost:8080 (browsers block fetch() from file://; service workers need https or localhost). Phone install/offline (Stage 2) can only be tested on the PC (localhost) until Stage 4 hosting gives https.
+│ +
+│ +### Files for Stage 1
+│ +
+│ +| File | Action | Purpose |
+│ +|------|--------|---------|
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])` | Toggle "Visible to players" for any play (ALL team_keys) |
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/publish-player", methods=["POST"])` | Build static player site to `dist/player/` with ONLY visible plays |
+│ +| `blueprints/playbook.py` | ADD helper `_build_player_site(db)` | Generate `dist/player/player.html`, `dist/player/plays/*.json`, copy assets |
+│ +| `templates/playbook.html` | EDIT — Add "Visible to players" toggle switch on every play row; add "Publish to Player App" button | Scott controls visibility per play; one-click publish |
+│ +| `data/playbook/jrhigh_player_visibility.json` | CREATE (empty object `{}`) | Persisted map: `play_id` → `true/false` (visible to players) |
+│ +| `templates/player.html` | CREATE new STANDALONE template (does NOT extend base.html) | Minimal viewer: court SVG + play selector + Play All button |
+│ +| `static/js/player-viewer.js` | CREATE new file | Animation logic copied/adapted from `playbook.html` inline script |
+│ +| `static/css/player.css` | CREATE new file | Court styles extracted from `playbook.css` (no main app nav/styles) |
+│ +| `scripts/check_animation_sync.py` | CREATE | Compares `player-viewer.js` functions against `playbook.html` source; flags drift |
+│ +| `dist/player/` | CREATE directory (gitignored) | Output folder for static player site (NOT under `static/`) |
+│ +
+│ +### New Route: Toggle Visibility (ALL plays, any team_key)
+│ +
+│ +```python
+│ +@playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])
+│ +@require_feature("ENABLE_PRACTICES")
+│ +def playbook_toggle_visibility(play_id):
+│ +    db = get_db()
+│ +    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+│ +    if not play:
+│ +        return jsonify({"error": "Play not found"}), 404
+│ +    data = request.get_json() or {}
+│ +    visible = bool(data.get("visible", False))
+│ +    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+│ +    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+│ +    manifest[str(play_id)] = visible
+│ +    manifest_path.write_text(json.dumps(manifest, indent=2))
+│ +    return jsonify({"ok": True, "play_id": play_id, "visible": visible})
+│ +```
+│ +
+│ +### New Route: Publish to Player App (builds static site with ONLY visible plays)
+│ +
+│ +```python
+│ +@playbook_bp.route("/playbook/publish-player", methods=["POST"])
+│ +@require_feature("ENABLE_PRACTICES")
+│ +def playbook_publish_player():
+│ +    db = get_db()
+│ +    result = _build_player_site(db)
+│ +    return jsonify(result)
+│ +
+│ +def _build_player_site(db):
+│ +    # Load visibility map
+│ +    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+│ +    visibility = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+│ +    visible_ids = [int(pid) for pid, vis in visibility.items() if vis]
+│ +
+│ +    # Build output directory at repo root (dist/ is gitignored at repo root)
+│ +    out_dir = Path(current_app.root_path) / "dist" / "player"
+│ +    plays_dir = out_dir / "plays"
+│ +
+│ +    # REBUILD FROM SCRATCH: delete everything, then write only visible plays
+│ +    if out_dir.exists():
+│ +        shutil.rmtree(out_dir)
+│ … omitted 353 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 10_jrhigh_player_app_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+The plan file has been created and verified. It contains:
+
+- step_number (line 128 in the publish route code)
+- positions_json (line 130 in the publish route code)  
+- Per-step choreography whitelist (lines 135–147, inside choreography.steps[] with step_index, positions, coachOrder, movements, ink — explicitly stripping source_image and court_frac)
+- Exact heading ## Files for Stage 1 (line 22)
+- No REJECTED lines copied from any previous version
+- All 4 v3 rejection reasons fixed: real schema columns, per-step choreography whitelist, correct Python path + DB copy for testing, localhost serving for Stage 1 (phone install only after Stage 4)
+- All v1/v2 rejection reasons fixed: rebuild-from-scratch, repo-root dist/, privacy strip complete, single player.html template, byte-compare only unchanged functions, Windows paths
+- All 9 Scott requirements met: export ALL plays, visible toggle per play, publish ships ONLY visible, hidden plays NOT shipped, turning off removes on republish, minors privacy, PWA installable, one-way sync, Jan 4 target
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-6f07f5eb05730d592fc8fbc83db164ccbee514162524271537605a8011652490
+  hermes -c "Rewrite JrHigh Player App Plan"
+
+Session:        local-6f07f5eb05730d592fc8fbc83db164ccbee514162524271537605a8011652490
+Title:          Rewrite JrHigh Player App Plan
+Duration:       5m 51s
+Messages:       13 (1 user, 11 tool calls)

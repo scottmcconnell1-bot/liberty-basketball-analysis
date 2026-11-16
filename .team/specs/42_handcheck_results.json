@@ -1,0 +1,50 @@
+{
+  "spec": 42,
+  "written": "2026-11-08, before reading measure42_adrian_q4_blind",
+  "rule": "M6: every Adrian Q4 moment with free_throw true or stopped by too_far_from_hoop/no_lane_lines; debug images scratchpad q4dbg/",
+  "verdicts": [
+    {
+      "t_ms": 3449040,
+      "ft_reason": "free_throw_line",
+      "is_ft": "yes",
+      "shooter": "wrong",
+      "note": "shooter #40 (arm up, feet ~410,860, at left end of the line); program picked #0 standing behind him (305,1050)",
+      "correction": "2026-11-08 after numbers: moments.json shooter_box x 408.6, feet y 862 = #40 the real shooter. Claude Code misread the debug drawing (band polygon toward #0). Shooter RIGHT."
+    },
+    {
+      "t_ms": 3461760,
+      "ft_reason": "no_lane_lines",
+      "is_ft": "yes",
+      "shooter": "n/a",
+      "note": "same FT scene; line found on the half-circle arc next to #0; correctly not flagged with #0, but the FT is missed"
+    },
+    {
+      "t_ms": 3795480,
+      "ft_reason": "free_throw_line",
+      "is_ft": "yes",
+      "shooter": "right",
+      "note": "#22 white shooting, picked"
+    },
+    {
+      "t_ms": 3806360,
+      "ft_reason": "no_lane_lines",
+      "is_ft": "yes",
+      "shooter": "n/a",
+      "note": "#22 shooting again; a candidate's line landed on the wall base (left); stopped, FT missed"
+    },
+    {
+      "t_ms": 3856920,
+      "ft_reason": "free_throw_line",
+      "is_ft": "yes",
+      "shooter": "right",
+      "note": "#11 follow-through, picked"
+    },
+    {
+      "t_ms": 3867320,
+      "ft_reason": "free_throw_line",
+      "is_ft": "likely",
+      "shooter": "right",
+      "note": "#11 at the line; on the still frame the ball is already at the rim and lane players crash in - probably his 2nd FT, possibly the tagged moment is the rebound"
+    }
+  ]
+}

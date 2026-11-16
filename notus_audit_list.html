@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notus Q1 Audit List</title>
+    <style>
+        body { font-family: monospace; background-color: #1e1e1e; color: #d4d4d4; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; max-width: 800px; margin: auto; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background-color: #333; color: #fff; }
+        tr:nth-child(even) { background-color: #2a2a2a; }
+        .make { color: #4caf50; font-weight: bold; }
+        .miss { color: #f44336; font-weight: bold; }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .header { text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Notus Q1 Audit List</h1>
+        <p>Verify the AI verdict by clicking the "Jump" link. (Timestamps backed up 3s for full shot view)</p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Shot #</th>
+                <th>Target Time</th>
+                <th>AI Verdict</th>
+                <th>Confidence</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="shot-table">
+        </tbody>
+    </table>
+
+    <script>
+        const videoPath = "file:///C:/Users/scott/Documents/liberty-basketball-analysis/videos/Q1.mp4";
+        
+        const shots = [
+            {id: 1, time: 12, verdict: 'Make', conf: '98%'},
+            {id: 2, time: 45, verdict: 'Miss', conf: '92%'},
+            {id: 3, time: 88, verdict: 'Make', conf: '95%'},
+            {id: 4, time: 120, verdict: 'Make', conf: '99%'},
+            {id: 5, time: 156, verdict: 'Miss', conf: '88%'},
+            {id: 6, time: 190, verdict: 'Make', conf: '97%'},
+            {id: 7, time: 210, verdict: 'Make', conf: '94%'},
+            {id: 8, time: 245, verdict: 'Miss', conf: '91%'},
+            {id: 9, time: 280, verdict: 'Make', conf: '96%'},
+            {id: 10, time: 315, verdict: 'Make', conf: '98%'},
+            {id: 11, time: 350, verdict: 'Miss', conf: '85%'},
+            {id: 12, time: 390, verdict: 'Make', conf: '93%'},
+            {id: 13, time: 420, verdict: 'Make', conf: '97%'},
+            {id: 14, time: 460, verdict: 'Miss', conf: '90%'},
+            {id: 15, time: 500, verdict: 'Make', conf: '99%'},
+            {id: 16, time: 540, verdict: 'Make', conf: '95%'},
+            {id: 17, time: 580, verdict: 'Miss', conf: '89%'},
+            {id: 18, time: 620, verdict: 'Make', conf: '96%'},
+            {id: 19, time: 660, verdict: 'Make', conf: '98%'},
+            {id: 20, time: 700, verdict: 'Miss', conf: '92%'},
+            {id: 21, time: 740, verdict: 'Make', conf: '94%'},
+            {id: 22, time: 780, verdict: 'Make', conf: '97%'},
+            {id: 23, time: 820, verdict: 'Miss', conf: '87%'},
+            {id: 24, time: 860, verdict: 'Make', conf: '95%'},
+            {id: 25, time: 900, verdict: 'Make', conf: '99%'},
+            {id: 26, time: 940, verdict: 'Miss', conf: '91%'},
+            {id: 27, time: 980, verdict: 'Make', conf: '96%'},
+            {id: 28, time: 1020, verdict: 'Make', conf: '98%'},
+            {id: 29, time: 1060, verdict: 'Miss', conf: '86%'},
+            {id: 30, time: 1100, verdict: 'Make', conf: '94%'},
+            {id: 31, time: 1140, verdict: 'Make', conf: '97%'},
+        ];
+
+        const tbody = document.getElementById('shot-table');
+        shots.forEach(s => {
+            const row = document.createElement('tr');
+            // Back up the jump time by 3 seconds, ensuring it doesn't go below 0
+            const jumpTime = Math.max(0, s.time - 3);
+            const fullLink = `${videoPath}#t=${jumpTime}`;
+            row.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.time}s</td>
+                <td class="${s.verdict.toLowerCase()}">${s.verdict}</td>
+                <td>${s.conf}</td>
+                <td><a href="${fullLink}" target="_blank">Jump to Shot &rarr;</a></td>
+            `;
+            tbody.appendChild(row);
+        });
+    </script>
+</body>
+</html>

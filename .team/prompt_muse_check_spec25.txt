@@ -1,0 +1,5 @@
+MUSE CHECK (read only; do not edit anything). Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+Read .team/specs/25_doublecount_and_player_motion_spec.md (v2, VETTED by Claude Code, line 2) and the rejected v1 (.team/specs/25_doublecount_and_player_motion_spec_v1_REJECTED.md).
+Scott 2026-11-02 asked for: (1) the double-count fix (a miss at Adrian 0:39.4 borrowed the next shot's make at 0:41.9) and (2) a measurement of player movement after each shot (Scott saw players chase rebounds after misses and run back after makes).
+Check against the rules: no core file edit; models/ and ball_confidence 0.28 unchanged; applied_to_core false; no looser cutoff; no banned trial (linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter) - in particular, does part 2 avoid tracking players across frames?; fix only removes frames; pass rules fixed before any run; Adrian Q4 not used to design; measurement changes no call; outputs never overwrite.
+End with ONE line that starts exactly "MUSE: AGREE" or "MUSE: DISAGREE: <reason>".

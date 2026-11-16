@@ -1,0 +1,109 @@
+Query: TEAM INPUT REQUEST - spec 52, after Scott's label check (read-only; do 
+not edit any file)
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner) asked that Hermes, Muse and Cursor be part of this decision. Read:
+- .team/specs/52_label_audit_stable_ensemble_spec.md (spec 52 v3, approved by 
+all)
+- .team/drift_log.md (last 8 lines, 2026-11-14)
+- .team/review52/spot_check_52_answers.json (Scott's 89 answers, notes included)
+- .team/review52/relabel.txt (Claude Code's relabel decisions) and 
+labels52_v2.json
+
+WHAT HAPPENED
+1. R2: Claude Code re-audited 729 rows on tiny rim crops: 0 miss<->not-shot 
+flips, 18 small changes.
+2. R3: Scott checked 89 rows on video. Agreement on Claude's unchanged rows: 
+58/71 = 81.7% (fails the 10% bar).
+   Main error: real shots (airballs, putbacks, layups) labelled not-a-shot or 
+unknown. Also 4 'miss' rows Scott
+   says are not shots: warm-up shot, shot waved off for travel, shooting fouls 
+(ref signal).
+3. Scott set a binding rule: fouled missed attempts, waved-off shots and warm-up
+shots do NOT count as shots;
+   putbacks are separate shots; airballs count.
+4. Claude Code relabelled (wide-court sheets -1.5..+2.5 s + tight rim zoom) 
+every row the old LOGO model found
+   borderline or disagreed with (229 rows), applied Scott's answers and rule, 
+and an auto rule (class-0 row within
+   2.5 s of a labelled shot -> -1 duplicate). Result labels52_v2: gvg 0/1/2 = 
+145/146/72, hsb 4/89/51,
+   rimrock 241/88/35; adrian/notus coach tags (unmatched -> -1).
+5. A second 130-item check page was built. Scott WAIVED it: "retrain now and 
+lets review. otherwise we are in an
+   indefinite loop of me looking at film and you giving me more clips." Labels 
+frozen (sha in drift_log).
+   choose_e (R5) is now running on clips7.
+6. Scott also asked: how is his input helping? Honest answer given: the model 
+learns only from labels; his
+   89 answers are in the labels; much earlier input went into hand rules later 
+dropped; no model trained on
+   today's input yet.
+
+QUESTIONS (answer each briefly, concrete)
+Q1. Is retraining now on labels52_v2 without the second check acceptable? What 
+risk does the waiver add, and how
+    should the gate/blind result be read because of it?
+Q2. Scott's rule (fouled / waved-off misses are not shots) cannot be seen by a 
+ball+rim clip model. How should the
+    gate and the blind test treat these: score them as not-shots, exclude them, 
+or route them to coach review?
+    Recommend one.
+Q3. To stop the endless review loop: propose the minimum, bounded human role 
+from here on (who looks at what, how
+    many items, one time) that still lets a blind result stand for the >=90% 
+goal.
+Q4. Anything in the plan (choose_e -> 3-seed LOGO gate -> 5-seed final -> blind 
+on >=2 new films) that must change
+    now? Only real issues.
+
+End with one line: <NAME>: AGREE (retrain now, plan as is) | AGREE WITH CHANGES:
+<list> | DISAGREE: <reason>
+
+────────────────────────────────────────
+☤ Hermes
+I'll read the relevant files first to ground my answers.
+────────────────────────────────────────
+
+📖 Read 52_label_audit_stable_ensemble_spec.md  1.2s
+📖 Read drift_log.md  1.3s
+✗ Read spot_check_52_answers.json  1.3s [File not found: spot_check_52_answers.json]
+✗ Read relabel.txt  1.3s [File not found: relabel.txt]
+✗ Read labels52_v2.json  1.3s [error]
+
+────────────────────────────────────────
+☤ Hermes
+The review52 files live under the repo, not at the top level of /mnt/c/Users/scott. Let me read them from the correct path.
+────────────────────────────────────────
+
+📖 Read spot_check_52_answers.json
+📖 Read relabel.txt
+📖 Read labels52_v2.json
+📖 Read drift_log.md L348
+
+────────────────────────────────────────
+☤ Hermes
+Q1. Not under the approved spec — R3's spot-check failed (58/71 = 81.7% agreement = 18.3% disagreement, over the 10% bar), so spec 52's freeze-before-training precondition was not met; R10's analogue would have forced a label redo before scoring. Scott's waiver is binding, so retraining on labels52_v2 (clips7, choose_e already running) can proceed, but it is an owner deviation, not spec compliance. Risk: label noise biased toward under-calling shots (real shots → not-a-shot/unknown; 12 of Claude's "-1" rows were real shots per Scott) gets learned as systematic recall loss the clip model cannot fix. Read the gate/blind with the caveat disclosed: a pass is "pass on these labels," not proof on all real shots; keep the blind's random-20% second-person label check (fixed seed, ≤10% disagreement) mandatory before scoring; no seed-picking; report per-seed gate numbers.
+
+Q2. Exclude them from the gate/blind denominator. A ball+rim clip model cannot see a whistle, travel signal, or warm-up context, so scoring fouled/waved-off/warm-up attempts as not-shots guarantees errors and measures whistle-reading, not shot detection; routing each one to coach review breaks the minimal-coach-work goal. Keep them labelled not-a-shot per Scott's rule in training (the model learns them as negatives where visuals allow), and route only model calls of them as shots to coach review once (one-to-one) as a safety net so a false shot doesn't stand as an auto call.
+
+Q3. One person (Scott, who took the coach role), one time, one capped sample: run the already-built spot_check_52b (130 items, fixed seed 5202: all 48 non-judgement relabel changes + 25% of auto-rule "-1 duplicate" changes + random 10% of unsampled labelled rows) — verify Claude's relabel decisions only, no fresh full-film re-watch. Same rule as R10: >10% disagreement on that sample → labels redone before scoring; otherwise freeze stands and training proceeds. No further film-review rounds. The blind's own random-20% label check (R10) runs as spec'd on unseen films — that's the blind protocol, not the loop. Bounds human work to ~130 items once plus the blind films' required 20% check.
+
+Q4. Real issues to change before/while the plan runs:
+1. Silent-floor hole (review 52, Cursor-confirmed): sub-0.35 P(shot) misses are silently dropped (HSB1: 33/70 labelled misses had P(shot) < 0.1). Extend the review band to surface them for coach review, enforce the hard ≤20 checks/game cap, and make the silent-reject diagnostic (0 per game) a hard gate failure.
+2. Label-noise caveat on all gate/blind results (from Q1 waiver) — disclosed, no seed-picking.
+3. Add Q2's treatment to the blind protocol before scoring: fouled/waved-off/warm-up excluded from the denominator, coach-review safety net for model shots on them.
+4. Blind precondition: ≥2 unseen films, at least one in an unseen gym — Rimrock and HSB1 are now seen; Riverstone is in the seen Liberty gym; verify NOTUS_A/nfhs_gam0a66d85e12.mp4 or get Scott to supply an unseen-gym film before committing to blind.
+5. Lock gate seeds exactly (0,1,2 for LOGO gate; 0–4 final), report per-seed, no picking (HSB1 showed 65.4%–93.5% auto variance across seeds).
+
+Hermes: AGREE WITH CHANGES: retrain now on labels52_v2 (Scott's waiver is binding, choose_e already running); changes = disclose label-noise caveat on gate/blind results, extend review band below the silent floor and make silent-reject diagnostic a hard gate failure, exclude fouled/waved-off/warm-up attempts from the blind/gate denominator with a coach-review safety net for model shots on them, verify an unseen-gym blind film exists (else Scott decides), blind random-20% label check still mandatory before scoring, no seed-picking, per-seed gate reporting.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-ba9fe2f84d39b49c288407ac7282367be7d2a01ddac9d8fa7f166ef3e27c0f59
+  hermes -c "Review spec 52 label audit agreement"
+
+Session:        local-ba9fe2f84d39b49c288407ac7282367be7d2a01ddac9d8fa7f166ef3e27c0f59
+Title:          Review spec 52 label audit agreement
+Duration:       1m 41s
+Messages:       13 (1 user, 11 tool calls)

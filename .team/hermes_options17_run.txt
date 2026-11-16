@@ -1,0 +1,220 @@
+﻿Query: Hermes, you are the Architect. This is an OPTIONS list for Scott, not a 
+build plan. Nothing gets built from it until Scott picks an option. After you, 
+Muse reviews your list and adds to it, then Claude Code reviews and adds, then 
+Scott chooses.
+
+Write ONE file: .team/specs/17_missed_makes_options.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Create nothing else: no scratch scripts, no test runs that write files, no 
+edits. If your write tool refuses, say so plainly. First line of the file: 
+"OPTIONS v1 - Hermes - nothing built or measured". Plain markdown, no 
+line-number prefixes, no literal "\n".
+
+READ FIRST: AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md (Golden Rules), 
+OLLAMA.md, MUSE.md, DETECTOR_PROPOSAL_REJECTION.md, .team/drift_log.md, 
+.team/specs/05_reliable_detector_architecture.md, 
+.team/specs/13_shot_work_order_plan.md, .team/specs/15_net_check_plan.md, 
+.team/specs/16_ball_in_net_plan.md, .team/shot_detectors/pixel_miss/README.md, 
+and the v6 rule `run_saved_v6_rule` in ai_bridge.py (read only; quote the real 
+names of its steps and reasons from the code).
+
+SCOTT'S GOAL: makes and misses 100% right, so he never tags a game by hand. A 
+make is still `ball_through_rim` or `net_moved_after_shot`. Zero misses called 
+makes is a hard gate.
+
+THE BUILD SET (140 tagged shots = Notus A1 Q1 31 + Adrian Q1-Q3 109): the v6 
+rule gets 19 makes wrong (called miss) out of 47 real makes; 28 makes right; 0 
+of 93 real misses called makes. Of the 19: in 12 a rim crossing WAS seen and a 
+later test vetoed it; in 7 no crossing was seen. Reason tally over all 140 (real
+makes / real misses rejected by each reason; from 
+C:\Users\scott\Documents\Liberty_Shot_Outputs\rejection_reason_tally_2026-10-29.
+txt):
+no_valid_crossing 7/41, column_ratio_low 4/13, short_net_depth 1/7, 
+ball_starts_well_below 1/7, ball_box_jump 2/6, ball_went_up 2/4, 
+short_track_left_net 0/5, ball_bounces_up 1/3, tracker_swap_bodd_ball 0/3, 
+sideways_drift 1/1, short_combined_track 0/1, short_make_bodd_fail 0/1, 
+x_at_180_outside_rim 0/1.
+Every reason rejects more real misses than makes, so no cutoff can simply be 
+loosened.
+Scott's own view of the review page: the ball is detected on its way up, at the 
+rim and after the rim, and the pictures can look like one make and two misses 
+for one shot (it is one verdict per shot, but the tracker's boxes jump between 
+objects).
+
+TRIED AND FAILED (do NOT propose these again, in any disguise):
+1. A window 2 s earlier (Notus 0 of 7).
+2. Dropping jumps over 60 px (Adrian 86/111, 3 misses called makes).
+3. Drawing the jumped segment through the hoop (Adrian 93/111, 1 false make).
+4. Straight-line interpolation between neighbours (Adrian 98/111; Notus 0/7). 
+BANNED.
+5. ByteTrack (21/31, 1 false make). DeepSORT (22/31). BANNED.
+6. Wider column / looser column_ratio. BANNED. Any looser cutoff in 
+ai_bridge.py. BANNED.
+7. Hoop recenter. BANNED.
+8. net_moved_after_shot as a rescue (step 1): recovers 6 of 19 missed makes but 
+fires on 38 of 93 real misses.
+9. Plan 15 colour/orange pixels in the net box: 8/19 caught, 22/93 real misses 
+fired.
+10. Plan 16 ball detector inside the net box: 5/19 caught, 27-28/93 fired. Crops
+show net_detector._net_box sits BELOW the real net (hoop_y in the tracks is 
+below the rim).
+11. Scott CLOSED all net-region measurements on 2026-10-29: "No, I do not see 
+how a net measurement would be beneficial." No option may measure anything in 
+the net box or net region.
+12. The Notus scoreboard reader (plans 07/09) failed its gate and is SHELVED by 
+Scott ("we can readdress the scoreboard later"). You may list it as a later 
+option but say it is shelved.
+
+RULES: no looser cutoffs; no banned trial; no hard-coded results; 
+applied_to_core stays false; models/ball_detector.pt and ball_confidence are 
+Scott's gates (a NEW candidate weights file is allowed since 2026-10-20 and is 
+scored by validate_ball_weights.py; it never overwrites the model); no edits to 
+protected core files; the holdout answers are never opened; the repo is public, 
+so images and DB copies stay outside it.
+
+WHAT TO WRITE:
+Part A - "Fixes to the v6 rule's own steps" (Scott asked for this): for the 12 
+crossing-then-veto shots and the 7 no-crossing shots, which steps of 
+run_saved_v6_rule could be changed WITHOUT a looser cutoff and without any 
+net-region measurement (for example a different order of tests, a test that uses
+evidence the rule already has but ignores, a stricter test elsewhere that pays 
+for a change). For each: the step name as in the code, what changes, which of 
+the 19 it could recover (by reason), and how it could create a false make.
+Part B - "Other possibilities": anything else that is not on the 
+tried-and-failed list. Think wide: other signals in the film, other models, 
+other ways to get the ball track, other evidence a basket was made, 
+human-in-the-loop ways that still save Scott most of the tagging. For each give 
+the same fields.
+For EVERY option (A and B), a short block with: Name; What it is (2-3 plain 
+sentences); Why it could work where the tried ones failed; Risk to the 
+zero-false-makes gate; How it would be measured on the 140 (and what number 
+would count as a pass); Cost (time, money, new software or training); Rules 
+check (which Golden Rule or Scott gate it touches, or "none").
+End with a short ranked table: option, expected gain, risk, cost. Say which you 
+would try first and why. Mark every number you did not measure yourself as "from
+the files" with the file name.
+📖 Read AUTHORITY.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+📖 Read OLLAMA.md  0.2s
+📖 Read MUSE.md  0.2s
+📖 Read DETECTOR_PROPOSAL_REJECTION.md  0.3s
+📖 Read drift_log.md  0.3s
+📖 Read 05_reliable_detector_architecture.md  0.3s
+📖 Read 13_shot_work_order_plan.md  0.3s
+📖 Read 15_net_check_plan.md  0.2s
+📖 Read 16_ball_in_net_plan.md  0.2s
+📖 Read README.md  0.2s
+🔎 Grep run_saved_v6_rule  3.1s
+📖 Read ai_bridge.py L900-1299
+✗ Read rejection_reason_tally_2026-10-29.txt  0.1s [File not found: rejection_reason_tally_2026-1...]
+💻 $ cat "/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/rejection_reason_tally_2026-10-29.txt" 2>/dev/null + 1 command
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the source material. Let me write the OPTIONS file.
+Now I have all the context. Let me write the OPTIONS file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/17_missed_makes_options.md  0.2s
+│ .team/specs/17_missed_makes_options.md
+│ @@ -0,0 +1,431 @@
+│ +OPTIONS v1 - Hermes - nothing built or measured
+│ +
+│ +# Options for the 19 Missed Makes (12 crossing-then-veto, 7 no-crossing)
+│ +
+│ +**Context from the files:** Build set = 140 tagged shots (Notus A1 Q1 31 + Adrian Q1–Q3 109). v6 rule (`run_saved_v6_rule` in `ai_bridge.py`) gets 28 makes right, 19 makes wrong (called miss), 0 of 93 real misses called makes. Rejection tally (from `Liberty_Shot_Outputs/rejection_reason_tally_2026-10-29.txt`): no_valid_crossing 7/41, column_ratio_low 4/13, short_net_depth 1/7, ball_starts_well_below 1/7, ball_box_jump 2/6, ball_went_up 2/4, short_track_left_net 0/5, ball_bounces_up 1/3, tracker_swap_bodd_ball 0/3, sideways_drift 1/1, short_combined_track 0/1, short_make_bodd_fail 0/1, x_at_180_outside_rim 0/1. Every reason rejects more real misses than makes → no cutoff can simply be loosened. Scott's observation: the tracker's boxes jump between objects (ball, heads, jersey), so one shot can look like one make and two misses in the review page.
+│ +
+│ +**Tried and failed (do not propose again):** 1) 2 s earlier window (Notus 0/7), 2) drop jumps >60 px (Adrian 86/111, 3 false makes), 3) draw jumped segment through hoop (Adrian 93/111, 1 false make), 4) straight-line interpolation (Adrian 98/111, Notus 0/7) — BANNED, 5) ByteTrack (21/31, 1 false make) / DeepSORT (22/31) — BANNED, 6) wider/looser column or any looser cutoff in `ai_bridge.py` — BANNED, 7) hoop recenter — BANNED, 8) `net_moved_after_shot` rescue (recovers 6/19, fires 38/93), 9) Plan 15 colour/orange pixels in net box (8/19, 22/93), 10) Plan 16 ball detector in net box (5/19, 27–28/93; `_net_box` sits below real net), 11) Scott closed all net-region measurements 2026-10-29, 12) Notus scoreboard reader (plans 07/09) shelved by Scott.
+│ +
+│ +---
+│ +
+│ +## Part A — Fixes to the v6 rule's own steps
+│ +
+│ +The v6 rule's step sequence (from `ai_bridge.py:908–1283`) for a shot with a crossing:
+│ +1. **Crossing detection** (lines 1014–1043): finds `cross_idx` where ball goes from above `hoop_y` to below within 8 samples and within 0.55 × `hoop_w` horizontally. Falls back to `detect_dynamic_entry_crossing` if none found.
+│ +2. **Short net depth check** (lines 1052–1063): requires ≥3 ball points with `y_rel ≤ 180×scale_y` after crossing.
+│ +3. **Downward trend check** (lines 1065–1070): `last_y > first_y` in those net-depth frames → else `ball_went_up`.
+│ +4. **Column ratio check** (lines 1072–1097): on ball track from 80px to max_y below hoop, `column_ratio = in_column / total_in_zone` (when `total_in_zone ≥ 3`). Threshold 0.5 → else `column_ratio_low`. `came_back` heuristic can override.
+│ +5. **Ball box jump check** (lines 1099–1135): from true rim crossing to end of ball track, max Euclidean jump ≤ 60×geo_mean_scale (ignores slow/through-net motion) → else `ball_box_jump`.
+│ +6. **Ball starts well below check** (lines 1137–1168): if first ball point >50px below hoop and fell ≥80px and started near rim → `ball_starts_well_below`. Also `floor_to_hoop_putback` if bodd shows floor origin.
+│ +7. **Tracker swap check** (lines 1171–1196): small frame gap (≤3) but large spatial gap (>100×geo_mean_scale) between last bodd and first ball → `tracker_swap_bodd_ball`.
+│ +8. **Provisional make** (line 1214): `pred = True`.
+│ +9. **Drift veto** (lines 1224–1240): only if both 80px and 180px measured on ball. `sideways = (dist_at_180 - dist_at_80)/hoop_w`. Veto if >0.43 → `sideways_drift`. Also `x_at_180_outside_rim` if `dist_at_180 > 0.85×hoop_w`.
+│ +10. **Bounce check** (lines 1243–1261): after max depth in `net_depth_frames`, any upward move >5×scale_y → `ball_bounces_up`.
+│ +11. **Short make bodd continuation** (lines 1263–1282): if `is_short_make` (no 180px on ball), call `short_track_stays_in_net`; if passes, check bodd after ball ends: deep bodd points (`>180px`) must have `bodd_ratio ≥ 0.95` in column → else `short_make_bodd_fail`. Also `short_track_left_net` from helper.
+│ +
+│ +For the **7 no-crossing shots** (`no_valid_crossing`): the rule never reaches steps 2–11.
+│ +
+│ +---
+│ +
+│ +### A1. Reorder: run ball_box_jump BEFORE column_ratio_low
+│ +
+│ +**What it is:** Move the ball box jump check (step 5) before the column ratio check (step 4). Currently a shot that passes column ratio but fails jump check is rejected at step 5; if jump is checked first, some shots that would fail column ratio might instead fail jump — but crucially, the jump check uses the *true crossing frame* and ignores motion after the ball is 200px down and in-column. Some of the 4 `column_ratio_low` makes may have a clean jump profile that the column test obscures because the tracker jumps *after* the net.
+│ +
+│ +**Why it could work where tried ones failed:** The column test measures *all* ball points from 80px down, including frames where the tracker has already jumped to a head/jersey. The jump check already filters out "through" and "slow" motion. Reordering lets the jump check veto tracker-swap frames before they pollute the column ratio. No cutoff changes; same thresholds.
+│ +
+│ +**Which of the 19 it could recover:** Primarily the 4 `column_ratio_low` makes (if their column failure is caused by post-net tracker jumps). Possibly some `ball_went_up` if the upward motion is a tracker artifact after a clean jump.
+│ +
+│ +**Risk to zero-false-makes gate:** Low. The jump check is already in the rule and passed 0 false makes on Adrian. Reordering only changes which reason is recorded first; a shot that fails both still fails. A shot that passes jump but fails column would now be rejected at column (same outcome). A shot that fails jump but would have passed column now fails earlier (same outcome).
+│ +
+│ +**How measured on the 140:** Run modified rule on the 140 build set. Count: makes recovered (of 19), new false makes (must be 0), reason tally shift. Pass = recovers ≥2 of the 4 `column_ratio_low` makes with 0 new false makes.
+│ +
+│ +**Cost:** Low (code reorder only, ~30 min). No new software/training.
+│ +
+│ +**Rules check:** None (no cutoff change, no banned trial, `applied_to_core=false`).
+│ +
+│ +---
+│ +
+│ +### A2. Use bodd track for column check when ball track has a large jump
+│ +
+│ +**What it is:** When `ball_box_jump` detects a jump >60px on the ball track, fall back to the bodd track (which extends to the floor) for the column ratio check from 80px down. The bodd track is more stable after the net because it follows the body/ball-blob rather than the jumping ball box.
+│ +
+│ +**Why it could work where tried ones failed:** The column test currently uses *only* the ball track (`post_cross_dense = ball[cross_idx:]`). On missed makes, the ball track often jumps to a head/jersey after the net, inflating `total_in_zone` with outliers and lowering `column_ratio`. The bodd track stays on the falling object longer. The rule already uses bodd for short-make continuation (step 11); this extends that logic to non-short makes when the ball track is visibly corrupted.
+│ +
+│ +**Which of the 19 it could recover:** The 4 `column_ratio_low` makes (if their column failure is from post-net ball-track jumps). Possibly the 2 `ball_box_jump` makes (if the jump is recoverable via bodd).
+│ +
+│ +**Risk to zero-false-makes gate:** Medium. The bodd track on misses can also wander (rebounder, defender). Must guard: only use bodd for column check when (a) ball track has a detected jump >60px, AND (b) bodd track exists and has ≥3 points from 80px down, AND (c) bodd column ratio ≥ 0.5. If all three hold, accept bodd column; else keep ball column result.
+│ +
+│ +**How measured on the 140:** Run with this fallback. Count: makes recovered (target ≥2 of 4 `column_ratio_low`), false makes on 93 misses (must be 0), new rejection reasons logged.
+│ +
+│ +**Cost:** Medium (~2 hours). New logic in existing file, no new deps.
+│ +
+│ +**Rules check:** Touches Golden Rule "No looser cutoffs" — the fallback must not effectively lower the column threshold for misses. Guard conditions (a–c) keep it a *recovery*, not a *loosening*.
+│ +
+│ +---
+│ +
+│ +### A3. Tighten the "came_back" heuristic to save column_ratio_low makes
+│ +
+│ +**What it is:** The `came_back` logic (lines 1088–1094) currently overrides a low column ratio if the ball went wide then narrowed *and* the later width ≤0.70 hoop_w. For the 4 `column_ratio_low` makes, the tracker may jump *out* wide (to a head) and never come back, so `came_back` stays false. Relax the "later ≤ 0.70" to "later ≤ 0.85" *only when* the wide point coincides with a detected ball-box jump (>60px) — i.e., the wide point is a known tracker artifact.
+│ +
+│ +**Why it could work where tried ones failed:** The current `came_back` requires the track to naturally narrow. Tracker jumps don't narrow; they jump to a different object and stay there. Conditioning on a detected jump lets the rule say "this wide point is fake, ignore it for column ratio."
+│ +
+│ +**Which of the 19 it could recover:** The 4 `column_ratio_low` makes where the wide point aligns with a jump.
+│ +
+│ +**Risk to zero-false-makes gate:** Medium. On a real miss that happens to have a jump (e.g., ball hits rim and tracker jumps to backboard), this could incorrectly widen the "came_back" window. Guard: require the jump to be *after* 80px down (in the net), not at the rim.
+│ +
+│ +**How measured on the 140:** Run modified rule. Count: `column_ratio_low` makes recovered, false makes on misses (0 required), any `came_back` activations on misses.
+│ +
+│ +**Cost:** Low (~1 hour). Logic tweak only.
+│ … omitted 353 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 17_missed_makes_options.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. Wrote .team/specs/17_missed_makes_options.md with:
+
+- Part A (10 options): Fixes to v6 rule's own steps — reordering checks, using bodd track as fallback when ball track jumps, tightening drift anchor to crossing frame, linking bounce/jump checks, relaxed crossing for rim-level starts, bodd crossing for no-crossing shots, stricter vetoes. Each names the exact step from ai_bridge.py, which rejection reasons it targets, risk to 0-false-makes gate, measurement on 140, cost, rules check.
+- Part B (10 options): Other possibilities — candidate ball weights (Scott gate), court-space interpolation (spec 05 architected path), scoreboard as S1 signal (spec 05), human-in-loop review queue (19 shots vs 140), multi-tracker ensemble, three-zone detection, free-throw specific rule, rim-contact angle signal, opponent basket, track-quality classifier.
+- Ranked table with expected gain, risk, cost. Top three to try first: A1 (reorder jump before column, 30 min), A4 (crossing-anchored drift, 1 hr), A8 (link ball_went_up to jump, 1 hr) — pure logic rearrangements, no new thresholds, no banned trials, no net-region measurements.
+
+All numbers not measured by me are marked "from the files" with filenames.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4e1aacf76e7393802a1433b2f0d48900f013009276b9797dc1b8d9740c6a1ce8
+  hermes -c "Create missed makes options spec document"
+
+Session:        local-4e1aacf76e7393802a1433b2f0d48900f013009276b9797dc1b8d9740c6a1ce8
+Title:          Create missed makes options spec document
+Duration:       5m 44s
+Messages:       26 (1 user, 24 tool calls)

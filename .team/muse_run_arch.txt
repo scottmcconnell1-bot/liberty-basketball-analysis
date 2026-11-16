@@ -1,0 +1,19 @@
+I've loaded the five instruction files. Now I'm Muse, checking the Vetter's verdict on Hermes's proposal. Before answering, I'll verify the Vetter's factual claims (origin numbers, referenced records, scores) against the repository itself.
+ACTIVE.md confirms the scoreboard record (`51-26`, Notus books `29-48` and `38-21`). The first grep on pick_court_points.py failed on output size, so I'll read the relevant sections directly, plus the origin numbers in ai_bridge.py and run_v8.py.
+The Vetter's point (5) is verified: `pick_court_points.py:26-29` puts the FT line at +13.75 and lane baseline at −5.25 from hoop-center origin, and `ai_bridge.py:1472` has `HOOP_TO_BASELINE_FT = 5.25`. Now spot-checking the proposal's remaining citations: the 43/43 scoreboard record, run_v8.py, and the line-number claims.
+All record claims for S1 (43 made baskets, 25 s, 3-sample hold, 51-26, Notus books `29-48`/`38-21`) are in ACTIVE.md:7-21, and `net_detector.py:511` matches the proposal's S3 citation. Final checks: run_v8.py's keypoint model and confidence, and court_homography.py's frozen status and scale factors.
+Verification complete. As Muse, here is my check of Claude Code's verdict on `05_reliable_detector_architecture.md`.
+
+**The Vetter's six points, checked against the repo:**
+- (3) Adrian half-court gate — verified: `ai_bridge.py:1480` `GYM_COURT_LENGTH_FT` has only `liberty: 92.0`; other gyms use the 94 ft default. Correct to remove the [38, 44] Adrian gate.
+- (4) Keypoint-index assumption — verified: `dist/scripts/run_v8.py:22,71` confirms the model and `conf=0.3` exist, but nothing in the repo proves the 18 indices mean what §1.2 claims. Requiring Stage 1 to discover them first is correct.
+- (5) Origin — verified: `pick_court_points.py:25-30` has FT line (±6, **13.75**) and lane baseline (±6, **−5.25**), origin = hoop center; `ai_bridge.py:1472` `HOOP_TO_BASELINE_FT = 5.25`. The proposal's +15/−4 values misquote the file it cites and would shift every point 1.25 ft. Correct.
+- (1) Banned trial — verified: "interpolate gaps ≤ 15 frames" is the interpolation trial closed in OLLAMA.md/ACTIVE.md (`DETECTOR_PROPOSAL_REJECTION.md` exists). Correct to reject.
+- (2) Voting logic — verified by reading proposal §2.2: with `agree = votes >= 3`, `else miss` is dead code and every clear miss (0–1 votes) falls into the flag branch; nothing is ever called a miss. Correct.
+- (6) Non-additive — verified: protocol §6.2 forbids modifying `run_saved_v6_rule` without an assigned safety-wrapper task, and the gate rejects removed lines in `ai_bridge.py`. Wrapper-first is correct.
+
+**Could the Vetter be wrong anywhere?** No: the stamps rest on `GYM_COURT_LENGTH_FT`, `pick_court_points.py`, protocol §6.2, and the closed-trial record — all checked this session. Nothing in the VETTED Stage 1 portion loosens a cutoff, edits a protected file, or claims an uncheckable number. The proposal's S1 record (43/43, 3-sample hold, 25 s, 51-26) and Stage 4 book figure (Liberty 29, Notus 48) both trace to `ACTIVE.md:9-21`; `net_detector.py:511` matches the S3 side-ROI rule.
+
+**Two small nits (no stamp change):** the proposal cites `court_homography.py:30` as "reprojection ≤ 2 px" but that line uses a 3.0 px RANSAC threshold; and §3.1's rim-plane crossing omits how the far-end hoop is handled — both live in already-REJECTED stages and belong on the rewrite list, not grounds to disagree.
+
+MUSE: AGREE

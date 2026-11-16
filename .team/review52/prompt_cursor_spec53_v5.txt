@@ -1,0 +1,7 @@
+You are CURSOR, builder/auditor. READ-ONLY: do not edit or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Re-review .team/specs/53_referee_signals_spec.md v5. Check your 4 v4 changes (review52/cursor_spec53_v4.txt) are
+applied correctly, Scott's numbers (review52/scott_numbers53.txt) are concrete enough to code (ms windows, wrist-above-
+head rule, 80% keypoint share, 0 false fires), the cue->source table names real files/functions, and the combination
+table is codeable as pure functions in ref_signals.py.
+End with one line: CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...

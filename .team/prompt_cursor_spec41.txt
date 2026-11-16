@@ -1,0 +1,16 @@
+You are the Coder. Implement spec 41 (.team/specs/41_free_throw_line_spec.md). Claude Code's block L1-L8 at the top OVERRIDES the Hermes text below it. Muse AGREE. Settings are fixed in section 2 + L1-L8; add no other number. The method is Claude Code's calibration prototype .team/specs/41_ftline_calibration_proto.py (read it; match its geometry exactly, minus its debug prints and its coverage/support extras, which are NOT used).
+
+Files (L2 only): .team/shot_detectors/ft_half_circle.py, .team/shot_detectors/test_ft_half_circle.py, .team/shot_detectors/rim_first_finder.py (reason names in _apply_ft_decision, the decide_ft call incl. hoop=moment.get("hoop"), the debug_image call), .team/shot_detectors/rim_first_measure.py (count ft_line_not_found instead of ft_circle_not_found; list non-FT-tag moments flagged free_throw with t_ms, L8). Nothing else. stage1b files read only. Do not commit. No video or models in tests. Shot calls, make/miss, hoop steps, trace, spec 39 fixes unchanged; --ft-off still reproduces the spec 39 trace exactly.
+
+ft_half_circle.py: keep stillness, is_still, still_frame_index, candidates, _cleaned_players unchanged. Remove the ellipse step (remove_straight, ransac_ellipse, feet_inside, ellipse helpers, Ellipse alias, their constants). Add, each number a named constant "spec 41, fixed by Claude Code 2026-11-08":
+- line_segments(mask_with_players_erased, cfg, width) -> HoughLinesP as in section 2.
+- erase_players(mask, players, pad=3).
+- keep_segments(segments, feet, h, hoop_xy, gray, gym, width): LINE_NEAR 0.25, END_PAD 0.5, ANGLE_MIN 60 (undirected, L4), Adrian DARK_MIN 10 darker than BOTH sides at 8 px x width/1280, 20 samples (min of the two sides, as in the prototype).
+- ft_line(kept): median angle, group within GROUP_DEG 5, point = mean of group endpoints, extent along direction.
+- in_band(line, players, cand_h, hoop_xy): normal with hoop on negative side (L5); signed distance in [-0.15 p.h, +1.2 p.h]; projection within extent +- 0.5 cand_h.
+- decide_ft(..., hoop=...) per section 2 + L1/L3: reasons free_throw_line / ft_line_not_found / line_not_one / no_hoop / not_still / frame_unreadable; returns {free_throw, ft_shooter_box, ft_reason, views?}.
+- debug_image draws kept segments, FT line, band polygon and all cleaned feet (L6).
+Tests (synthetic masks/frames): FT line found with the shooter in the band; lane line at ~30 deg to feet->hoop rejected; Adrian light line (bright stripe, dark-beside-it strip) rejected by darker-than-both-sides; 0, 1, 2 players in band; one in band but not a candidate -> line_not_one; no hoop -> no_hoop; not still -> untouched; reason names flow through _apply_ft_decision; measure counts ft_line_not_found and lists non-FT flags.
+Run and print exact command + result:
+.venv/bin/python -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q   (python3 if .venv cannot run)
+End with functions added/changed/removed and choices not spelled out.

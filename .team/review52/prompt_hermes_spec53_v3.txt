@@ -1,0 +1,31 @@
+You are HERMES, the architect. Rewrite .team/specs/53_referee_signals_spec.md as v3 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Inputs to read: current spec (v2), .team/review52/nfhs_signals_reference.md (official NFHS chart, use chart
+numbers), .team/review52/addendum_ref53_scott.txt (Scott binding: "Go with the book, but some wiggle room. Some
+things may have to be deduced with several factors because referees do not always follow the book, or clearly
+indicate their intent."), .team/review52/cursor_ref53.txt, .team/review52/muse_round52_53.txt (ITEM C).
+
+Apply exactly these reviewer changes:
+MUSE C1 / CURSOR: correct the spec-36 root cause in section 3: spec 36's ball-in-referee-box / referee-holding
+  proxies fired on real game shots and hid them; pose was never used. is_referee_player was a spec-39 shooter bug,
+  not the spec-36 cause. State why v3 avoids it: pose arm events only, gated on labelled TRUE shots, no-ref -> no change.
+MUSE C2 / CURSOR: pass bar = Scott's 6 examples (rimrock:77 travel, rimrock:253 waved off, gvg:149 shooting foul,
+  hsb:91 fouled shot, gvg:349 jump ball, rimrock:325 foul before clip) detected as the expected category, AND false
+  fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now
+  (leave the number for Scott to fix, marked SCOTT DECIDES). Warm-ups/breaks alone are not enough.
+MUSE C3: small-referee pose test as an explicit first gate: on gvg/hsb/notus (smallest refs, ~47-56 px wide)
+  pad/upscale crop of the referee from the FULL frame; pose keypoints must be found on >= a fixed share of
+  referee-visible frames before anything else runs (SCOTT DECIDES the share).
+CURSOR: v1 detectable events = arm raised (one arm above head), both arms up, lateral wave/scissor (#16 no score),
+  chop down (#1 start clock). Fist vs open hand, thumbs, fingers, T = NOT detectable by COCO pose at this size ->
+  never claimed; only inferred through cue fusion (arm raised + play stops + FT setup / throw-in next + score
+  change) per Scott's addendum; otherwise category 'unknown' -> coach flag (<=20 cap).
+CURSOR: moment-window pose only (about -1 s .. +4 s around each candidate/shot, 1-2 nearest refs) on BODD 'r'
+  boxes from existing frames.json; no full-film pose pass. Build surface: new .team/shot_detectors/ref_signals.py
+  + test_ref_signals.py; thin optional hook in postproc/ensemble_predict; do not touch spec 52 training, core
+  finder, ball model. First prototype: 3 seen clips (rimrock:77, gvg:149, rimrock:253) with keypoint overlay dump.
+TEAM (spec 52 scoring, decided): fouled / waved-off / warm-up attempts are EXCLUDED from the auto e2e denominator;
+  spec 53 output may later turn them into automatic not-shots, measured on seen films first.
+Note: v2 was written by a model run in the Muse slot by mistake; you own the spec now.
+End with "HERMES: SPEC WRITTEN".

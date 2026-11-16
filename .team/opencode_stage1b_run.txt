@@ -1,0 +1,74 @@
+## Objective
+- Build the VETTED plan `.team/specs/08_stage1b_court_lines_plan.md` as Coder.
+- Create ONLY `scripts/stage1b_court_lines.py`, `config/stage1b_court_lines.yaml`, and runtime outputs under `.team/stage1b_lines/`; do not edit existing files, do not edit the plan, do not commit.
+- Calibrate/freeze all thresholds on separate calibration frames at least 60 s from every measurement frame, then measure the 60 frames once with frozen values.
+- `court_length_ft = 2 * (half_court_y_ft + 5.25)`; no interpolation, tracking, or learned-model training.
+- Run: `.\.venv\Scripts\python.exe scripts/stage1b_court_lines.py --config config/stage1b_court_lines.yaml`.
+
+## Important Details
+- Roles: Hermes=Architect, OpenCode/DeepSeek=Coder, Claude Code=Vetter, Muse=checks Vetter. Coder builds only VETTED plans and does not commit before Claude checks.
+- Plan is VETTED by Claude Code 2026-10-27 08:45 (v4) and Muse agreed; body formula must be `court_length_ft = 2 * (half_court_y_ft + 5.25)`.
+- NFHS model: rim origin, baseline `y=-5.25`, FT line `y=13.75`, lane half-width `6.0`, 3-pt radius `19.75`, FT circle radius `6.0`, center line measured, sidelines fitted/reported not fixed.
+- Liberty court length known ~92 ft; Adrian court length must be measured. `half_court_y_ft` must be measured from projected center line, not hard-coded.
+- Planned gates: Adrian >=80% successful frames, Notus A1 >=70%, no wrong Adrian court lengths, reprojection median <=2 px, condition number <1e4.
+- Video metadata:
+  - Adrian: `uploads/nfhs_gam0a66d85e12.mp4`, 97475 frames, 25 fps, 1920x1080.
+  - Notus A1: `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4`, 100950 frames, 25 fps, 1280x720.
+  - Notus A: `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4`, 93650 frames, 25 fps, 1280x720.
+- Measurement frame lists are already encoded in `config/stage1b_court_lines.yaml`.
+- Stage 1 keypoint model is unreliable: Adrian 16/20 frames with >=4 keypoints, Notus A1 8/20, Notus A 11/20; `VETTER_FINDINGS.md` says do not build Stage 2 on it alone.
+- Liberty paint colors are ambiguous but critical: red marks include arcs/FT circles; blue marks include lane lines/sidelines in some frames; current mask combines saturated red+blue. Adrian lines are white with a dark center line.
+- Environment: `.venv/Scripts/python.exe`, OpenCV `5.0.0`, NumPy, PyYAML `6.0.3`, SciPy `1.18.0`; no `cv2.ximgproc`, no `skimage`.
+- Some measurement frames were viewed during prototyping; final threshold tuning must use only the separate calibration frames.
+- Do not commit; Claude vets first.
+
+## Work State
+### Completed
+- Read `TEAM_RECOVERY.md`, `AGENTS.md`, and `.team/specs/08_stage1b_court_lines_plan.md`.
+- Inspected existing `court_homography.py`, `pick_court_points.py`, `scripts/stage1_measure_keypoints.py`, Stage 1 report/findings, videos, and repo structure.
+- Extracted temp frames/contact sheets under `C:\Users\scott\AppData\Local\Temp\opencode\stage1b`.
+- Prototyped color masks, Hough line extraction, collinear merging, line-pair hypotheses, exhaustive line-quad hypotheses, and structural mask scoring in temp files (`proto3.py`…`proto5.py`, `exhaust.py`, `exhaust2.py`).
+- Wrote initial `config/stage1b_court_lines.yaml` containing court constants, calibration frames, measurement frames, detection/scoring thresholds, and game metadata.
+- Created `config/` directory.
+- Confirmed calibration frames chosen:
+  - Adrian: `[2436, 17055, 31674, 46293, 60912, 80404]`
+  - Notus A1: `[2523, 17664, 32805, 47946, 63087, 83275]`
+  - Notus A: `[2341, 16387, 30433, 44479, 58525, 77253]`
+
+### Active
+- Need to implement final `scripts/stage1b_court_lines.py` from prototype logic, then run calibration-only evaluation to tune thresholds before freezing YAML and running measurement once.
+- Current prototype pipeline still fails on sampled frames:
+  - permissive scoring returns degenerate/sliver homographies with false high coverage;
+  - stricter structural/area scoring rejects all tested frames;
+  - exhaustive search over top 22 lines for `notus_a1_25235` ran 122,942 hypotheses in ~20.4 s and produced no valid H;
+  - best wrong candidate had coverage ~0.32.
+- Likely root cause: correct lane/FT/baseline line segments are fragmented/occluded and not being reconstructed/matched reliably; Liberty color classes need final clarification.
+- No measurement run has been executed yet.
+
+### Blocked
+- Automatic line-based homography search currently does not find correct H on sampled frames.
+- Cannot tune thresholds using measurement results; must improve/fix on calibration frames only.
+- Liberty lane-line color/segmentation is unresolved: red-only and blue-only masks each capture only part of the lane geometry in different frames.
+- OpenCV 5 ellipse drawing signature issue was encountered/fixed in temp prototypes; final script should avoid or correctly use `cv2.ellipse`.
+
+## Next Move
+1. Create `scripts/stage1b_court_lines.py` implementing the plan with YAML-driven thresholds, calibration/measure/guard modes, per-frame JSON/overlay, summary JSON, and report MD.
+2. Run calibration frames only, inspect successes/failures, adjust thresholds or line-extraction/scoring logic on calibration data, freeze YAML, then run the 60-frame measurement exactly once and report actual results.
+
+## Relevant Files
+- `.team/specs/08_stage1b_court_lines_plan.md`: VETTED plan to implement; do not edit.
+- `TEAM_RECOVERY.md`: team roles, current project goal/state.
+- `AGENTS.md`: Coder/Vetter rules; no commit before Claude checks.
+- `config/stage1b_court_lines.yaml`: created config with frozen-threshold structure, calibration frames, measurement frames, court constants, detection/scoring settings.
+- `scripts/stage1b_court_lines.py`: required final script, not yet created.
+- `.team/stage1b_lines/`: required runtime output directory, not yet populated.
+- `.team/stage1_keypoints/VETTER_FINDINGS.md` and `measurement_report.md`: Stage 1 keypoint evidence/comparison source.
+- `.team/stage1_keypoints/adrian`, `notus_a1`, `notus_a`: per-frame Stage 1 JSON/overlays for summary comparison.
+- `uploads/nfhs_gam0a66d85e12.mp4`: Adrian video.
+- `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4`: Notus A1 video.
+- `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4`: Notus A video.
+- `court_homography.py`, `pick_court_points.py`: existing homography/keypoint helpers to reference but not edit.
+- `scripts/stage1_measure_keypoints.py`: existing Stage 1 script/style reference.
+- `C:\Users\scott\AppData\Local\Temp\opencode\stage1b\`: temp frames, masks, overlays, and prototypes; outside repo.
+- `C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe`: interpreter to use.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.

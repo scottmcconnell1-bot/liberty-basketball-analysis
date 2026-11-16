@@ -1,0 +1,18 @@
+G1 through G5 are in `rim_first_finder.py` and `test_rim_first.py` only. Nothing was committed, and no video or model was run.
+
+Empty frames no longer scan every hoop sample. One carry index walks forward and returns the same row as `hoop_at`: the last row on an exact time, the first row of the latest earlier time after that, and the first row of the first later time before any hoop exists. The trace builds a frame index once and passes only the window: balls and players inside it, v6 points inside it, and hoop samples inside it plus the first hoop of the latest time before it. Each frame keeps one hoop per `int(x // 80)` bucket (`HOOP_X_BUCKET_PX`, quoted from `collect_q4_bodd.py:40`), highest `c`. The release track is `combine_ball_track` of that series' v6 points, then the best-confidence BODD ball, so a spare BODD box on a v6 frame does not win. `moments.json` is metadata plus moments at indent 2. `frames.json` is the per-frame detections with `separators=(",", ":")`. After 500 BODD frames the finder prints `ESTIMATE`, scaling that elapsed time to a full BODD pass plus a full v6 pass at the same per-frame rate.
+
+`python` is not on PATH in this shell. The same pytest command was run with `python3`:
+
+```text
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+..................................................                       [100%]
+50 passed in 1.90s
+```
+
+**Proven:** that command, 50 passed (the previous 45 plus these five). The carry matches `hoop_at` on a hand list, including the before-first case. Two boxes in one 80 px bucket become one series and the higher confidence is kept; hoops at both ends stay two series. A windowed trace matches the full-list trace. Without v6 the spare BODD ball's shooter is chosen; with v6 the v6 shooter is chosen.
+
+**Inferred:** the v6 pass costs about the same per frame as the measured BODD frames, which is what the `ESTIMATE` line assumes.
+
+**Unknown:** real time on the Adrian film.The file check finished. `rim_first_finder.py` and `test_rim_first.py` are the only files this job changed, and both are still untracked, so nothing was committed.
+[cursor_wsl] exit 0 at 09:07:14

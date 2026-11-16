@@ -1,0 +1,125 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY.
+TEAM REVIEW - .team/specs/52a_class0_restore_prereg.md v1 (Hermes). READ-ONLY: 
+do not edit or create files except
+your own reply. Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott (binding): proposal (a) approved; the re-gate on the SAME 5 LOGO games (R6
+unchanged) is binding pass/fail.
+Nothing is trained until Muse and Cursor agree. Context: 
+review52/{hermes,muse,cursor}_gate52.txt, drift_log.md tail.
+CLAUDE CODE OBSERVATIONS (verify, do not take on trust):
+O1 Output/session paths are written /mnt/c/Users/Documents/... (missing "scott")
+- wrong paths.
+O2 Size of the fix: adrian class 0 after restore = 6, notus 9, hsb count not 
+given. 48b dropped only 8/136 adrian
+   and 0/36 notus finder moments as out-of-session. With gvg held out, class 0 
+would still be ~241 rimrock + ~15
+   others. Does this actually fix D1 (seeds 0/2 calling 113-137/145 GV not-shots
+a shot)? Notus "restore
+   not-a-shot candidates" has no stated source (48b dropped 0 notus moments) - 
+where do its 9 come from?
+O3 Are the out-of-session candidates even in the clips (clips7 built from 
+in-session cand5)? If new clips are
+   needed, the extract step and t_ms source must be pinned.
+O4 Predict-time filter: does gate52 scoring drop filtered candidates as "not a 
+shot" (counts against recall if a
+   real shot is filtered) - state it. Rimrock/hsb session availability correct?
+O5 Any alternative within (a) that adds enough multi-gym class 0 without peeking
+(e.g. in-session untagged
+   candidates on Adrian/Notus that sit far from any coach tag, a rule fixed 
+now)?
+Roles: MUSE = protocol (is this a real pre-registration, any peeking, does 
+same-5 re-gate stay honest);
+CURSOR = audit (counts, files, paths, buildable; compute the real class-0 counts
+per film the rule yields).
+End with one line: MUSE:/CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ 2>/dev/null  1.4s
+📖 Read 52a_class0_restore_prereg.md
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ 2>/dev/null | grep -v "^total"  1.3s
+📖 Read muse_gate52.txt
+📖 Read cursor_gate52.txt  0.6s
+💻 $ tail -n 60 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.2s
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -v "^d" | grep -iE "prompt|verdict|round|gate|muse|cursor|hermes|protocol|authority|recovery|status|next" + 2 commands  0.5s
+📖 Read gate52.py  0.2s
+📖 Read ensemble_predict.py
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ + 1 command  0.2s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/postproc_locked51.json + 4 commands  0.2s
+📖 Read train_clip.py
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/runs/ 2>/dev/null + 6 commands  0.3s
+✗ $ python -c " import json d=json.load(open('.team/review52/labels52_v2.json')) print(type(d)) print(list(d.keys()) if isinstance(d,dict) else len(d)) mom=d.get('moments') print(type(mom), len(mom) if hasattr(mom,'__len__') else mom) import itertools if isinstance(mom,dict): ks=list(mom)[:10] for k in ks: print(repr(k), mom[k]) print(json.dumps({k:v for k,v in d.items() if k!='moments'})[:2000]) " [BLOCKED: Command flagged as dangerous (script...]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/runs/ 2>/dev/null + 5 commands  2.1s
+✗ Exec import json, os [This code is not allowed in an unattended session — it did not run.]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -i "runs\|clips\|outputs" + 6 commands  16.6s
+📖 Read labels52_v2.json
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ + 8 commands  33.4s
+💻 $ echo "===LIBERTY_OUT===" + 9 commands  0.3s
+📖 Read hermes_prereg52a.txt
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i "prereg" + 4 commands  0.3s
+📖 Read game_session.py  0.2s
+📖 Read muse_prereg52a.txt.recursive_flint-v1.0_free.txt
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52/  0.3s
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/clips7/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/cand5/ /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/cand/ + 6 commands  0.3s
+💻 $ cat /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52/gate52_report.json + 4 commands  0.2s
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read extract_clips.py
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+
+────────────────────────────────────────
+☤ Hermes
+I need to read the actual spec under review, which I haven't fully captured yet.
+────────────────────────────────────────
+
+📖 Read 52a_class0_restore_prereg.md
+💻 $ echo "===TEAM TOP-60===" + 11 commands  1.1s
+📖 Read game_session.py
+📖 Read cursor_prereg52a.txt
+📖 Read prompt_muse_prereg52a.txt
+📖 Read spec52a_v1_sha.txt
+💻 $ echo "===G48B ADRIAN===" + 9 commands  0.2s
+📖 Read muse_gate52.txt
+
+────────────────────────────────────────
+☤ Hermes
+MUSE — protocol review of Spec 52A v1 (Hermes) — TEAM REVIEW round, class0 restore + predict-time session filter.
+
+I re-verified the Claude Code observations directly against the repo before answering, and I accept Cursor's audit findings where they are checkable.
+
+O1 — paths: CONFIRMED WRONG. Spec writes /mnt/c/Users/Documents/... (missing "scott") in the Outputs line (line 6), in the Item 2 per-film session sources, and in the Item 5 run-output paths. Real root is /mnt/c/Users/scott/Documents/... . A binding pre-registration cannot cite files that do not exist. MUST FIX.
+
+O2 — counts vs pinned rule: CONFIRMED. Under the pinned 48b rule (out-of-session -> class 0; in-session untagged stay -1; real shots keep y=1/2):
+- gvg: keep labels52_v2, y0=145, real shots 218. UNCHANGED.
+- rimrock: keep, y0=241, real shots 123. UNCHANGED.
+- hsb: class-0 after = 4 (no new restores); in-session untagged 2 stay -1.
+- adrian: class-0 after = 6 (from the 8 dropped adrian moments; 6 not-shots); in-session untagged 39 stay -1; real shots 121.
+- notus: class-0 after = 0 under the pinned rule (all 9 of its -1 are in-session; 48b dropped 0 notus moments). Hermes's "notus 9" CONTRADICTS the pinned rule, and no source for those 9 was pinned. The n=39 / class0=9 set is internally inconsistent with the restore mechanism.
+- Hold-out gvg train class-0 = 241 + 6 + 4 + 0 = 251 (~96% rimrock), not "~241 + ~15".
+
+So the fix size was roughly right in aggregate but the per-film breakdown was wrong and the notus source is unpinned. MUST RESOLVE BEFORE FREEZE.
+
+O3 — clips: CONFIRMED by Cursor. clips7 t_ms == labels52_v2 t_ms for all five films (0 missing, 0 extra); the 6 adrian restores are already inside clips7; no new extract needed for those rows. Notus y0=9 source (if any) not pinned.
+
+O4 — filter scoring: CONFIRMED by Cursor. gate52/ensemble_predict do NOT implement session_filter today (postproc52 still false; old postproc.py is not the gate path). Scoring if wired like old postproc: filtered candidates OMITTED from auto shot list (not emitted), NOT scored as model not-a-shot; a filtered REAL shot is simply missing -> counts against auto recall; filtered non-shot reduces false shots/checks. HSB risk: labelled miss t=2631233 falls in the gap 2624000-2712000 (neither interval nor ft_window) -> filter would drop a real shot -> recall loss. Rimrock: no readable board -> no change (spec correct).
+
+Item 2 vs Item 3 conflict: filter is required, but the postproc52 flag and gate52 wiring are not pinned; "Item 3 unchanged" does not say how session_filter becomes true for logo52a. MUST FIX.
+
+O5 — alternative within (a): Cursor's fixed far-from-tag rule (>=8s from any coach tag -> class 0; adrian ~26 + notus ~6) is the only (a)-compatible multi-gym class-0 lever found without peeking; must be pinned before labels write, with the residual risk that far -1 may be untagged real shots.
+
+Pre-registration integrity (my protocol read):
+- NOT a real binding pre-registration as written: (1) missing frozen artifact - .team/review52/labels52a_class0_restore.json does not exist and .team/pre52a_sha256.txt does not exist, so the freeze-before-training step is unmet; (2) internally inconsistent count vs pinned rule (notus); (3) unpinned scoring/wiring for required Item 2; (4) wrong paths throughout.
+- No peeking found in the rule text ("No row may be chosen by looking at logo52 predictions" is good). Counts were source-derived. The notus gap means the restore set was not fully source-pinned.
+- Same-5 re-gate: Scott has made the same-5 re-gate (R6 unchanged) binding pass/fail and approved proposal (a). Per my protocol ruling in the gate round, a re-gate on the same five is a diagnostic re-score; the binding lock stays R10 blind. Scott may re-bind, but the re-gate can only be honored if the pre-registration is made internally consistent and the scoring is pinned before retraining. No training has run since logo52 (no logo52a outputs exist), so no freeze violation has occurred.
+
+My verdict: DISAGREE as written; AGREE WITH CHANGES on the required fixes.
+
+MUSE:/CURSOR: DISAGREE: spec 52A v1 is not binding as written (missing frozen labels52a + pre52a_sha256; notus y0=9 contradicts pinned 48b rule; gate52 session_filter wiring/scoring unpinned; D1 fix overstated) — AGREE WITH CHANGES: Hermes resubmits v2 with the required fixes (paths; notus source pin -> y0=0; post-restore counts adrian6/notus0/hsb4; gate52 session_filter wiring + omit-vs-not-a-shot scoring; fixed far-from-tag class-0), freezes before training, then the binding same-5 re-gate can proceed.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4fff61e90a72b1bf5a6f03c92ddde5a67cc15463ff8c2c98a98a0926d70f6449
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #5"
+
+Session:        local-4fff61e90a72b1bf5a6f03c92ddde5a67cc15463ff8c2c98a98a0926d70f6449
+Title:          You are MUSE, the REVIEWER (not Hermes)… #5
+Duration:       7m 31s
+Messages:       32 (1 user, 30 tool calls)

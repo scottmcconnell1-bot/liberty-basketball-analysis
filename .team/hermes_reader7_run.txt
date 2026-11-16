@@ -1,0 +1,103 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. FIRST read NEXT_TASK.md with your read tool (your write tool 
+refuses to overwrite a file you have not read in this session). Then read 
+.team/specs/09_VETTER_FINDING_hue.md: on Notus A1 fitting frames up to ~44% of 
+lit-segment pixels have YELLOW hue (13-40), outside the plan's fixed red hue 
+range [0,12] U [165,180]. Amend NEXT_TASK.md step 1 so the HUE range is also 
+measured on the fitting frames by a rule fixed in advance (for example: hue of 
+pixels inside the ON-segment regions of eye-read digits, keep the central 98% of
+that hue distribution, handling wrap-around at 180), together with the S and V 
+percentiles, and frozen to data/roi/notus_red_thresholds.json (add hue keys). 
+Note that step 0 is DONE: the crops are in .team/notus_fit_crops/ and the 
+Vetter's eye-read values are in .team/notus_fit_crops/eye_read_values.json 
+(fields: crop_path, game, timestamp_s, slot, score, digit; digit null = blank 
+tens). Keep the first line (the VETTED stamp) and everything else unchanged 
+except step 1, the mask code in step 2 (use the frozen hue range), and a 
+one-line note in step 0 that it is done. Do NOT open 
+.team/specs/04_notus_holdout_truth.json or any holdout_*.png. STRICT: edit ONLY 
+NEXT_TASK.md; create no other file; run no code. If any tool reports an error or
+refusal, say so plainly; never report a write that did not succeed.
+📖 Read NEXT_TASK.md
+📖 Read 09_VETTER_FINDING_hue.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now I'll make the three targeted edits to NEXT_TASK.md.
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -26,7 +26,7 @@
+│
+│  ## Fix Plan
+│
+│ -### 0. Verify home/away TENS box positions (FIRST, before any mask change)
+│ +### 0. Verify home/away TENS box positions (FIRST, before any mask change) — DONE
+│  **Before any in-place change**, the coder copies `data/roi/notus_scoreboard_rois.json` → `data/roi/notus_scoreboard_rois_approved_2026-10-26.json`.
+│
+│  On **fitting frames only** (frames ≥60 s from every gate time and every holdout time):
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -45,9 +45,9 @@
+│
+│  ### 1. Measure Notus red-digit colour on fitting frames ONLY (no gate/holdout frames)
+│  Using the (possibly corrected) ROI boxes from step 0 on fitting frames only:
+│ -- The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json` (written by the Vetter). For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (`_SEVEN_SEGMENT` maps a segment pattern to a digit, so invert it: the ON segments for a digit are the letters common to EVERY pattern that maps to that digit — 6 → c,d,e,f,g; 7 → a,b,c; 9 → a,b,c,f,g; every other digit has one pattern; region names are the letters a–g, as in `_SEGMENTS`). Union those ON-segment regions, and collect pixels inside that union whose hue falls in the standard red wrap [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale). These are the "red-hue lit-segment pixels" — defined without any S/V cutoff.
+│ -- **Rule (fixed before measuring)**: Take the 10th percentile of V and the 10th percentile of S over all red-hue lit-segment pixels across all four slots and all fitting frames. These two numbers become the frozen `NOTUS_S_MIN` and `NOTUS_V_MIN`.
+│ -- Write `NOTUS_S_MIN` and `NOTUS_V_MIN` to `data/roi/notus_red_thresholds.json` (keys: `s_min`, `v_min`). The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│ +- The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json` (written by the Vetter). For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (the ON segments for a digit are the letters common to EVERY pattern that maps to that digit — 6 → c,d,e,f,g; 7 → a,b,c; 9 → a,b,c,f,g; every other digit has one pattern; region names are the letters a–g, as in `_SEGMENTS`). Union those ON-segment regions, and collect pixels inside that union.
+│ +- **Rule (fixed before measuring)**: From those lit-segment pixels, take the central 98% of the hue distribution (handling wrap-around at 180: map hues >165 to hue-180 so the red cluster is contiguous around 0, compute the 1st and 99th percentiles, map back to 0–179). Also take the 10th percentile of V and the 10th percentile of S over the same pixels. These four numbers become the frozen `NOTUS_H_MIN`, `NOTUS_H_MAX` (the contiguous hue interval in 0–179), `NOTUS_S_MIN`, and `NOTUS_V_MIN`.
+│ +- Write `h_min`, `h_max`, `s_min`, `v_min` to `data/roi/notus_red_thresholds.json`. The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│
+│  ---
+│
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -70,12 +70,18 @@
+│      """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
+│      import cv2
+│      thresholds = _load_notus_thresholds()
+│ +    h_min = thresholds["h_min"]
+│ +    h_max = thresholds["h_max"]
+│      s_min = thresholds["s_min"]
+│      v_min = thresholds["v_min"]
+│      hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+│ -    low = cv2.inRange(hsv, (0, s_min, v_min), (12, 255, 255))
+│ -    high = cv2.inRange(hsv, (165, s_min, v_min), (180, 255, 255))
+│ -    mask = cv2.bitwise_or(low, high)
+│ +    if h_min <= h_max:
+│ +        mask = cv2.inRange(hsv, (h_min, s_min, v_min), (h_max, 255, 255))
+│ +    else:
+│ +        # wrap-around interval (should not occur after central-98% rule but handle anyway)
+│ +        low = cv2.inRange(hsv, (0, s_min, v_min), (h_max, 255, 255))
+│ +        high = cv2.inRange(hsv, (h_min, s_min, v_min), (179, 255, 255))
+│ +        mask = cv2.bitwise_or(low, high)
+│      return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+│  ```
+│
+
+────────────────────────────────────────
+☤ Hermes
+All three edits applied. Let me verify the changes:
+────────────────────────────────────────
+
+📖 Read NEXT_TASK.md L1-85
+
+────────────────────────────────────────
+☤ Hermes
+The changes are verified. All three required edits are complete:
+
+1. Step 0 — added "— DONE" to the heading2. Step 1 — hue range now measured on fitting frames (central 98% of hue distribution with wrap-around handling at 180), together with S/V 10th percentiles, frozen to data/roi/notus_red_thresholds.json with keys h_min, h_max, s_min, v_min
+3. Step 2 — mask code now reads h_min/h_max from the JSON and uses a single inRange for contiguous intervals or the two-range fallback for wrap-around
+
+The VETTED stamp and all other content remain unchanged. No other files created or modified.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2c2c5ee0ddfae9302f81fa24127779f52e6603d896cc11b27935c6e6c0473ac9
+  hermes -c "Amend NEXT_TASK.md step 1 for hue measurement"
+
+Session:        local-2c2c5ee0ddfae9302f81fa24127779f52e6603d896cc11b27935c6e6c0473ac9
+Title:          Amend NEXT_TASK.md step 1 for hue measurement
+Duration:       1m 16s
+Messages:       13 (1 user, 11 tool calls)

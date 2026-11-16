@@ -1,0 +1,70 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit or create
+any file.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/53_referee_signals_spec.md (v3, by Hermes) against your own 
+ITEM C changes in
+.team/review52/muse_round52_53.txt (C1 spec-36 cause, C2 pass bar incl. false 
+fires on labelled true shots,
+C3 small-ref pose test as explicit first gate), Cursor's v1 audit 
+.team/review52/cursor_ref53.txt, the NFHS
+reference .team/review52/nfhs_signals_reference.md and Scott's addendum 
+.team/review52/addendum_ref53_scott.txt
+("Go with the book, but some wiggle room ... deduced with several factors"). Are
+all applied? Anything that
+blocks building the 3-clip prototype? Numbers left for Scott must be clearly 
+marked.
+End with one line that STARTS with "MUSE: AGREE" or "MUSE: DISAGREE:".
+📖 Read 53_referee_signals_spec.md  0.2s
+📖 Read muse_round52_53.txt  0.2s
+📖 Read cursor_ref53.txt  0.2s
+📖 Read nfhs_signals_reference.md  0.2s
+📖 Read addendum_ref53_scott.txt  0.2s
+💻 $ git status + 2 commands  33.9s
+💻 $ grep -n "ref53\|referee\|refsignal\|ref signal\|ref_53" .team/drift_log.md  0.1s
+📖 Read spot_check_52_answers.json
+📖 Read hermes_ref53.txt  0.1s
+📖 Read muse_ref53.txt  0.1s
+📖 Read prompt_muse_round52_53.txt  0.2s
+📖 Read prompt_team_refsignals53.txt  0.2s
+📖 Read cursor_spec53_v3.txt  0.2s
+📖 Read hermes_spec53_v3.txt  0.2s
+📖 Read muse_spec53_v3.txt  0.2s
+💻 $ grep -n "fusion\|SCOTT DECIDES\|Scott decides\|Scott confirms\|Scott DECIDES\|decides\|DECIDES" .team/specs/53_referee_signals_spec.md  0.2s
+💻 $ cat .team/review52/spec53_v3_sha.txt + 2 commands
+✗ $ python -c " import json d=json.load(open('.team/review52/labels52_v2.json')) print(type(d)) if isinstance(d,dict): print(list(d.keys())[:20]) import re s=json.dumps(d) print(s[:800]) " [BLOCKED: Command flagged as dangerous (script...]
+📖 Read STATUS.md  0.2s
+✗ Read NEXT_TASK.md  0.2s [File not found: NEXT_TASK.md]
+💻 $ sha256sum .team/specs/53_referee_signals_spec.md + 2 commands  0.2s
+📖 Read TEAM_RECOVERY.md
+💻 $ sed -n '380,400p' .team/drift_log.md  0.1s
+💻 $ grep -n "addendum\|wiggle\|restart\|overlay\|lane\|throw-in\|probability\|evidence\|nearest\|lead\|fist vs\|release/rim\|timing\|score change" .team/specs/53_referee_signals_spec.md  0.1s
+💻 $ grep -rn "53" .team/drift_log.md | sed -n '1,5p' + 2 commands  0.2s
+💻 $ ls .team/shot_detectors/ | grep -i "ref\|signal" + 8 commands  1.1s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE review — spec 53 v3 vs my ITEM C changes, Cursor's v1 audit, NFHS chart, Scott addendum.
+
+Are all applied? Mostly, one gap.
+C1 (spec-36 cause): APPLIED in v3 section 3. Pose pipeline never used; ball-in-ref-box / ref-holding proxies were the weak ones; is_referee_player was a spec-39 shooter bug, not the spec-36 cause; v3 uses pose arm events only, gated on labelled TRUE shots, no-ref -> no change. Good.
+C2 (pass bar incl. false fires on labelled true shots): APPLIED in v3 section 4. Pass = Scott's 6 examples detected as expected category AND false fires on labelled true shots (labels52_v2 class 1/2 rows, seen films) at or below a fixed number marked SCOTT DECIDES; warm-ups/breaks alone are not enough. Good.
+C3 (small-ref pose test as explicit first gate): APPLIED in v3 section 7 step 0 and section 8. Small-ref pad/upscale pose test on gvg/hsb/notus is the first gate; small-ref keypoint-found share marked SCOTT DECIDES. Good.
+Cursor v1-change audit: APPLIED in substance. v1 events = arm raised / both arms up / lateral wave / chop down; fist vs open hand, thumbs, fingers, T -> not detectable, never claimed, via fusion or unknown -> coach flag (<=20 cap). Moment window only (about -1s..+4s, 1-2 nearest BODD "r" boxes, no full-film pass). No-ref -> no change. Spec 52 untouched. Hook in assign_shot_calls + optional postproc hook. 3-clip prototype = rimrock:77, gvg:149, rimrock:253 with keypoint overlay dump. Good (moment-window bound "about -1s..+4s" vs Cursor's "about +/-2s" is wording drift only).
+NFHS 2024-25 chart: APPLIED. v3 uses chart numbers; waved off = #16 both arms crossing/scissoring in front at waist-chest height out to sides; 3-pt attempt = #19 one arm up with three fingers, made = both arms up; #4 foul fist; #22 travel. Good.
+Scott addendum: NOT FULLY APPLIED. This is the gap. Scott's binding addendum required combining cues (arm-raised timing vs shot release/rim time, fist vs open hand where resolvable, which referee nearest/lead, play stopping, score overlay change, next restart) and outputting a probability/category per shot with evidence listed, unknown -> coach flags <=20 rather than guessing. The v2-to-v3 rewrite replaced the explicit per-shot fusion block with the moment-window bullet; the current v3 carries only compressed fusion language (POSE LIMIT "cue fusion (section 2)" now dangles; DETECTABLE EVENTS "cue fusion (arm raised + play stops + FT setup / throw-in next + score change)"). The fuller cue-combination and per-shot output requirements are absent. So not all inputs are applied.
+
+Does anything block building the 3-clip prototype? Not technically, but yes procedurally/substantively. Nothing is built yet (no ref_signals.py, test_ref_signals.py, or runs on disk; status line still says nothing built until agree). The agreement loop is not closed: real MUSE's verdict on v3 has not landed (the nemotron ITEM C verdict was on v2; the v3 review artifacts are stubs), and Cursor's v3 audit file is empty (0 bytes). And Scott still must decide the open numbers before step 0 / the run: waved_off window, 3PT arm-up min height, small-ref keypoint-found share, labelled-true-shot false-fire pass bar. With the fusion gap, the current v3 is not sign-off complete, so the build should not be unblocked yet.
+
+Numbers left for Scott: clearly marked in v3 section 8. fouls_ref_window_ms: Scott's ~1.3s -> 1500 ms (Scott confirms). Waved_off window: Scott decides. 3PT arm-up min height: Scott decides (NOT spec 38 S8; S8's 8 frames / 1.5 hoop widths = track-break gap / FT pass line, misattributed in v1). Small-ref pose keypoint-found share: SCOTT DECIDES (MUSE C3; first gate, before anything runs). Labelled-true-shot false-fire pass bar: SCOTT DECIDES (MUSE C2; fixed number written now, left for Scott to fix). Coach-review cap: <=20 fixed. No-ref -> no cue fixed. All marked.
+
+MUSE: DISAGREE: v3 applied the MUSE C1/C2/C3 and the Cursor v1 fixes, but the Scott addendum per-shot cue fusion was not fully carried through, so all changes are not applied and the 3-clip prototype should not be unblocked yet.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d58cbe62b73d7bc6247812c9d2064b0701f86614bfb8398cf431d838723ecd3d
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #2"
+
+Session:        local-d58cbe62b73d7bc6247812c9d2064b0701f86614bfb8398cf431d838723ecd3d
+Title:          You are MUSE, the REVIEWER (not Hermes)… #2
+Duration:       4m 31s
+Messages:       35 (1 user, 33 tool calls)

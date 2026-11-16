@@ -1,0 +1,30 @@
+[
+  {
+    "name": "ft_line_left",
+    "image_xy": [
+      694.0,
+      514.0
+    ]
+  },
+  {
+    "name": "ft_line_right",
+    "image_xy": [
+      902.0,
+      423.0
+    ]
+  },
+  {
+    "name": "baseline_left",
+    "image_xy": [
+      361.0,
+      381.0
+    ]
+  },
+  {
+    "name": "baseline_right",
+    "image_xy": [
+      569.0,
+      324.0
+    ]
+  }
+]

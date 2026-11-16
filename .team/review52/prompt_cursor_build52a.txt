@@ -1,0 +1,17 @@
+You are CURSOR, the builder. BUILD spec 52a exactly as pre-registered: .team/specs/52a_class0_restore_prereg.md v3
+(sha in .team/review52/spec52a_v3_sha.txt; AGREED by Hermes, Muse, Cursor; Scott approved proposal (a)).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Build ONLY the pre-run items (NO training, NO gate run, NO logo52a):
+1. session_filter in .team/mm_clip/ensemble_predict.shot_list + gate52 path: per-film session json mapping
+   (adrian/notus/gvg from game_session_48b, hsb from hybrid49/hsb/session, rimrock none -> no filter), using
+   game_session in_session(is_ft=True) as pinned; filtered candidates omitted from the shot list (a filtered real
+   shot = recall miss). Default OFF so logo52 results reproduce unchanged; postproc52.json R7 amendment for logo52a
+   as the spec says (new file or flag exactly per spec; re-freeze sha).
+2. Tests in test_mm52.py (or new test file): filter on/off behaviour, omit scoring, logo52 gate reproduces
+   byte-identical numbers with the filter OFF.
+3. Write .team/review52/labels52a_class0_restore.json from labels52_v2 by the pinned rule only (48b oos OR >= 8000 ms
+   from nearest coach tag, adrian + notus y=-1 -> 0); expected counts adrian 26, notus 6, hsb 4, gvg 145, rimrock 241;
+   print actual counts; write .team/pre52a_sha256.txt. Do not change labels52_v2.json or clips7.
+4. Run the tests with the Windows .venv (C:/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe
+   -m pytest .team/mm_clip .team/shot_detectors -q) and report pass counts. List every file changed with sha256.
+End with: CURSOR: BUILT | BLOCKED: <reason>

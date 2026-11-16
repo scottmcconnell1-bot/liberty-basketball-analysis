@@ -1,0 +1,239 @@
+Results: 2/31 makes
+SCORE: 24/111 right, 7 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** DOES NOT PASS 85-SCORE TARGET ***
+[notus_a1] t=55400 q=Q1 gt=miss rule=miss net_moved=True peak=1387 nc=True
+[notus_a1] t=64200 q=Q1 gt=make rule=miss net_moved=False peak=1605 nc=True
+[notus_a1] t=95600 q=Q1 gt=miss rule=miss net_moved=True peak=2396 nc=True
+[notus_a1] t=142600 q=Q1 gt=make rule=miss net_moved=False peak=3629 nc=False
+[notus_a1] t=159300 q=Q1 gt=make rule=miss net_moved=False peak=3983 nc=True
+[notus_a1] t=192100 q=Q1 gt=miss rule=miss net_moved=True peak=4825 nc=False
+[notus_a1] t=212300 q=Q1 gt=make rule=miss net_moved=False peak=5333 nc=False
+[notus_a1] t=234700 q=Q1 gt=miss rule=miss net_moved=False peak=5889 nc=True
+[notus_a1] t=240800 q=Q1 gt=make rule=make net_moved=True peak=6049 nc=False
+[notus_a1] t=252500 q=Q1 gt=miss rule=miss net_moved=False peak=6376 nc=False
+[notus_a1] t=256700 q=Q1 gt=miss rule=miss net_moved=False peak=6452 nc=False
+[notus_a1] t=272400 q=Q1 gt=miss rule=miss net_moved=False peak=6848 nc=True
+[notus_a1] t=279100 q=Q1 gt=miss rule=miss net_moved=False peak=7019 nc=False
+[notus_a1] t=303700 q=Q1 gt=miss rule=miss net_moved=False peak=7627 nc=False
+[notus_a1] t=325900 q=Q1 gt=miss rule=miss net_moved=False peak=8166 nc=False
+[notus_a1] t=357500 q=Q1 gt=make rule=miss net_moved=False peak=8983 nc=False
+[notus_a1] t=370600 q=Q1 gt=make rule=make net_moved=False peak=9294 nc=False
+[notus_a1] t=380800 q=Q1 gt=miss rule=miss net_moved=True peak=9558 nc=False
+[notus_a1] t=422700 q=Q1 gt=miss rule=miss net_moved=False peak=10595 nc=True
+[notus_a1] t=433900 q=Q1 gt=miss rule=miss net_moved=True peak=10877 nc=False
+[notus_a1] t=480200 q=Q1 gt=miss rule=miss net_moved=True peak=12032 nc=False
+[notus_a1] t=483400 q=Q1 gt=make rule=miss net_moved=False peak=12085 nc=True
+[notus_a1] t=591100 q=Q1 gt=miss rule=miss net_moved=False peak=14802 nc=False
+[notus_a1] t=598300 q=Q1 gt=miss rule=miss net_moved=True peak=14973 nc=False
+[notus_a1] t=646800 q=Q1 gt=miss rule=miss net_moved=False peak=16194 nc=True
+[notus_a1] t=693500 q=Q1 gt=miss rule=miss net_moved=True peak=17369 nc=False
+[notus_a1] t=696300 q=Q1 gt=miss rule=miss net_moved=True peak=17408 nc=True
+[notus_a1] t=761800 q=Q1 gt=miss rule=miss net_moved=False peak=19094 nc=False
+[notus_a1] t=774600 q=Q1 gt=make rule=miss net_moved=False peak=19398 nc=False
+[notus_a1] t=784400 q=Q1 gt=miss rule=miss net_moved=True peak=19641 nc=True
+[notus_a1] t=883400 q=Q1 gt=miss rule=miss net_moved=False peak=22092 nc=True
+Results: 26/111 makes
+SCORE: 99/111 right, 12 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** PASSES 85-SCORE TARGET ***
+[adrian] t=21300 q=Q1 gt=miss rule=miss net_moved=False peak=533 nc=True
+[adrian] t=39400 q=Q1 gt=miss rule=miss net_moved=True peak=1045 nc=False
+[adrian] t=41900 q=Q1 gt=make rule=make net_moved=True peak=1048 nc=False
+[adrian] t=48600 q=Q1 gt=make rule=make net_moved=False peak=1228 nc=False
+[adrian] t=88400 q=Q1 gt=make rule=make net_moved=True peak=2254 nc=False
+[adrian] t=120800 q=Q1 gt=miss rule=miss net_moved=False peak=3095 nc=True
+[adrian] t=134600 q=Q1 gt=miss rule=miss net_moved=False peak=3395 nc=False
+[adrian] t=167200 q=Q1 gt=make rule=make net_moved=False peak=4221 nc=False
+[adrian] t=186000 q=Q1 gt=miss rule=miss net_moved=True peak=4692 nc=False
+[adrian] t=190200 q=Q1 gt=miss rule=miss net_moved=False peak=4833 nc=True
+[adrian] t=217000 q=Q1 gt=miss rule=miss net_moved=True peak=5460 nc=False
+[adrian] t=236400 q=Q1 gt=miss rule=miss net_moved=False peak=5943 nc=True
+[adrian] t=250200 q=Q1 gt=miss rule=miss net_moved=False peak=6269 nc=True
+[adrian] t=268500 q=Q1 gt=miss rule=miss net_moved=False peak=6735 nc=False
+[adrian] t=280200 q=Q1 gt=miss rule=miss net_moved=True peak=7005 nc=True
+[adrian] t=335500 q=Q1 gt=miss rule=miss net_moved=False peak=8406 nc=True
+[adrian] t=338700 q=Q1 gt=miss rule=miss net_moved=False peak=8518 nc=False
+[adrian] t=342800 q=Q1 gt=make rule=miss net_moved=False peak=8573 nc=False
+[adrian] t=373700 q=Q1 gt=miss rule=miss net_moved=True peak=9370 nc=True
+[adrian] t=389900 q=Q1 gt=make rule=make net_moved=False peak=9769 nc=False
+[adrian] t=461000 q=Q1 gt=miss rule=miss net_moved=True peak=11564 nc=False
+[adrian] t=501900 q=Q1 gt=make rule=make net_moved=False peak=12575 nc=False
+[adrian] t=515000 q=Q1 gt=miss rule=miss net_moved=True peak=12889 nc=False
+[adrian] t=530600 q=Q1 gt=miss rule=miss net_moved=True peak=13294 nc=False
+[adrian] t=536900 q=Q1 gt=miss rule=miss net_moved=True peak=13445 nc=False
+[adrian] t=566900 q=Q1 gt=make rule=make net_moved=False peak=14217 nc=False
+[adrian] t=590900 q=Q1 gt=make rule=make net_moved=False peak=14799 nc=False
+[adrian] t=638300 q=Q1 gt=make rule=miss net_moved=False peak=15992 nc=False
+[adrian] t=666800 q=Q1 gt=miss rule=miss net_moved=False peak=16670 nc=True
+[adrian] t=674100 q=Q1 gt=miss rule=miss net_moved=False peak=16892 nc=True
+[adrian] t=705200 q=Q1 gt=miss rule=miss net_moved=True peak=17669 nc=False
+[adrian] t=717000 q=Q1 gt=make rule=miss net_moved=False peak=17953 nc=True
+[adrian] t=728800 q=Q1 gt=miss rule=miss net_moved=True peak=18244 nc=False
+[adrian] t=755400 q=Q1 gt=miss rule=miss net_moved=False peak=18924 nc=False
+[adrian] t=787500 q=Q1 gt=make rule=make net_moved=False peak=19707 nc=False
+[adrian] t=801800 q=Q1 gt=make rule=miss net_moved=True peak=20045 nc=True
+[adrian] t=832400 q=Q1 gt=miss rule=miss net_moved=False peak=20811 nc=True
+[adrian] t=846800 q=Q1 gt=miss rule=miss net_moved=False peak=21181 nc=True
+[adrian] t=856200 q=Q1 gt=miss rule=miss net_moved=True peak=21458 nc=False
+[adrian] t=896600 q=Q1 gt=miss rule=miss net_moved=False peak=22484 nc=False
+[adrian] t=912600 q=Q1 gt=miss rule=miss net_moved=True peak=22822 nc=False
+[adrian] t=936200 q=Q1 gt=make rule=make net_moved=False peak=23442 nc=False
+[adrian] t=949300 q=Q1 gt=make rule=make net_moved=True peak=23800 nc=False
+[adrian] t=958200 q=Q1 gt=miss rule=miss net_moved=False peak=23994 nc=True
+[adrian] t=1091600 q=Q2 gt=miss rule=miss net_moved=False peak=27332 nc=True
+[adrian] t=1166800 q=Q2 gt=miss rule=miss net_moved=False peak=29225 nc=False
+[adrian] t=1181700 q=Q2 gt=make rule=make net_moved=False peak=29574 nc=False
+[adrian] t=1217300 q=Q2 gt=make rule=make net_moved=False peak=30471 nc=False
+[adrian] t=1231400 q=Q2 gt=make rule=miss net_moved=True peak=30785 nc=False
+[adrian] t=1433200 q=Q2 gt=miss rule=miss net_moved=False peak=35839 nc=True
+[adrian] t=1437100 q=Q2 gt=miss rule=miss net_moved=True peak=35957 nc=False
+[adrian] t=1461000 q=Q2 gt=make rule=make net_moved=False peak=36581 nc=False
+[adrian] t=1476600 q=Q2 gt=miss rule=miss net_moved=False peak=36960 nc=False
+[adrian] t=1488500 q=Q2 gt=miss rule=miss net_moved=False peak=37220 nc=True
+[adrian] t=1515700 q=Q2 gt=miss rule=miss net_moved=True peak=37957 nc=False
+[adrian] t=1557200 q=Q2 gt=miss rule=miss net_moved=True peak=38976 nc=False
+[adrian] t=1582000 q=Q2 gt=make rule=make net_moved=True peak=39582 nc=False
+[adrian] t=1600900 q=Q2 gt=miss rule=miss net_moved=False peak=40043 nc=True
+[adrian] t=1603900 q=Q2 gt=make rule=make net_moved=False peak=40132 nc=False
+[adrian] t=1708100 q=Q2 gt=miss rule=miss net_moved=True peak=42746 nc=True
+[adrian] t=1716300 q=Q2 gt=miss rule=miss net_moved=False peak=42950 nc=True
+[adrian] t=1748400 q=Q2 gt=make rule=make net_moved=False peak=43771 nc=False
+[adrian] t=1760400 q=Q2 gt=miss rule=miss net_moved=False peak=44074 nc=False
+[adrian] t=1771900 q=Q2 gt=miss rule=miss net_moved=True peak=44357 nc=False
+[adrian] t=1776500 q=Q2 gt=miss rule=miss net_moved=True peak=44435 nc=False
+[adrian] t=1792900 q=Q2 gt=make rule=miss net_moved=False peak=44822 nc=False
+[adrian] t=1836700 q=Q2 gt=make rule=miss net_moved=False peak=45959 nc=False
+[adrian] t=1901500 q=Q2 gt=miss rule=miss net_moved=True peak=47576 nc=False
+[adrian] t=1929800 q=Q2 gt=miss rule=miss net_moved=False peak=48276 nc=False
+[adrian] t=2399600 q=Q3 gt=miss rule=miss net_moved=True peak=60059 nc=False
+[adrian] t=2408500 q=Q3 gt=miss rule=miss net_moved=False peak=60250 nc=True
+[adrian] t=2417100 q=Q3 gt=miss rule=miss net_moved=True peak=60501 nc=False
+[adrian] t=2419200 q=Q3 gt=miss rule=miss net_moved=True peak=60483 nc=True
+[adrian] t=2441900 q=Q3 gt=miss rule=miss net_moved=False peak=61090 nc=False
+[adrian] t=2447200 q=Q3 gt=miss rule=miss net_moved=False peak=61193 nc=True
+[adrian] t=2455600 q=Q3 gt=miss rule=miss net_moved=False peak=61413 nc=False
+[adrian] t=2473800 q=Q3 gt=miss rule=miss net_moved=False peak=61850 nc=True
+[adrian] t=2479100 q=Q3 gt=make rule=miss net_moved=True peak=62031 nc=True
+[adrian] t=2486900 q=Q3 gt=make rule=make net_moved=False peak=62188 nc=False
+[adrian] t=2504800 q=Q3 gt=miss rule=miss net_moved=False peak=62638 nc=True
+[adrian] t=2508600 q=Q3 gt=miss rule=miss net_moved=False peak=62731 nc=False
+[adrian] t=2529600 q=Q3 gt=miss rule=miss net_moved=True peak=63298 nc=False
+[adrian] t=2553900 q=Q3 gt=make rule=make net_moved=False peak=63884 nc=False
+[adrian] t=2586500 q=Q3 gt=make rule=make net_moved=False peak=64698 nc=False
+[adrian] t=2607300 q=Q3 gt=make rule=make net_moved=False peak=65217 nc=False
+[adrian] t=2622000 q=Q3 gt=make rule=make net_moved=True peak=65575 nc=False
+[adrian] t=2653200 q=Q3 gt=miss rule=miss net_moved=False peak=66370 nc=True
+[adrian] t=2670800 q=Q3 gt=miss rule=miss net_moved=False peak=66786 nc=True
+[adrian] t=2738600 q=Q3 gt=miss rule=miss net_moved=True peak=68523 nc=False
+[adrian] t=2747200 q=Q3 gt=miss rule=miss net_moved=True peak=68720 nc=True
+[adrian] t=2753200 q=Q3 gt=miss rule=miss net_moved=False peak=68836 nc=True
+[adrian] t=2738600 q=Q3 gt=miss rule=miss net_moved=True peak=68523 nc=False
+[adrian] t=2747200 q=Q3 gt=miss rule=miss net_moved=True peak=68720 nc=True
+[adrian] t=2753100 q=Q3 gt=miss rule=miss net_moved=False peak=68836 nc=True
+[adrian] t=2764600 q=Q3 gt=miss rule=miss net_moved=True peak=69147 nc=False
+[adrian] t=2870400 q=Q3 gt=make rule=miss net_moved=False peak=71803 nc=False
+[adrian] t=2888800 q=Q3 gt=miss rule=miss net_moved=True peak=72255 nc=True
+[adrian] t=2914500 q=Q3 gt=make rule=make net_moved=True peak=72900 nc=False
+[adrian] t=2928600 q=Q3 gt=miss rule=miss net_moved=False peak=73267 nc=False
+[adrian] t=2939100 q=Q3 gt=make rule=make net_moved=True peak=73489 nc=False
+[adrian] t=2951900 q=Q3 gt=make rule=make net_moved=False peak=73814 nc=False
+[adrian] t=2962500 q=Q3 gt=make rule=miss net_moved=True peak=74062 nc=False
+[adrian] t=2975800 q=Q3 gt=miss rule=miss net_moved=False peak=74421 nc=False
+[adrian] t=3020800 q=Q3 gt=miss rule=miss net_moved=False peak=75572 nc=False
+[adrian] t=3045900 q=Q3 gt=make rule=miss net_moved=True peak=76169 nc=False
+[adrian] t=3095700 q=Q3 gt=make rule=miss net_moved=True peak=77401 nc=True
+[adrian] t=3154100 q=Q3 gt=miss rule=miss net_moved=False peak=78893 nc=False
+[adrian] t=3256200 q=Q3 gt=miss rule=miss net_moved=False peak=81468 nc=True
+[adrian] t=3269900 q=Q3 gt=make rule=make net_moved=False peak=81796 nc=False
+[adrian] t=3291500 q=Q3 gt=miss rule=miss net_moved=False peak=82365 nc=True
+[adrian] t=3314200 q=Q3 gt=miss rule=miss net_moved=False peak=82855 nc=True
+
+=== SUMMARY ===
+# net_moved_after_shot baseline (Task 1 step 1)
+
+Build shots processed: 142
+Shots using no-crossing rule: 50
+
+| Metric | Build Set | Unseen Set |
+|--------|-----------|------------|
+| Missed Makes (GT=Make, Rule=Miss) | 19 | n/a |
+| Of Missed Makes: Net Moved = True | 6 (recovery 31.6%) | n/a |
+| Of Missed Makes: Net Moved = False | 13 | n/a |
+| Misses (GT=Miss) | 95 | n/a |
+| Of Misses: Net Moved = True (False Makes) | 40 | n/a |
+| Of Misses: Net Moved = False | 55 | n/a |
+
+Unseen set: not available: Adrian Q4 tracks were never built
+
+## Missed makes detail
+
+- t=64200 q=Q1 And-1 player='0 - Camden Linkhart' net_moved=False peak=1605 hoop=(440.6, 145.3, w=59.9) peak_reason=no_crossing_closest_ball
+- t=142600 q=Q1 FT Make player='0 - Camden Linkhart' net_moved=False peak=3629 hoop=(481.6, 172.3, w=74.6) peak_reason=crossing
+- t=159300 q=Q1 FT Make player='0 - Camden Linkhart' net_moved=False peak=3983 hoop=(519.1, 169.8, w=64.5) peak_reason=no_crossing_closest_ball
+- t=212300 q=Q1 2PT Make player='11 - Flores' net_moved=False peak=5333 hoop=(907.5, 127.4, w=64.8) peak_reason=crossing
+- t=357500 q=Q1 FT Make player='0 - Camden Linkhart' net_moved=False peak=8983 hoop=(480.2, 163.7, w=64.6) peak_reason=crossing
+- t=483400 q=Q1 2PT Make player='2 - Carson Linkhart' net_moved=False peak=12085 hoop=(501.1, 173.8, w=62.2) peak_reason=no_crossing_closest_ball
+- t=774600 q=Q1 FT Make player='53 - Price' net_moved=False peak=19398 hoop=(784.5, 167.6, w=66.9) peak_reason=crossing
+- t=342800 q=Q1 2PT Make player='51 - Peterson' net_moved=False peak=8573 hoop=(904.5, 275.6, w=107.9) peak_reason=crossing
+- t=638300 q=Q1 And-1 player='21 - Colman' net_moved=False peak=15992 hoop=(881.4, 263.4, w=103.4) peak_reason=crossing
+- t=717000 q=Q1 2PT Make player='21 - Colman' net_moved=False peak=17953 hoop=(688.8, 213.1, w=93.8) peak_reason=no_crossing_closest_ball
+- t=801800 q=Q1 2PT Make player='40 - Dayley' net_moved=True peak=20045 hoop=(773.4, 182.7, w=82.6) peak_reason=no_crossing_tag_frame
+- t=1231400 q=Q2 FT Make player='25 - Alvarez' net_moved=True peak=30785 hoop=(1399.7, 123.8, w=74.0) peak_reason=crossing
+- t=1792900 q=Q2 2PT Make player='40 - Dayley' net_moved=False peak=44822 hoop=(724.7, 257.7, w=105.3) peak_reason=crossing
+- t=1836700 q=Q2 3PT Make player='21 - Colman' net_moved=False peak=45959 hoop=(607.5, 187.1, w=86.1) peak_reason=crossing
+- t=2479100 q=Q3 2PT Make player='23 - Rodus' net_moved=True peak=62031 hoop=(806.4, 276.6, w=106.1) peak_reason=no_crossing_closest_ball
+- t=2870400 q=Q3 3PT Make player='21 - Colman' net_moved=False peak=71803 hoop=(1310.8, 183.8, w=91.7) peak_reason=crossing
+- t=2962500 q=Q3 2PT Make player='21 - Colman' net_moved=True peak=74062 hoop=(1372.6, 226.7, w=101.5) peak_reason=crossing
+- t=3045900 q=Q3 FT Make player='25 - Alvarez' net_moved=True peak=76169 hoop=(899.1, 222.3, w=90.8) peak_reason=crossing
+- t=3095700 q=Q3 FT Make player='13 - Mendoza' net_moved=True peak=77401 hoop=(842.6, 181.2, w=76.2) peak_reason=no_crossing_closest_ball
+
+## Misses with net_moved=True (false makes)
+
+- t=55400 q=Q1 2PT Miss peak=1387 peak_reason=no_crossing_closest_ball
+- t=95600 q=Q1 FT Miss peak=2396 peak_reason=no_crossing_closest_ball
+- t=192100 q=Q1 2PT Miss peak=4825 peak_reason=crossing
+- t=380800 q=Q1 3PT Miss peak=9558 peak_reason=crossing
+- t=433900 q=Q1 2PT Miss peak=10877 peak_reason=crossing
+- t=480200 q=Q1 2PT Miss peak=12032 peak_reason=crossing
+- t=598300 q=Q1 2PT Miss peak=14973 peak_reason=crossing
+- t=693500 q=Q1 3PT Miss peak=17369 peak_reason=crossing
+- t=696300 q=Q1 2PT Miss peak=17408 peak_reason=no_crossing_tag_frame
+- t=784400 q=Q1 3PT Miss peak=19641 peak_reason=no_crossing_closest_ball
+- t=39400 q=Q1 2PT Miss peak=1045 peak_reason=crossing
+- t=186000 q=Q1 3PT Miss peak=4692 peak_reason=crossing
+- t=217000 q=Q1 2PT Miss peak=5460 peak_reason=crossing
+- t=280200 q=Q1 2PT Miss peak=7005 peak_reason=no_crossing_closest_ball
+- t=373700 q=Q1 2PT Miss peak=9370 peak_reason=no_crossing_closest_ball
+- t=461000 q=Q1 2PT Miss peak=11564 peak_reason=crossing
+- t=515000 q=Q1 FT Miss peak=12889 peak_reason=crossing
+- t=530600 q=Q1 2PT Miss peak=13294 peak_reason=crossing
+- t=536900 q=Q1 2PT Miss peak=13445 peak_reason=crossing
+- t=705200 q=Q1 2PT Miss peak=17669 peak_reason=crossing
+- t=728800 q=Q1 2PT Miss peak=18244 peak_reason=crossing
+- t=856200 q=Q1 3PT Miss peak=21458 peak_reason=crossing
+- t=912600 q=Q1 FT Miss peak=22822 peak_reason=crossing
+- t=1437100 q=Q2 2PT Miss peak=35957 peak_reason=crossing
+- t=1515700 q=Q2 3PT Miss peak=37957 peak_reason=crossing
+- t=1557200 q=Q2 3PT Miss peak=38976 peak_reason=crossing
+- t=1708100 q=Q2 3PT Miss peak=42746 peak_reason=no_crossing_closest_ball
+- t=1771900 q=Q2 3PT Miss peak=44357 peak_reason=crossing
+- t=1776500 q=Q2 2PT Miss peak=44435 peak_reason=crossing
+- t=1901500 q=Q2 2PT Miss peak=47576 peak_reason=crossing
+- t=2399600 q=Q3 3PT Miss peak=60059 peak_reason=crossing
+- t=2417100 q=Q3 2PT Miss peak=60501 peak_reason=crossing
+- t=2419200 q=Q3 2PT Miss peak=60483 peak_reason=no_crossing_closest_ball
+- t=2529600 q=Q3 3PT Miss peak=63298 peak_reason=crossing
+- t=2738600 q=Q3 2PT Miss peak=68523 peak_reason=crossing
+- t=2747200 q=Q3 3PT Miss peak=68720 peak_reason=no_crossing_closest_ball
+- t=2738600 q=Q3 2PT Miss peak=68523 peak_reason=crossing
+- t=2747200 q=Q3 3PT Miss peak=68720 peak_reason=no_crossing_closest_ball
+- t=2764600 q=Q3 2PT Miss peak=69147 peak_reason=crossing
+- t=2888800 q=Q3 3PT Miss peak=72255 peak_reason=no_crossing_closest_ball
+
+Wrote .team/shot_outputs_test/net_moved_build_results.json
+Wrote .team/shot_outputs_test/net_moved_unseen_results.json
+Wrote .team/shot_outputs_test/net_moved_summary.md
+no_crossing_rule_count=50

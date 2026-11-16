@@ -1,0 +1,1 @@
+1906a52925ea2bfb29fc8a45c764e7ed7df548195bf035a897d6b49d213e31b2 *specs/53_referee_signals_spec.md

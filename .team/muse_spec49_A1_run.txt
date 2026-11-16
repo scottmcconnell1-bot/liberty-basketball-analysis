@@ -1,0 +1,32 @@
+[muse] model recursive/flint-v1.0:free 12:53:32
+Query: Muse, you review the Architect. Read-only: do not change any file.
+Spec 49's blind film changed. Read AMENDMENT A1 at the top of 
+.team/specs/49_hybrid_pull_spec.md and the last 4 entries of .team/drift_log.md.
+Riverstone has no scoreboard overlay (auto-panning camera), so game time could 
+not run; it stopped before any make/miss step. Scott chose HSB (away gym, has 
+the board overlay). Model, score script, threshold and pass bars stay frozen as 
+they were.
+Is the test still pre-registered and fair after the swap (did anything about HSB
+influence a setting; can anything leak)? At most 5 short lines. Last line 
+exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.
+📖 Read 49_hybrid_pull_spec.md  0.2s
+📖 Read drift_log.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+A1 is the binding amendment; model/score sha, T 0.70 and P1-P5 are frozen - nothing on HSB re-tuned a setting.
+The 0.55-0.80 stop band was already frozen for unseen films; the board check is conditional, not a setting.
+HSB keeps the blind (unseen away gym, labels/finder untouched until H7 step 3) but restores a readable scoreboard for game time.
+No leak: score digits never enter the pipeline, out-of-session moments drop before any call, no retune after scoring.
+MUSE: AGREE: the swap is spec-registered and introduces no leak into the frozen test.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-9c757ab02d85b68bcb0f0ab1cc47a422a8b1fce7adb4f69ffcf43ff9f75ef47c
+  hermes -c "Muse, you review the Architect. Read-only: do… #5"
+
+Session:        local-9c757ab02d85b68bcb0f0ab1cc47a422a8b1fce7adb4f69ffcf43ff9f75ef47c
+Title:          Muse, you review the Architect. Read-only: do… #5
+Duration:       42s
+Messages:       5 (1 user, 3 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE: the swap is spec-registered and introduces no leak into the frozen test.

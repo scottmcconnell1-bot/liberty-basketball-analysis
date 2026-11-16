@@ -1,0 +1,11 @@
+MUSE CHECK (read only; do not edit anything). Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+Scott 2026-11-02 approved the fall-through guard (spec .team/specs/24_fall_through_guard_spec.md) and said: write the code, run once on the 140 build shots (pass: misses_called_makes == 0 AND makes_right >= 29) and once on Adrian Q4 18 shots (pass: misses_called_makes == 0 AND makes_right >= v6 plain on Q4), no tuning.
+Locked rule: (1) ball center crosses the rim plane downward; (2) during descent |x - hoop_x| < 0.5*hoop_w; (3) track continues below the rim (>= 3 points in 0..180*scale_y below rim) and does not rise more than 5*scale_y.
+Hermes wrote the code; Claude Code fixed: the "seen above the rim" check (now the nearest earlier ball point off the rim plane must be above the rim, stricter than Hermes's "any earlier point above"), removed a dead function with hoop_w=0.0, and kept the answer out of frame picking in q4_blind_test.py.
+Read: .team/review_fall_guard_small_fixes.diff, .team/review_fall_guard_kbd.diff (it also contains the earlier, already-agreed --mapping-proof-json lines), .team/shot_detectors/q4_blind_test.py, and the new tests at the end of .team/shot_detectors/test_keep_ball_detections.py. Claude Code ran: 61 passed.
+Check and answer AGREE or DISAGREE with reasons:
+1. With the switch off, nothing changes (old results identical).
+2. The guard can only turn a make into a miss; numbers 180, 3, 0.5, 5 come from the locked rule/existing lines; nothing looser.
+3. q4_blind_test.py: truth used only for scoring; old_pred = plain v6 rule; PASS line matches the fixed pass rule; it cannot overwrite outputs.
+4. Any bug that would make the one run invalid.
+End your reply with ONE line that starts exactly "MUSE: AGREE" or "MUSE: DISAGREE: <reason>".

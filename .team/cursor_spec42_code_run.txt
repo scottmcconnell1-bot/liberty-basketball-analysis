@@ -1,0 +1,20 @@
+Spec 42 band + lane is in. No commit.
+
+**Command + result**
+```
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q
+```
+(`.venv/bin/python` missing; used `python3`)  
+**93 passed in 2.08s**
+
+**Functions added/changed**
+- `ft_half_circle.py`: constants `BAND_*`, `HOOP_DIST_MAX`, `LANE_*`; added `lane_crossings`; changed `decide_ft`, `debug_image` (optional `lane_segments`), `in_band`/`band_polygon` via new band constants
+- `rim_first_finder.py`: `_apply_ft_decision` (doc + explicit note; `too_far_from_hoop` / `no_lane_lines` leave trace alone)
+- `rim_first_measure.py`: `FT_DUPLICATE_WINDOW_MS`; `ft_section`; `_render_ft`
+- `test_ft_half_circle.py`: helpers + spec 42 cases; existing FT success paths now include lane paint
+
+**Choices not spelled out**
+- `lane_crossings` takes optional `out_segments` for debug views; return value stays `(left, right)`
+- Lane geometry runs before the hoop-distance return so views still get `lane_segments` / `hoop_dist_h`; fail reason order is still hoop then lanes
+- Duplicates are listed in `duplicate_of_found_ft` and dropped from both `false` and `non_ft_flagged`
+[cursor_wsl] exit 0 at 17:07:25

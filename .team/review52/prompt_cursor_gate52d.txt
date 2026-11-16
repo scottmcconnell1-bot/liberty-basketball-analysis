@@ -1,0 +1,9 @@
+You are CURSOR, the builder, checking results.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis. READ-ONLY: no file edits, no training, nothing that writes. Output = review text.
+Spec 52d v3.1 binding same-5 re-gate FAILED (Outputs/mm_clip/runs/logo52d/gate52_report.json, gate52d_stdout.txt, logo_report.json; compare runs/logo52c; drift_log end).
+adrian PASS 93.7 checks 5; notus PASS 93.5 silent 0; gvg FAIL 95.9 checks 140 (cap 20) silent 0; hsb PASS 97.1; rimrock FAIL auto 88.6 checks 34 silent 1.
+First-shot P(shot) 52c->52d: notus 0.170->0.289, gvg 0.092->0.789, rimrock 0.037->0.111. gvg nonshot_rejected 0.993->0.793; rimrock shots_correct 0.935->0.870.
+1. Verify numbers from files.
+2. Why did gvg checks jump 20->140 (class-0 scrambles now look like shots? G3 confound) and why did rimrock get worse (camera/crop over 6.9 s? halved frame rate? which rows flipped)? Use the preds and labels; say Proven/Inferred.
+3. Give Scott 2-3 honest next-step options in plain words with risks (e.g. combine 52c-style short clip for make/miss with long clip for shot/no-shot; accept partial; more labels; stop). No tuning on these results; any new run needs a new prereg.
+End with ONE line: CURSOR: VERIFIED | CURSOR: DISAGREE: <what>

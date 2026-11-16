@@ -1,0 +1,210 @@
+﻿Query: Hermes, you are the architect. Write a PLAN only (no code). Save it as a 
+NEW file:
+.team/specs/15_net_check_plan.md
+(FIRST check that the file does not exist. Write plain markdown: no line-number 
+prefixes and no literal "\n".)
+
+Read first: AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md (Golden Rules), 
+docs/agent_handoffs/ACTIVE.md,
+.team/specs/13_shot_work_order_plan.md (Task 1 = pixel make/miss), 
+.team/specs/14_missed_makes_diagnosis_plan.md,
+.team/shot_detectors/pixel_miss/measure_net_moved.py, 
+.team/shot_detectors/pixel_miss/build_review_page.py,
+ai_bridge.py run_saved_v6_rule (read only), net_detector.py (read only, 
+protected).
+
+FINDING (Scott looked at the review page; Claude Code checked it, 2026-10-29)
+Scott: "The ball gets detected on its way to the rim, through the rim, after the
+rim and counts 1 make and 2 misses."
+Meaning: the v6 rule sees the ball cross the rim, then tests on the frames AFTER
+the rim throw the make out.
+
+Rule rejection reason for each of the 19 missed makes (from run_saved_v6_rule 
+details):
+- Crossing seen, then rejected by an after-rim test: 12
+  column_ratio_low 4 (missed_make_02, 05, 12, 16), ball_went_up 2 (04, 07), 
+ball_box_jump 2 (14, 18),
+  ball_bounces_up veto 1 (08), ball_starts_well_below 1 (09), short_net_depth 1 
+(13), sideways_drift veto 1 (17)
+- No crossing seen at all (no_valid_crossing): 7 (01, 03, 06, 10, 11, 15, 19). 
+missed_make_11 has zero ball points.
+
+Same reasons over all 140 tagged shots (Notus A1 Q1 31 + Adrian Q1-Q3 109), 
+rule-rejected shots only:
+reason                 real_makes real_misses
+no_valid_crossing           7          41
+column_ratio_low            4          13
+short_net_depth             1           7
+ball_starts_well_below      1           7
+ball_box_jump               2           6
+ball_went_up                2           4
+short_track_left_net        0           5
+ball_bounces_up             1           3
+tracker_swap_bodd_ball      0           3
+sideways_drift              1           1
+(file: 
+C:\Users\scott\Documents\Liberty_Shot_Outputs\rejection_reason_tally_2026-10-29.
+txt)
+
+So every after-rim test rejects more real misses than makes. Loosening or 
+removing a test is NOT allowed
+(Golden Rule: no looser cutoffs) and would create false makes. Current: 0 false 
+makes; keep it 0.
+
+Claude Code's reading: after the rim, the ball tracker is unreliable (jumps to 
+heads, loses the ball in the net,
+follows the rebound). Example: missed_make_08 (Adrian t=342800, #51 Peterson) 
+shows the ball visibly in the net
+with no tracker point. A separate check is needed that looks only at the net 
+region directly under the rim in the
+few frames after the ball reaches the rim, and asks "is the ball inside the net"
+- independent of where the tracker
+jumps later. Step 1 already showed net_moved_after_shot as-is is not usable 
+(6/19 makes, fires on 38/93 misses).
+
+PLAN REQUIREMENTS
+1. Plan a NEW read-only measurement for this net check, as Task 1 step 3, in 
+.team/shot_detectors/pixel_miss/.
+   It must NOT edit ai_bridge.py, net_detector.py or any protected core file, 
+and must not change any cutoff.
+2. State exactly what pixels/region it reads (in image pixels, relative to 
+hoop_x, hoop_y, hoop_w from the tracks),
+   which frames (offsets from the crossing frame or rim-arrival frame; absolute 
+frame = round(t/1000*fps)+offset),
+   and what it outputs per shot. Decide how to find the "ball reached the rim" 
+frame when there is no crossing.
+3. No banned trials: no linear interpolation, ByteTrack, DeepSORT, early 
+windows, wider column, hoop recenter.
+   No hard-coded results. applied_to_core stays false.
+4. Measure it on the same 140 tagged shots and report: of the 19 missed makes 
+how many it catches, and on how many
+   of the real misses it fires. Success bar for even considering it: fires on 0 
+real misses. Write results to
+   C:\Users\scott\Documents\Liberty_Shot_Outputs\ (outside the repo; repo is 
+public). No images in the repo.
+5. Holdout answer keys are never opened. The live film_analysis.db is not 
+touched.
+6. Coder is Cursor in its WSL sandbox (Linux python3 has cv2 and numpy; cannot 
+run the Windows .venv; cannot write
+   outside the workspace) - plan outputs it can write in 
+.team/shot_outputs_test/ and Claude Code reruns with the venv.
+7. Reuse the review page's crops/hoop box so Scott can see what the check saw 
+(he liked the photos and boxes).
+8. List the files the coder may create (only new files). Keep the plan short and
+concrete.
+
+At the top write: "PLAN - NOT BUILT OR MEASURED YET".
+📖 Read AUTHORITY.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+📖 Read ACTIVE.md  0.2s
+📖 Read 13_shot_work_order_plan.md  0.2s
+📖 Read 14_missed_makes_diagnosis_plan.md  0.3s
+📖 Read measure_net_moved.py  0.3s
+📖 Read build_review_page.py  0.3s
+📖 Read ai_bridge.py  0.3s
+📖 Read net_detector.py  0.2s
+🔎 Find 15_net_check_plan\.md  2.8s
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/15_net_check_plan.md
+│ .team/specs/15_net_check_plan.md
+│ @@ -0,0 +1,257 @@
+│ +PLAN - NOT BUILT OR MEASURED YET
+│ +
+│ +---
+│ +
+│ +# Net Check Plan — Task 1 Step 3: Post-Rim Net Region Read-Only Measurement
+│ +
+│ +**Author:** Hermes (Architect)  
+│ +**Date:** 2026-10-29  
+│ +**Status:** Plan for Vetted implementation  
+│ +**Gate:** Must pass Vetter review before OpenCode/Cursor implements
+│ +
+│ +---
+│ +
+│ +## 1. Purpose
+│ +
+│ +The v6 rule (`run_saved_v6_rule` in `ai_bridge.py`) sees the ball cross the rim on 12 of 19 missed makes but then rejects them on **after-rim tests** (column_ratio_low, ball_went_up, ball_box_jump, ball_bounces_up, ball_starts_well_below, short_net_depth, sideways_drift). On the other 7 missed makes, **no_valid_crossing** is found at all (missed_make_11 has zero ball points).
+│ +
+│ +The tracker is unreliable after the rim: it jumps to heads, loses the ball in the net, follows the rebound. `net_moved_after_shot` as-is (Step 1) catches 6/19 missed makes but fires on 38/93 misses.
+│ +
+│ +**This step adds a separate, read-only check that looks only at the net region directly under the rim in the few frames after the ball reaches the rim, and asks: "Is the ball inside the net?"** — independent of where the tracker jumps later.
+│ +
+│ +---
+│ +
+│ +## 2. Scope
+│ +
+│ +- **Read-only measurement only.** No edits to `ai_bridge.py`, `net_detector.py`, `models/ball_detector.pt`, `ball_confidence`, `schema.sql`, or any protected core file.
+│ +- **No cutoff changes.** The v6 rule thresholds stay exactly as they are (0 false makes must remain 0).
+│ +- **New code only** in `.team/shot_detectors/pixel_miss/` (one new file).
+│ +- **Measured on the same 140 tagged shots** (Notus A1 Q1: 31, Adrian Q1–Q3: 109).
+│ +- **Output** written to `C:\Users\scott\Documents\Liberty_Shot_Outputs\net_check/` (outside repo).
+│ +- **Sandbox test run** writes to `.team/shot_outputs_test/net_check/` (never committed).
+│ +- **Reuses the review page's crops/hoop box** so Scott can see what the check saw.
+│ +
+│ +---
+│ +
+│ +## 3. What the Check Reads (Image Pixels)
+│ +
+│ +All coordinates are **image pixels**, relative to the saved hoop track for each shot (`hoop_x`, `hoop_y`, `hoop_w` from `v6_tracks.json`).
+│ +
+│ +### 3.1 Net Region (ROI)
+│ +
+│ +From `net_detector.py:_net_box` (line 459):
+│ +- **x-range:** `hoop_x ± 1.1 × rim_r` where `rim_r = hoop_w / 2`
+│ +- **y-range:** `hoop_y + 0.25 × rim_r` to `hoop_y + 2.8 × rim_r`
+│ +
+│ +This is a column under the rim: width ≈ `2.2 × rim_r`, height ≈ `2.55 × rim_r`.
+│ +
+│ +### 3.2 Frames to Sample
+│ +
+│ +Let **peak_frame** = the absolute video frame where the ball *reaches the rim*:
+│ +- For shots **with a crossing**: the crossing frame (ball goes from above to below `hoop_y` within 0.55 × `hoop_w`).
+│ +- For shots **without a crossing** (`no_valid_crossing`): the frame of the closest ball point to `(hoop_x, hoop_y)` in the saved track (same as `peak_from_track` logic in `measure_net_moved.py` line 172–176).
+│ +
+│ +Sample **5 frames after the peak frame**: `peak_frame + 1, +2, +3, +4, +5`.
+│ +
+│ +**Rationale:** The ball passes through the rim and enters the net in ~1–3 frames at 25 fps. Sampling 5 frames after peak captures the ball in the net before the tracker loses it or jumps away.
+│ +
+│ +### 3.3 What to Measure Per Frame
+│ +
+│ +For each of the 5 frames, within the net ROI:
+│ +1. **Orange pixel count** — HSV range for the ball (red/orange: hue 0–14 or 165–180, sat > 70, val > 70). Count pixels in the ROI matching this.
+│ +2. **White/gray pixel count** — HSV range for the net (white: sat < 60, val > 155; gray: sat < 55, val 70–190). Count pixels in the ROI matching this.
+│ +3. **Orange/white ratio** — `orange_px / max(1, white_px + gray_px)`.
+│ +
+│ +**Output per shot:** a JSON object with:
+│ +```json
+│ +{
+│ +  "t": 342800,
+│ +  "film": "adrian",
+│ +  "peak_frame": 8573,
+│ +  "has_crossing": true,
+│ +  "frames": [
+│ +    {"frame": 8574, "orange_px": 120, "white_px": 450, "gray_px": 320, "orange_ratio": 0.16},
+│ +    {"frame": 8575, "orange_px": 95,  "white_px": 480, "gray_px": 350, "orange_ratio": 0.12},
+│ +    {"frame": 8576, "orange_px": 60,  "white_px": 500, "gray_px": 380, "orange_ratio": 0.07},
+│ +    {"frame": 8577, "orange_px": 15,  "white_px": 520, "gray_px": 400, "orange_ratio": 0.02},
+│ +    {"frame": 8578, "orange_px": 5,   "white_px": 530, "gray_px": 410, "orange_ratio": 0.01}
+│ +  ],
+│ … omitted 179 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Created .team/specs/15_net_check_plan.md with the full plan for Task 1 Step 3.
+
+Summary of the plan:
+- New read-only measurement in .team/shot_detectors/pixel_miss/net_check.py — no edits to protected files, no cutoff changes
+- Net ROI from net_detector.py:_net_box: hoop_x ± 1.1×rim_r, hoop_y + 0.25×rim_r to +2.8×rim_r
+- 5 frames after peak (crossing frame or closest-ball frame for no-crossing shots)
+- Measures: orange/white/gray pixel counts in HSV, computes orange_ratio per frame
+- Reports on 140 build shots: how many of the 19 missed makes have max_orange_ratio ≥ 0.08, and must fire on 0 real misses at that threshold to even consider it
+- Outputs to C:\Users\scott\Documents\Liberty_Shot_Outputs\net_check/ with crops reusing review page layout- Only new files: net_check.py, config.yaml, README.md in .team/shot_detectors/pixel_miss/
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-487784a305ae64aae1e617ab76f1b50f2a6c4a7c58b02a29a06464b9231a3ae9
+  hermes -c "Plan net check for missed makes diagnosis"
+
+Session:        local-487784a305ae64aae1e617ab76f1b50f2a6c4a7c58b02a29a06464b9231a3ae9
+Title:          Plan net check for missed makes diagnosis
+Duration:       2m 45s
+Messages:       16 (1 user, 14 tool calls)

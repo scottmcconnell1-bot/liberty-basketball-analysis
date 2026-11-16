@@ -1,0 +1,20 @@
+You are the Coder. Implement spec 40 (.team/specs/40_free_throw_half_circle_spec.md). Claude Code's block Q1-Q9 at the top OVERRIDES the Hermes text below it. Muse AGREE. Settings are fixed in Q1-Q9; add no other number.
+
+Files: NEW .team/shot_detectors/ft_half_circle.py; edit .team/shot_detectors/rim_first_finder.py, .team/shot_detectors/rim_first_measure.py (ft section only), .team/shot_detectors/test_rim_first.py (or new test_ft_half_circle.py). Nothing else. stage1b_court_lines.py and its yaml are imported/read only (sys.path insert of .team/stage1b_frozen_0943). Do not commit. Do not run video or models in tests. Shot calls, make/miss, hoop steps, the trace and spec 39 fixes unchanged; FT step is behind a flag (--ft on by default in retrace when --video and --gym are given; --ft-off reproduces run39b exactly).
+
+ft_half_circle.py (pure functions where possible, each number a named constant with "spec 40 Q<n>, fixed by Claude Code 2026-11-06"):
+- stillness(players_by_frame, trigger, fps) -> median player move per second over [trigger-3000ms, trigger-1000ms] (Q1); is_still(...) uses STILL_MOVE_MAX 0.15.
+- candidates(...) Q2.
+- region_for(player_box) Q2 (REGION_HALF 2.0 x box h, clipped to frame).
+- paint_in_region(frame, region, gym, cfg) via build_paint_mask (Q3).
+- remove_straight(mask, cfg, player_h, width) Q4 (HoughLinesP yaml params, erase segments longer than 1.0 x player_h).
+- ransac_ellipse(points, width, player_h, rng) Q4 (300 tries, Random(40), 5-point cv2.fitEllipse, inlier distance 3 px x width/1280, accept inliers >= 40, major in [1.2, 4.0] x player_h, minor/major >= 0.15). Use a closed-form or sampled point-to-ellipse distance; document it.
+- feet_inside(ellipse, boxes) Q5; decide_ft(...) Q5 returning {free_throw, ft_shooter_box, ft_reason}.
+- debug_image(frame, region, mask, ellipse, boxes, path) for Q7.
+rim_first_finder.py: retrace gains --video, --gym, --ft-off, --ft-debug-dir. For each moment: if is_still, read that one frame (nearest trigger-1000 ms), run decide_ft; free_throw true -> override status found, shooter_box, floor_spot (bottom-centre), shooter "found", shooter_reason "free_throw_half_circle", keep the old trace pick in "trace_shooter_box"; still and no ellipse -> status orange, reason "ft_circle_not_found"; else unchanged. Every moment gets "free_throw" (bool) and "ft_reason". Live detect_span calls the same step (it has the frames).
+--ft-debug-moments "t1,t2,..." writes debug images only for those moments to --ft-debug-dir (refuse if exists) and nothing else, so Claude Code can do the Q7 mask check first.
+rim_first_measure.py: "ft" section - free_throw flags vs FT tags (matched moments: FT tag & flag = found, FT tag & no flag = missed, non-FT tag & flag = false), orange ft_circle_not_found count, list of flagged moments (t_ms, tag eventtype).
+Tests (hand-made arrays, no video): stillness on still vs moving boxes; region clip; straight-line removal keeps an arc; RANSAC finds a drawn ellipse (cv2.ellipse on a blank mask) with a straight line added, rejects pure lines/noise; feet_inside counts; decide_ft: one inside -> ft; two inside -> no flag; none -> no flag; not still -> untouched; --ft-off retrace equals input trace on a tiny tmp run.
+Run and print exact command + result (python3 if .venv cannot run):
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q   (+ test_ft_half_circle.py if you made it)
+End with functions added/changed and choices not spelled out.

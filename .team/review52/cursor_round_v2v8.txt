@@ -1,0 +1,60 @@
+### ITEM 1 — 52a v2
+
+Most O1–O5 fixes are in: paths, notus=0 from 48b + far-from-tag source, GAP=8000, clips7 exact match, session_filter/omit/HSB 2631233 accepted, D1 honesty.
+
+**Counts are wrong.** Recomputed with `in_session(..., is_ft=True)` + coach shot tags:
+
+| set | adrian | notus |
+|---|---|---|
+| y=-1 | 45 | 9 |
+| out-of-session | **6** | 0 |
+| in-session | **39** (not 45) | 9 |
+| far ≥8 s (all y=-1) | **26** | **6** |
+| far ≥8 s (in-session only) | **20** | 6 |
+
+**Overlap:** all 6 adrian oos are also far≥8 s → oos ⊂ far. Unique restore = **26**, not 6+26=32. Train pool = **277**, not 283. Notus 6 is correct.
+
+Buildable after that arithmetic is fixed; wiring is pinned but not coded yet (fine for a prereg).
+
+### ITEM 2 — spec 53 v8
+
+v7 (`ft_next`, 253 unknown OK) kept. Scott item 5 applied: `rotate_hands` + `violation_travel`; rimrock:77 must be `violation`. Both are pure-function codeable (lock the “~” constants at build). No material pass-bar vs rule conflict left (253 still passes via v7 unknown).
+
+CURSOR 52a: DISAGREE: adrian 6+26 double-counts (oos ⊂ far; unique class-0=26; train pool 277 not 283; fix “in-session n=45”→39) before freeze/train  
+CURSOR: AGREE
+eg). Today: postproc52 still false; shot_list has no session filter. |
+| HSB t=2631233 | Accepted in writing; Proven out of session (gap 2624000–2712000); label y=1. |
+| D1 honesty | Applied: YES mechanism / NOT certainty; Item 2 main lever on gvg checks. |
+
+**Recomputed GAP=8000 / session counts (Proven):**
+
+- adrian y=-1 n=45; out-of-session (is_ft=True)=**6**; in-session=**39** (Hermes’s “in-session n=45” is false).
+- adrian far (min|t−coach_shot|≥8000): on **all** y=-1 → **26**; on **in-session only** → **20**.
+- **Overlap:** all 6 oos are also far≥8s (dists 47.8–176 s). oos ⊂ far_all.
+- Unique class-0 under (i)∪(ii): **26**, not 6+26=**32**.
+- notus: oos=0; far≥8s=**6**; unique=**6**. (≥15s→4; ≥30s→1.)
+- Post-restore class-0 should be: adrian **26**, notus **6**, hsb **4**, gvg 145, rimrock 241.
+- Hold-out-gvg train class-0: 241+4+26+6=**277** (not 283).
+- Remaining -1: adrian 19, notus 3 (those stay numbers match; the 32 arithmetic does not).
+- Coach tags oos: adrian 0/127, notus 0/31. HSB 2631233 oos confirmed.
+
+**Buildable?** Not until the frozen expected counts drop the double-count. Rule + wiring + paths + notus source + omit/HSB/D1 honesty are otherwise ready.
+
+### ITEM 2 — spec 53 v8
+
+v7 asks applied: ft_next on fouled_miss (and and_one); 253 pass = waved_off OR unknown.
+v8 Scott item 5 applied: `rotate_hands` DETECTABLE (wrist trajectory); `violation_travel` boolean;
+rimrock:77 must `violation` (unknown no longer OK for 77); fist/thumbs/fingers stay not pose-claimable.
+
+**Codeable as pure functions?** Yes. `rotate_hands` = boolean over wrist/shoulder/hip keypoint time series
+(chest band, separation &lt; 1× shoulder width, opposite-phase cycle ≥1 within 2 s — lock the “~” as fixed
+constants at build). `violation_travel` = `arm_raised` then `rotate_hands` within 2 s + timing window +
+`play_stopped`. Fusion table otherwise boolean with precedence.
+
+**Remaining pass-bar vs rule conflict?** None material. 77 conflict resolved by DETECTABLE rotate_hands.
+253: no-score → `unknown`; v7 rule stays (unknown passes). Example list still says “253 waved off” but
+status pins “v7 stays” — non-blocking.
+
+CURSOR 52a: DISAGREE: adrian 6+26 double-counts (oos ⊂ far; unique class-0=26; train pool 277 not 283; fix “in-session n=45”→39) before freeze/train
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 17:06:31

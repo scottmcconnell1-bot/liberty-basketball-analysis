@@ -1,0 +1,1 @@
+1b08c4dc73f4c73843bd8524a95f5bd8dcf3580838c475f86cfacabf7b390f35 *specs/52a_class0_restore_prereg.md

@@ -1,0 +1,188 @@
+Query: You are HERMES, the architect. Revise 
+.team/specs/52c_first_shot_sequence_prereg.md to v2 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Muse and Cursor both returned AGREE WITH CHANGES (review52/muse_spec52c.txt, 
+review52/cursor_spec52c.txt). Apply ALL of:
+1. F1: postproc52b.json = postproc52a keys + "review": 
+{"extras_require_seed_disagreement": true}; postproc52/52a key absent (flat band
+kept). Step 2 includes the 52b shot_list change (extras only if 
+seed_disagreement(PM,i)) + 52b tests; delete "shot_list UNCHANGED".
+2. F3: seq_follower computed PER FILM over that film's full candidate T (incl. 
+-1/0 rows), never across films; window (t, t+6000] inclusive end, and the test 
+line matches.
+3. F4: Dropout(0.5) on 512-d pool only, then concat seq (never dropped); seq 
+float32 0/1, no scaling; head Linear(513,3); old 512 checkpoints incompatible; 
+seq=None -> zeros only for new models.
+4. F5: soften 6000 ms wording: round possession bound, happens to cover all 3 
+gaps (4000 would not cover rimrock 5233), not tuned from silent P or gate 
+numbers.
+5. F2: disclose the confound (flag fires on 13-47% of candidates incl. scramble 
+non-shots). Decide in-session-only YES or NO yourself, state one reason not from
+results.
+6. sha file: .team/review52/spec52c_v2_sha.txt.
+Mark v2 at top. End with "HERMES: PREREG V2 WRITTEN".
+📖 Read 52c_first_shot_sequence_prereg.md  0.5s
+✗ Read muse_spec52c.txt  0.5s [File not found: muse_spec52c.txt]
+✗ Read cursor_spec52c.txt  0.5s [File not found: cursor_spec52c.txt]
+
+────────────────────────────────────────
+☤ Hermes
+The review files aren't at those paths — they're likely under .team/review52/. Let me look at the directory structure.
+────────────────────────────────────────
+
+🔎 Find review52  3.3s
+🔎 Find spec52c|muse_spec|cursor_spec  1.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ 2>/dev/null + 1 command  0.4s
+
+────────────────────────────────────────
+☤ Hermes
+Found them — they're under .team/review52/. Let me read both reviews plus the current v2 drafts that exist.
+────────────────────────────────────────
+
+📖 Read muse_spec52c.txt
+📖 Read cursor_spec52c.txt
+📖 Read hermes_spec52c.txt
+📖 Read spec52c_v1_sha.txt
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read the supporting specs and code files referenced by the reviews.
+────────────────────────────────────────
+
+📖 Read postproc52a.json
+📖 Read postproc52.json
+📖 Read 52b_check_rule_prereg.md
+📖 Read prompt_hermes_spec52c_v2.txt
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the coordinator's v2 draft and the key code files to keep the spec consistent with reality.
+────────────────────────────────────────
+
+📖 Read hermes_spec52c_v2.txt
+📖 Read train_clip.py
+📖 Read ensemble_predict.py
+📖 Read test_mm52.py
+
+────────────────────────────────────────
+☤ Hermes
+I have everything needed. The review files were at .team/review52/. Now I'll write the v2 spec, applying all six required changes to the spec file only.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md
+│ .team/specs/52c_first_shot_sequence_prereg.md
+│ @@ -1,4 +1,4 @@
+│ -# Spec 52C - First-Shot-of-Sequence Model Fix (PRE-REGISTERED) v1
+│ +# Spec 52C - First-Shot-of-Sequence Model Fix (PRE-REGISTERED) v2
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-15
+│ @@ -7,8 +7,9 @@
+│
+│  ## Status
+│
+│ -PRE-REGISTERED (v1). The change set below is frozen BEFORE any code change or training.
+│ -This is the binding pre-registration for the first-shot-of-sequence model fix.
+│ +PRE-REGISTERED (v2). The change set below is frozen BEFORE any code change or training.
+│ +This is the binding pre-registration for the first-shot-of-sequence model fix, combined
+│ +with spec 52b (check rule) in ONE re-gate using postproc52b.json.
+│
+│  ## Binding decision (Scott, 2026-11-15)
+│
+│ @@ -94,13 +95,13 @@
+│  Definition: a real shot row (y in {1,2}) with another real shot row within N s after it
+│  (same film, labels alone, no model output). Counts per film:
+│
+│ -| N after first shot | adrian /121 | notus /30 | gvg /218 | hsb /140 | rimrock /123 | TOTAL /632 |
+│ -|---|---|---|---|---|---|---|
+│ -| 2000 ms | 2 | 1 | 14 | 9 | 8 | 34 |
+│ -| 4000 ms | 6 | 3 | 22 | 13 | 16 | 60 |
+│ -| 6000 ms | 13 | 3 | 32 | 23 | 21 | 92 (~15%) |
+│ -| 8000 ms | 17 | 5 | 44 | 29 | 22 | 117 |
+│ -| 10000 ms | 25 | 7 | 56 | 34 | 25 | 147 |
+│ +|| N after first shot | adrian /121 | notus /30 | gvg /218 | hsb /140 | rimrock /123 | TOTAL /632 ||
+│ +||---|---|---|---|---|---|---|---||
+│ +|| 2000 ms | 2 | 1 | 14 | 9 | 8 | 34 ||
+│ +|| 4000 ms | 6 | 3 | 22 | 13 | 16 | 60 ||
+│ +|| 6000 ms | 13 | 3 | 32 | 23 | 21 | 92 (~15%) ||
+│ +|| 8000 ms | 17 | 5 | 44 | 29 | 22 | 117 ||
+│ +|| 10000 ms | 25 | 7 | 56 | 34 | 25 | 147 ||
+│
+│  - First-of-sequence shots are ~15% of all training shot rows at N=6000 ms - not rare;
+│    they are just INVISIBLE to the clip model because the follow-up shot is outside the
+│ @@ -136,23 +137,28 @@
+│  - SEQ_WINDOW_MS = 6000 (6 s). Reason: a putback / second shot is the same possession's
+│    rebound-and-putback, which resolves within a few seconds; a gap greater than 6 s is a
+│    new possession, not the 2-shot sequence. 6000 ms is a round upper bound on continuous
+│ -  possession action. It is NOT chosen to include or exclude the 3 observed gaps
+│ -  (1160 / 2600 / 5233 ms) and NOT chosen from any gate number.
+│ +  possession action and happens to cover all three observed gaps (1160 / 2600 / 5233 ms);
+│ +  4000 ms would not cover rimrock's 5233 ms. It is NOT chosen to include or exclude the
+│ +  3 gaps and NOT chosen from any silent P value or gate number.
+│  - seq_follower(t) = 1.0 iff another candidate moment exists with t_ms in
+│ -  (t, t + 6000], else 0.0. Computed from candidate t_ms only:
+│ -  - Train: from the clips npz t_ms array (already in clips7a, unchanged).
+│ -  - Predict: from the candidate moment T array.
+│ -  Identical computation at train and predict; NO labels used; no label peeking.
+│ -- Float32 (B, 1), 0.0/1.0.
+│ +  (t, t + 6000] (inclusive end), else 0.0. Computed PER FILM over that film's full
+│ +  candidate T (incl. -1/0 rows), never across films:
+│ +  - Train: from the clips npz t_ms array, one npz / Fm == f (full film T for follower
+│ +    lookup even though the loss mask drops Y < 0).
+│ +  - Predict: from the candidate moment T, one film at a time.
+│ +  Identical computation at train and predict; NO labels used; no label peeking;
+│ +  cross-film concat is forbidden (it invents false followers).
+│ +- Float32 (B, 1), 0.0/1.0, no scaling.
+│
+│  ### 2.2 Model (PINNED NOW)
+│
+│  - Backbone: torchvision r2plus1d_18 (Kinetics-400 pretrained), fine-tuned end to end -
+│    UNCHANGED.
+│ -- Head: global pooled 512-d features concatenated with seq_follower ->
+│ -  nn.Linear(513, 3); nn.Dropout(0.5) before the head UNCHANGED.
+│ -- forward(x, seq): x = (B,3,T,H,W) normalised clip; seq = (B,1) float32 flags;
+│ -  pooled features concat seq -> head.
+│ +- Head: global pooled 512-d features -> nn.Dropout(0.5) applied to the pool ONLY;
+│ +  seq_follower concatenated AFTER dropout (never dropped); nn.Linear(513, 3).
+│ +- forward(x, seq): x = (B,3,T,H,W) normalised clip; pooled 512-d features concat seq
+│ +  (B,1) float32 flags -> head.
+│ +- Old Linear(512, 3) checkpoints are INCOMPATIBLE with the new 513 head.
+│  - All R4 recipe hyperparameters UNCHANGED: bf16 autocast without GradScaler;
+│    WeightedRandomSampler w = 1/max(cnt,1); plain CE + label_smoothing 0.05 (no class
+│    weights); soft augmentation; lr 2e-4, bs 8, AdamW wd 0.05, OneCycle pct_start 0.15;
+│ … omitted 111 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Spec written. Now compute the sha256 and write the v2 sha file as required (item 6), then verify key content landed.
+────────────────────────────────────────
+
+💻 $ sha256sum .team/specs/52c_first_shot_sequence_prereg.md | awk '{print $1 " *specs/52c_first_shot_sequence_prereg.md"}' | tee .team/review52/spec52c_v2_sha.txt + 1 command  0.1s
+💻 $ grep -n -E 'v2|extras_require_seed_disagreement|seed_disagreement|PER FILM|inclusive|Linear\(513|Dropout\(0.5\)|512 checkpoints|zeros for new|4000 would not cover|13-47%|In-session-only|spec52c_v2_sha|shot_list|PREREG V2' .team/specs/52c_first_shot_sequence_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. The spec is revised to v2 and the sha file is written.
+
+Changes applied to .team/specs/52c_first_shot_sequence_prereg.md:
+
+- v2 marked at top; ends with HERMES: PREREG V2 WRITTEN.
+- F1: postproc52b.json = postproc52a keys + "review" with "extras_require_seed_disagreement": true; postproc52/postproc52a keep flat band (key absent). Step 2 now includes the shot_list change (extras only if seed_disagreement(PM, i)) plus 52b tests; the shot_list UNCHANGED line is deleted.
+- F3: seq_follower computed per film over that film's full candidate T (incl. -1/0 rows), never across films; window (t, t+6000] inclusive end; test line asserts flag at t+6000, none at t+6001.
+- F4: Dropout(0.5) on the 512-d pool only, concat seq after dropout (never dropped); seq float32 0/1 no scaling; head Linear(513,3); old 512 checkpoints incompatible; seq=None -> zeros for new 513 models only.
+- F5: 6000 ms softened — round possession bound, happens to cover all 3 gaps (4000 misses rimrock's 5233), not tuned from silent P or gate numbers.
+- F2: confound disclosed (flag fires ~13-47% of candidates incl. scramble -1/0 non-shots; gvg most flagged rows are non-shots). In-session-only: NO — reason not from results: session.json isn't a frozen input of this spec and is unavailable for rimrock (None), so gating on it would make the flag film-dependent and add an unfrozen external dependency.
+- sha: .team/review52/spec52c_v2_sha.txt written with f5b4d5df1cc3538990ea762a5cd9c57352fa3da31ab5a798260714becbc96817 *specs/52c_first_shot_sequence_prereg.md.
+
+Only the spec file was touched; no code, tests, or postproc JSON were created or modified (this is the pre-registration freeze step).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-3fddf8e252742fee7adb99704c44f1fdf684996144a3209019ece5ee72ae6d03
+  hermes -c "Revise spec 52c to v2"
+
+Session:        local-3fddf8e252742fee7adb99704c44f1fdf684996144a3209019ece5ee72ae6d03
+Title:          Revise spec 52c to v2
+Duration:       4m 39s
+Messages:       33 (1 user, 31 tool calls)
+[hermes] exit 0 at 12:43:45

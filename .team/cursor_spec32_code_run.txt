@@ -1,0 +1,22 @@
+Done on `team/auto`. Not committed.
+
+**Files**
+- `.team/shot_detectors/find_shots_measure.py` — pure `match_shots` / `match_shot_indices` / `summarize` / `span_bounds` / `filter_by_span`; CLI reads DB `mode=ro`, tags via lazy `measure_net_moved.load_shot_tags`, reports Adrian Q1–Q3 / Adrian Q4 / Notus Q1 × kind × generator (+ all); scoreboard rises from `pairs_results.json` vs MAKE tags (else `not measured`); refuses existing `--out-dir`
+- `.team/shot_detectors/test_find_shots_measure.py` — exact / inside / outside window, two-finder / one-finder ties, empty, span filter, summary maths
+
+**Proven**
+- `python3 -m pytest .team/shot_detectors/test_find_shots_measure.py -q` → **8 passed**
+- Smoke load: Adrian 229 finder rows (`precision`/`rim_arc`/`tagged_gap`), 127 tags; Q1–Q3 all→all found 87/109
+- No core imports in this module (window hard-coded `8000` with comment naming `manual_tag_teach.py`)
+
+**Test command**
+```text
+.venv/Scripts/python.exe -m pytest .team/shot_detectors -q
+```
+(Under WSL here, `.venv/Scripts/python.exe` failed interop; system `python3` ran the new tests. Full `.team/shot_detectors` collection still hits pre-existing `q4_blind_test.py` → missing `ultralytics`.)
+
+**Run measure** (when wanted; refuses if out dir exists):
+```text
+.venv/Scripts/python.exe .team/shot_detectors/find_shots_measure.py --db film_analysis.db
+````find_shots_measure` is on `team/auto` (uncommitted): the measure script + pure tests, **8 passed**. Ready for Claude Code to vet whenever you want.
+[cursor_wsl] exit 0 at 20:30:35

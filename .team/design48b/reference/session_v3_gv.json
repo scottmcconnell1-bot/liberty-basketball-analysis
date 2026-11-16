@@ -1,0 +1,130 @@
+{
+ "L": 420,
+ "periods": [
+  {
+   "start_ms": 83000,
+   "end_ms": 827000,
+   "stops": 14,
+   "end": "z",
+   "n_in_game": 1
+  },
+  {
+   "start_ms": 929000,
+   "end_ms": 1630000,
+   "stops": 10,
+   "end": "z",
+   "n_in_game": 2
+  },
+  {
+   "start_ms": 2100000,
+   "end_ms": 2779000,
+   "stops": 9,
+   "end": "z",
+   "n_in_game": 3
+  },
+  {
+   "start_ms": 2863000,
+   "end_ms": 3516000,
+   "stops": 7,
+   "end": "z",
+   "n_in_game": 4
+  },
+  {
+   "start_ms": 4165000,
+   "end_ms": 4746000,
+   "stops": 8,
+   "end": "z",
+   "n_in_game": 1
+  },
+  {
+   "start_ms": 4826000,
+   "end_ms": 5447000,
+   "stops": 10,
+   "end": "z",
+   "n_in_game": 2
+  },
+  {
+   "start_ms": 5889000,
+   "end_ms": 6834000,
+   "stops": 13,
+   "end": "z",
+   "n_in_game": 3
+  },
+  {
+   "start_ms": 6913000,
+   "end_ms": 7738000,
+   "stops": 14,
+   "end": "z",
+   "n_in_game": 4
+  }
+ ],
+ "intervals": [
+  {
+   "start_ms": 83000,
+   "end_ms": 827000
+  },
+  {
+   "start_ms": 929000,
+   "end_ms": 1630000
+  },
+  {
+   "start_ms": 2100000,
+   "end_ms": 2779000
+  },
+  {
+   "start_ms": 2863000,
+   "end_ms": 3516000
+  },
+  {
+   "start_ms": 4165000,
+   "end_ms": 4746000
+  },
+  {
+   "start_ms": 4826000,
+   "end_ms": 5447000
+  },
+  {
+   "start_ms": 5889000,
+   "end_ms": 6834000
+  },
+  {
+   "start_ms": 6913000,
+   "end_ms": 7738000
+  }
+ ],
+ "ft_windows": [
+  {
+   "start_ms": 827000,
+   "end_ms": 832000
+  },
+  {
+   "start_ms": 1630000,
+   "end_ms": 1636000
+  },
+  {
+   "start_ms": 2779000,
+   "end_ms": 2783000
+  },
+  {
+   "start_ms": 3516000,
+   "end_ms": 3530000
+  },
+  {
+   "start_ms": 4746000,
+   "end_ms": 4750000
+  },
+  {
+   "start_ms": 5447000,
+   "end_ms": 5460000
+  },
+  {
+   "start_ms": 6834000,
+   "end_ms": 6838000
+  },
+  {
+   "start_ms": 7738000,
+   "end_ms": 7756000
+  }
+ ],
+ "error": null
+}

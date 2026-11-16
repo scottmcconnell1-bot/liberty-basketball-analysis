@@ -1,0 +1,33 @@
+Query: MUSE CHECK (read only; do not edit anything). Repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+Read .team/specs/25_doublecount_and_player_motion_spec.md (v2, VETTED by Claude 
+Code, line 2) and the rejected v1 
+(.team/specs/25_doublecount_and_player_motion_spec_v1_REJECTED.md).
+Scott 2026-11-02 asked for: (1) the double-count fix (a miss at Adrian 0:39.4 
+borrowed the next shot's make at 0:41.9) and (2) a measurement of player 
+movement after each shot (Scott saw players chase rebounds after misses and run 
+back after makes).
+Check against the rules: no core file edit; models/ and ball_confidence 0.28 
+unchanged; applied_to_core false; no looser cutoff; no banned trial (linear 
+interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter) 
+- in particular, does part 2 avoid tracking players across frames?; fix only 
+removes frames; pass rules fixed before any run; Adrian Q4 not used to design; 
+measurement changes no call; outputs never overwrite.
+End with ONE line that starts exactly "MUSE: AGREE" or "MUSE: DISAGREE: 
+<reason>".
+📖 Read 25_doublecount_and_player_motion_spec.md  0.1s
+📖 Read 25_doublecount_and_player_motion_spec_v1_REJECTED.md
+
+────────────────────────────────────────
+☤ Hermes
+MUSE: AGREE: v2 fixes all v1 rejections (correct baselines with measured 28/29/5/0 Q4; removes pixel_miss edit and tracking measures; fixes pass criteria; uses default-OFF --double-count-cut; applied_to_core false; only frame removal; part 2 explicitly no cross-frame player tracking — "Players are NOT matched across frames"; no banned trial used; 5/140 misses counted; Q4 not used for design; output refusal logic present; outputs to separate player_motion/ folder; no model/cutoff/core-file changes).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-3115e7b10e6aa323b79da9108e154dc678a24ac34338daccf0dc02c5d14a3378
+  hermes -c "Verify double count and motion spec compliance"
+
+Session:        local-3115e7b10e6aa323b79da9108e154dc678a24ac34338daccf0dc02c5d14a3378
+Title:          Verify double count and motion spec compliance
+Duration:       11s
+Messages:       6 (1 user, 4 tool calls)

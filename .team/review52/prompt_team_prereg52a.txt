@@ -1,0 +1,19 @@
+TEAM REVIEW - .team/specs/52a_class0_restore_prereg.md v1 (Hermes). READ-ONLY: do not edit or create files except
+your own reply. Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott (binding): proposal (a) approved; the re-gate on the SAME 5 LOGO games (R6 unchanged) is binding pass/fail.
+Nothing is trained until Muse and Cursor agree. Context: review52/{hermes,muse,cursor}_gate52.txt, drift_log.md tail.
+CLAUDE CODE OBSERVATIONS (verify, do not take on trust):
+O1 Output/session paths are written /mnt/c/Users/Documents/... (missing "scott") - wrong paths.
+O2 Size of the fix: adrian class 0 after restore = 6, notus 9, hsb count not given. 48b dropped only 8/136 adrian
+   and 0/36 notus finder moments as out-of-session. With gvg held out, class 0 would still be ~241 rimrock + ~15
+   others. Does this actually fix D1 (seeds 0/2 calling 113-137/145 GV not-shots a shot)? Notus "restore
+   not-a-shot candidates" has no stated source (48b dropped 0 notus moments) - where do its 9 come from?
+O3 Are the out-of-session candidates even in the clips (clips7 built from in-session cand5)? If new clips are
+   needed, the extract step and t_ms source must be pinned.
+O4 Predict-time filter: does gate52 scoring drop filtered candidates as "not a shot" (counts against recall if a
+   real shot is filtered) - state it. Rimrock/hsb session availability correct?
+O5 Any alternative within (a) that adds enough multi-gym class 0 without peeking (e.g. in-session untagged
+   candidates on Adrian/Notus that sit far from any coach tag, a rule fixed now)?
+Roles: MUSE = protocol (is this a real pre-registration, any peeking, does same-5 re-gate stay honest);
+CURSOR = audit (counts, files, paths, buildable; compute the real class-0 counts per film the rule yields).
+End with one line: MUSE:/CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...

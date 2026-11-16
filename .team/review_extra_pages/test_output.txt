@@ -1,0 +1,19 @@
+unchanged page rebuilds to itself: true | save bar: true Everyone with the link sees these spots and plays.
+tabs: 1 · Offense | 2 · Defense | 3 · BLOB/SLOB | 4 · Press | 5 · Press Break | 6 · Transition
+blob {"intro":"Baseline and sideline out-of-bounds play","plays":"Box 1 (3 steps), Cross (1 steps), Flob (1 steps), Triangle (2 steps), X (1 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 515","addShown":false,"kinds":"","players":5}
+  picked Box 1 {"intro":"Baseline and sideline out-of-bounds play","plays":"Box 1 (3 steps), Cross (1 steps), Flob (1 steps), Triangle (2 steps), X (1 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 515","addShown":false,"kinds":"","players":5}
+press {"intro":"Our press, from the coach's drawings. Re","plays":"12 (0 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":10}
+  picked 12 {"intro":"Our press, from the coach's drawings. Re","plays":"12 (0 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":10}
+pressbreak {"intro":"Breaking the press, full court. We inbou","plays":"Man - 4 Across (2 steps), Zone - Slash (6 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":10}
+  picked Man - 4 Across {"intro":"Breaking the press, full court. We inbou","plays":"Man - 4 Across (2 steps), Zone - Slash (6 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":10}
+transition {"intro":"Transition, full court. Pick a play and ","plays":"4 Flash (5 steps), 5-1-2 (1 steps), 5-1-2-4 (2 steps), 5-1-3 (2 steps), Finish the Cycle (4 steps), Last Leg (5 steps), Pitt 1 (2 steps), Pitt 5 (2 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":5}
+  picked 4 Flash {"intro":"Transition, full court. Pick a play and ","plays":"4 Flash (5 steps), 5-1-2 (1 steps), 5-1-2-4 (2 steps), 5-1-3 (2 steps), Finish the Cycle (4 steps), Last Leg (5 steps), Pitt 1 (2 steps), Pitt 5 (2 steps)","man":false,"zone":false,"full":true,"vb":"0 -45 500 985","addShown":false,"kinds":"","players":5}
+after Play: Cross: done. Press Play to run it again. | mid: Cross: step 1 of 1: read the lines.
+end spots match last step: 5 players; true
+offense {"intro":"Our plays against a dummy defense playin","plays":"1-Game (6 steps), 32 (4 steps), Back (2 steps), Crush (2 steps), Curl (2 steps), Double (4 steps), Flat (4 steps), Miami (zone) (3 steps), Opposite (2 steps), Pinch (2 steps), Rub (4 steps), Split (5 steps), Spread (zone) (4 steps), Triangle (zone) (4 steps), Wheel (3 steps)","man":true,"zone":false,"full":false,"vb":"0 -45 500 515","addShown":true,"kinds":"Defense:Man2-31-3-11-2-2","players":5}
+defense {"intro":"Our defense, built from the coach's spot","plays":"","man":true,"zone":false,"full":false,"vb":"0 -45 500 515","addShown":true,"kinds":"Defense:ManZone","players":5}
+after delete X: Box 1 (3 steps), Cross (1 steps), Flob (1 steps), Triangle (2 steps) | save disabled: false
+published: has X in blob: false | size 387763
+published page blob plays: Box 1 (3 steps), Cross (1 steps), Flob (1 steps), Triangle (2 steps)
+published page transition plays: 8
+errors: 0 []

@@ -1,0 +1,271 @@
+[0m
+> build · deepseek-v4.1-flash-free
+[0m
+I'll start by reading the required files.
+[0m→ [0mRead AGENTS.md
+[0m→ [0mRead TEAM_RECOVERY.md
+[0m→ [0mRead NEXT_TASK.md
+[0m→ [0mRead AUTHORITY.md
+[0m→ [0mRead AGENT_OPERATIONAL_PROTOCOL.md
+Read the protocol files and relevant source.
+[0m→ [0mRead scripts/team_score.py
+[0m→ [0mRead tests/test_team_score.py
+[0m
+[0m$ [0mls gemini-upload/notus_q1_v6_tracks.json uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 2>&1; echo "---TEMP---"; ls "$TEMP/v6_tracks.json" 2>&1; echo "---FALLBACK---"; ls "/c/Users/scott/Documents/liberty_offline_backup/temp_scoring/v6_tracks.json" 2>&1; echo "---ENV---"; echo "TEMP=$TEMP"
+gemini-upload/notus_q1_v6_tracks.json
+uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4
+---TEMP---
+/tmp/v6_tracks.json
+---FALLBACK---
+/c/Users/scott/Documents/liberty_offline_backup/temp_scoring/v6_tracks.json
+---ENV---
+TEMP=/tmp
+[0m
+[0m✗ [0mGrep "def run_saved_v6_rule|def .*results|results\[|tag_ts" failed[90m in ai_bridge.py[0m
+[91m[1mError: [0mRipgrep JSON record exceeded 65536 bytes
+[0m
+[0m$ [0m.\.venv\Scripts\python.exe -c "import os; print(os.environ.get('TEMP')); import json; rows=json.load(open('gemini-upload/notus_q1_v6_tracks.json')); print(len(rows), rows[0].keys())"
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+[0m$ [0mrg -n --max-columns 300 --max-columns-preview "^def run_saved_v6_rule|tag_ts|\"results\"|results =|results.append" ai_bridge.py | head -80
+120:        person_results = self.person_model(frame, classes=[0], verbose=False)
+149:        ball_results = self.ball_model(frame, classes=[0], verbose=False)  # Assuming ball is class 0 in custom model
+183:        tracking_results = []
+218:            tracking_results.append(TrackingData(
+241:        results = []
+265:                        results.append(make_data)
+636:        results = self.model(frame, verbose=False)
+825:        results = []
+826:        for i, (tag_ts, tag_frame) in enumerate(zip(tag_timestamps, tag_frames)):
+839:            classification['tag_timestamp_ms'] = tag_ts
+844:            results.append(classification)
+908:def run_saved_v6_rule(
+982:    results = []
+984:    for tag_ts in valid_timestamps:
+985:        is_make_true = ground_truth.get(tag_ts, False)
+987:        track = track_by_time[tag_ts]
+1292:        results.append({
+1293:            'tag_ts': tag_ts,
+[0m
+[0m→ [0mRead ai_bridge.py[90m [offset=900, limit=110][0m
+[0m→ [0mRead ai_bridge.py[90m [offset=1270, limit=70][0m
+[0m
+[0m$ [0m./.venv/Scripts/python.exe -c "import os; print(os.environ.get('TEMP')); import json; rows=json.load(open('gemini-upload/notus_q1_v6_tracks.json')); print(len(rows), list(rows[0].keys()))"
+C:\Users\scott\AppData\Local\Temp
+31 ['t', 'result', 'hoop', 'ball', 'bodd']
+[0m
+[0m$ [0mls uploads/nfhs_gam0a66d85e12.mp4 2>&1; ./.venv/Scripts/python.exe -c "import json,os; p=os.path.join(os.environ['TEMP'],'v6_tracks.json'); rows=json.load(open(p)); print(len(rows)); print(sum(1 for r in rows if r.get('hoop') and len(r['hoop'])==4))"
+uploads/nfhs_gam0a66d85e12.mp4
+111
+111
+[0m
+[0m$ [0mgit status --short; git branch --show-current; git log --oneline -3
+M .gitignore
+ M data/hoopsalytics/full_film_panel_history.jsonl
+ M data/hoopsalytics/full_film_panel_latest.json
+?? .team/STATUS.md
+?? .team/dry2.txt
+?? .team/dry_runs/
+?? .team/opencode_review_run.txt
+?? .team/previous_NEXT_TASK.md
+?? .team/prompt_claude.txt
+?? .team/prompt_hermes.txt
+?? .team/prompt_opencode.txt
+?? .team/queued_review_page.md
+?? .team/spec_backup.md
+?? .team/specs/
+?? "Liberty vs Notus Gym.png"
+?? NEXT_TASK.md
+?? audit_notus_failures.py`
+?? data/playbook/sheet_align_cache/09022b165c4436ce34b93aee9219517dbceafd0d.json
+?? data/playbook/sheet_align_cache/105a99a7dd2796959f544c9a286780f1c8e32a21.json
+?? data/playbook/sheet_align_cache/3d2e148d3554a7feb3d927e6ca3dbc9995aadb88.json
+?? data/playbook/sheet_align_cache/66066c12038ab74dae476c0abf9e55191326dae2.json
+?? data/playbook/sheet_align_cache/70e367354bf895154dfeb23b1dab08c936ef0db0.json
+?? data/playbook/sheet_align_cache/751e4359c10095b5f328cb54f612a59bd21dbc34.json
+?? data/playbook/sheet_align_cache/89ceda26acbc3f48a067154b352036d34488dc0e.json
+?? data/playbook/sheet_align_cache/92cb73f5a115605854a9adee88905cd502390ac0.json
+?? data/playbook/sheet_align_cache/93ebbc80c6d09b3dd92e46e35a95edaf4184b13e.json
+?? data/playbook/sheet_align_cache/9e36032a7ebde3fa8c28334639d60e16797b7f38.json
+?? data/playbook/sheet_align_cache/a5a3088491fdde4c480f8cfc31cc22e7b47e0fdf.json
+?? data/playbook/sheet_align_cache/a6e33a1cefc7d9195fb078dfb79cc5841872e28e.json
+?? data/playbook/sheet_align_cache/a885186ed02e5054e404395f847900df18a17e43.json
+?? data/playbook/sheet_align_cache/bc20cc36b4f367393e4428a143c569ff47fa4c98.json
+?? data/playbook/sheet_align_cache/e0b5fc992b4c62c9e0595ccdcfde2150ce6fa4c8.json
+?? gemini-upload/validate_integration.py
+?? manual_calibration.json
+?? notus_audit_list.html
+?? scottmcconnell1-bot-liberty-basketball-analysis-8a5edab282632443.txt
+?? scripts/aider_guard.ps1
+?? scripts/aider_guard.py
+team/auto
+6843dec team: build the team loop (relay), vetted
+ebf7631 docs: TEAM_RECOVERY.md, the single restart point for every agent
+70dad6c docs: roster is Hermes architect, OpenCode coder, Claude Code vetter
+[0m
+[0m$ [0m./.venv/Scripts/python.exe -c "import json; rows=json.load(open('gemini-upload/notus_q1_v6_tracks.json')); print([r['t'] for r in rows][:5]); print(type(rows[0]['t']).__name__)"
+[55400, 64200, 95600, 142600, 159300]
+int
+[0m
+Now I'll create the script.
+[0m← [0mWrite scripts/build_review_page.py
+Wrote file successfully.
+[0m
+[0m← [0mEdit scripts/build_review_page.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+@@ -108,8 +108,9 @@
+ score = _score_film(film)
+ summaries.append(
+     {
+         "label": film["label"],
++        "rows": len(score["results"]),
+         "right": score["right"],
+         "total": score["total_tags"],
+         "makes_missed": score["makes_missed"],
+         "misses_called_makes": score["misses_called_makes"],
+
+[0m
+[0m← [0mEdit scripts/build_review_page.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+@@ -494,17 +494,16 @@
+ refresh();
+ """
+ 
+ 
+-def build_review_page(
+-    films: Iterable[dict[str, Any]],
+-    output_path: str | Path = DEFAULT_OUTPUT,
++def _write_page(
++    shot_rows: list[dict[str, Any]],
++    summaries: list[dict[str, Any]],
++    output: Path,
+ ) -> Path:
+-    """Write the self-contained review page and return its path."""
+-    output = Path(output_path)
++    """Render the page from collected rows and return its path."""
+     output.parent.mkdir(parents=True, exist_ok=True)
+ 
+-    shot_rows, summaries = _collect(films)
+     git_hash, branch = _git_info()
+     built = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+ 
+     rows_json = json.dumps(shot_rows, ensure_ascii=False).replace("</", "<\\/")
+
+[0m
+[0m→ [0mRead scripts/build_review_page.py[90m [offset=530, limit=80][0m
+[0m
+[0m← [0mEdit scripts/build_review_page.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+@@ -554,8 +554,17 @@
+     output.write_text(header, encoding="utf-8")
+     return output
+ 
+ 
++def build_review_page(
++    films: Iterable[dict[str, Any]],
++    output_path: str | Path = DEFAULT_OUTPUT,
++) -> Path:
++    """Write the self-contained review page and return its path."""
++    shot_rows, summaries = _collect(films)
++    return _write_page(shot_rows, summaries, Path(output_path))
++
++
+ def main(argv: list[str] | None = None) -> int:
+     parser = argparse.ArgumentParser(description="Build the make/miss review page.")
+     parser.add_argument(
+         "--open",
+
+[0m
+[0m← [0mEdit scripts/build_review_page.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\build_review_page.py
+@@ -573,15 +573,14 @@
+ )
+ args = parser.parse_args(argv)
+ 
+ films = default_films()
+-output = build_review_page(films, DEFAULT_OUTPUT)
++shot_rows, summaries = _collect(films)
++output = _write_page(shot_rows, summaries, DEFAULT_OUTPUT)
+ print(f"Wrote {output}")
+-for film in films:
+-    _, summaries = _collect([film])
+-    summary = summaries[0]
+-    print(f"{summary['label']}: {summary['total']} shot rows")
+-print(f"Total: {sum(1 for _ in films)} film(s)")
++for summary in summaries:
++    print(f"{summary['label']}: {summary['rows']} shot rows")
++print(f"Total: {len(shot_rows)} shot rows")
+ 
+ if args.open:
+     try:
+         os.startfile(str(output))
+
+[0m
+[0m← [0mWrite tests/test_build_review_page.py
+Wrote file successfully.
+[0m
+[0m$ [0m./.venv/Scripts/python.exe -m pytest tests/test_build_review_page.py tests/test_team_score.py -q
+....                                                                     [100%]
+4 passed in 0.43s
+[0m
+[0m$ [0m./.venv/Scripts/python.exe scripts/build_review_page.py
+Wrote C:\Users\scott\Documents\Liberty_Review\make_miss_review.html
+Notus A1 Q1: 31 shot rows
+Adrian Q1-Q3: 111 shot rows
+Total: 142 shot rows
+[0m
+[0m$ [0mgit status --short -- scripts/build_review_page.py tests/test_build_review_page.py; echo "---"; ls -l "C:/Users/scott/Documents/Liberty_Review/make_miss_review.html"; echo "---"; git diff --stat
+?? scripts/build_review_page.py
+?? tests/test_build_review_page.py
+---
+-rw-r--r-- 1 scott 197610 210138 Oct 26 20:33 C:/Users/scott/Documents/Liberty_Review/make_miss_review.html
+---
+ .gitignore                                      | 1 +
+ data/hoopsalytics/full_film_panel_history.jsonl | 6 ++++++
+ data/hoopsalytics/full_film_panel_latest.json   | 2 +-
+ 3 files changed, 8 insertions(+), 1 deletion(-)
+[0m
+[0m$ [0m./.venv/Scripts/python.exe -c "from pathlib import Path; import re; h=Path(r'C:\Users\scott\Documents\Liberty_Review\make_miss_review.html').read_text(encoding='utf-8'); print('rows', len(re.findall(r'<article class=\"shot-row\"', h))); print('make labels', len(re.findall(r'class=\"call make\"', h))); print('miss labels', len(re.findall(r'class=\"call miss\"', h))); print('videos', len(re.findall(r'<video', h))); print('has save', 'Save my review' in h, 'has filters', all(x in h for x in ['Not reviewed','Marked incorrect','AI disagrees with my tag']))"
+rows 142
+make labels 28
+miss labels 114
+videos 142
+has save True has filters True
+[0m
+Created only:
+
+- `scripts/build_review_page.py`
+- `tests/test_build_review_page.py`
+- Generated output: `C:\Users\scott\Documents\Liberty_Review\make_miss_review.html`
+
+Command output:
+
+```
+./.venv/Scripts/python.exe -m pytest tests/test_build_review_page.py tests/test_team_score.py -q
+....                                                                     [100%]
+4 passed in 0.43s
+```
+
+```
+./.venv/Scripts/python.exe scripts/build_review_page.py
+Wrote C:\Users\scott\Documents\Liberty_Review\make_miss_review.html
+Notus A1 Q1: 31 shot rows
+Adrian Q1-Q3: 111 shot rows
+Total: 142 shot rows
+```
+
+Generated page check: 142 shot rows, 28 MAKE labels, 114 MISS labels, 142 video clips, save button and all four filters present.
+
+Not committed.

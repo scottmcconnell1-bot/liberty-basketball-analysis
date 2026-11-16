@@ -1,0 +1,18 @@
+Spec 44 wrapper is in. Only the two new files were added; nothing committed. Existing pipeline files were not edited in this session (pre-existing working-tree diffs on `collect_q4_bodd.py` / `keep_ball_detections.py` are unrelated).
+
+**Pytest** (`.venv/bin/python` missing on WSL; used `python3`):
+```
+python3 -m pytest .team/shot_detectors/test_rim_first_make_miss.py .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_ft_half_circle.py -q
+74 passed in 3.07s
+```
+
+**V2 truth:** Unchanged `kbd` does **not** crash on `gt_make None`. `truth_is_make` at `keep_ball_detections.py:562-563` does `return bool(track_or_row["gt_make"])`, so `None` → `False`. Shot rows keep `gt_make: None`; no `wrapper_note.json`.
+
+**Functions added:** `load_moment_times_from_moments`, `load_moment_times_from_tag_times`, `start_ms_for`, `start_frame_for`, `refuse_existing_file`, `refuse_existing_dir`, `track_has_hoop_and_ball`, `build_shot_list_from_tracks`, `vote_one`, `build_vote_rows`, `write_vote_outputs`, `cmd_tracks`, `cmd_d1`, `cmd_vote`, `build_parser`, `main`. Constant: `TRACK_LEAD_MS = 1000`.
+
+**Exact `kbd.main` argv:**
+1. extract: `["--step", "extract", "--v6-weights", str(weights), "--out-json", str(out_dir / "candidates.json")]`
+2. arc-rule-report: `["--step", "arc-rule-report", "--candidates-json", str(out_dir / "candidates.json"), "--out-json", str(out_dir / "results.json"), "--out-md", str(out_dir / "report.md")]` plus `["--mapping-proof-json", str(...)]` when given. No `--fall-through-guard`, no `--double-count-cut`.
+
+**Choices not spelled out:** YOLO/`collect_q4_bodd` imported only inside `tracks`; vote indexes results by `t` (= `start_ms`) only; `no_track` rows get null preds/reasons; `d1`/`vote` refuse an existing `--out-dir`; `tracks_by_film` keeps incomplete tracks even though they are omitted from the shot list; `kbd.main` SystemExit (e.g. hard gate with all-false truth) is left to propagate; results path uses `--out-json` (arc-rule-report), not `--results-json`.Spec 44 is done: `.team/shot_detectors/rim_first_make_miss.py` and `test_rim_first_make_miss.py` only. Pytest: **74 passed**. `gt_make` stays `None` (no crash at `truth_is_make` 562–563). Not committed.
+[cursor_wsl] exit 0 at 11:59:17

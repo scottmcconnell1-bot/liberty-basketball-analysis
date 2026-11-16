@@ -1,0 +1,75 @@
+[muse] model recursive/flint-v1.0:free 08:20:55
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/35_rim_first_shot_finder_spec.md: the top block is Claude Code's 
+VETTED WITH CONDITIONS stamp E1-E9; below it Hermes's v2. For checking you may 
+read collect_q4_bodd.py (is_make line 49, v6_ball 110-146, Q4_MS line 28), 
+.team/shot_detectors/shot_rules_measure.py (release_estimate_frame, 
+ball_inside_player), .team/shot_detectors/collect_flight_tracks.py (lines 
+59-60), .team/shot_detectors/find_shots_measure.py (match_shots), 
+court_memory.py 150-195, docs/agent_handoffs/HERMES.md ~27. Edit nothing, run 
+nothing that writes.
+
+Scott 2026-11-05: "Proceed." and: "I do not want to manually tag video then you 
+check my tags." Tags are only the answer key while building; the finder must use
+video only (no tags, no scoreboard, no DB). Make/miss must not break.
+
+Check:
+1. Are E1-E9 correct and enough? Especially E4/E5 (miss trigger and merge reuse 
+is_make's own numbers, so no new number) and E7 (finder provably reads no tags).
+2. Anything still breaking the Golden Rules: core edits, banned trials (linear 
+interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter),
+tuning after results, new numbers without Scott, Adrian Q4, training.
+3. Is the make/miss safety check enough?
+Reply under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE:
+DISAGREE: <reason>".
+📖 Read 35_rim_first_shot_finder_spec.md  0.2s
+📖 Read shot_rules_measure.py  0.3s
+✗ Read collect_q4_bodd.py  0.2s [File not found: collect_q4_bodd.py]
+📖 Read collect_flight_tracks.py  0.2s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "collect_q4_bodd.py" -o -name "court_memory.py" -o -name "find_shots_measure.py" -o -name "HERMES.md" 2>/dev/null + 1 command  12.5s
+📖 Read find_shots_measure.py
+📖 Read collect_q4_bodd.py  0.1s
+📖 Read court_memory.py  0.2s
+📖 Read HERMES.md
+💻 $ grep -rn -i "linear interp\|bytetrack\|deepsort\|early window\|wider column\|hoop recenter\|interpolat" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py --include=*.md -l  3.2s
+💻 $ ls .team/ + 1 command  0.1s
+💻 $ ls .team/specs/ | grep -i "rim_first\|35_" + 3 commands  39.0s
+📖 Read TEAM_RECOVERY.md
+📖 Read MUSE.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read AUTHORITY.md
+✗ Read muse_check_spec35_run.txt  0.1s [File not found: muse_check_spec35_run.txt]
+📖 Read last_claude_verdict.txt  0.1s
+💻 $ ls .team/ | grep -i "spec35\|rim_first" + 2 commands
+📖 Read prompt_muse_spec35.txt
+📖 Read muse_spec35_run.txt
+📖 Read prompt_muse_rim_first.txt
+📖 Read muse_rim_first_run.txt  0.2s
+✗ Read muse_rim_first_v2_run.txt  0.2s [File not found: muse_rim_first_v2_run.txt]
+📖 Read muse_spec35_run.txt.recursive_flint-v1.0_free.txt
+📖 Read hermes_rim_first_v2_run.txt
+
+────────────────────────────────────────
+☤ Hermes
+Muse check of Claude Code's VETTED-with-conditions E1-E9 on Hermes's spec 35 v2 (post-V1-V6 fold-in), against Scott's 2026-11-05 scope ruling.
+
+Check 1 — E1-E9 correct and enough? Largely yes. E1 overrides the bad cost note (BODD every frame, ESTIMATE, real time). E2 per-hoop crops OK. E3 per-frame v6 over the span, prev0.35 continuity, import-not-copy-edit of is_make OK. E4 reuses is_mak's own numbers (above test y<hoop_y-6, column 2.2 hoop_w, gap 8) plus Scott-approved rim numbers (0.735 hoop_w, 40hoop_w/98) — no new number. E5 drops merge_window_ms, ends a run at is_mak's gap 8 — no new number. E6 reuses release_estimate_frame / ball_inside_player(mode='release', 0.6) and the Scott-approved 3000 ms window; misses trace from trigger; fail to ORANGE. E7: finder takes only video+start-ms/end-ms/out-dir + models, imports nothing tag/DB-reading, import-grep test; measure reads tags only. E8/E9: measure via find_shots_measure.match_shots at 8000 ms; one try, no post-result change, Q4 blind until Scott saw the numbers.
+
+Check 2 — Golden Rules: no break. No core edits, no banned trial, no training, no tuning after results, no new number without Scott, Q4 gate cleared by "Proceed."
+
+Check 3 — Make/miss safety: adequate. Coach page --wide-combined --out-dir <NEW> before/after; gray=30 orange=9, 42 shots, combined groups match page_v6; no "v6 mapping check" print; make/miss files untouched; finder separate so it cannot perturb the make/miss path.
+
+Flag: E7's "Adrian end = Q4_MS 55:17.1" reads like a Q4 start boundary, not an end; before the run, set the Q4 blind span start=Q4_MS, end=film end.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-7bacb72ce1e1dd57ad3ce2042112811c1233f617ca8472f18f8d15391640497e
+  hermes -c "You are Muse, the checker of Claude Code's… #3"
+
+Session:        local-7bacb72ce1e1dd57ad3ce2042112811c1233f617ca8472f18f8d15391640497e
+Title:          You are Muse, the checker of Claude Code's… #3
+Duration:       6m 52s
+Messages:       41 (1 user, 39 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE

@@ -1,0 +1,49 @@
+{
+  "game": "notus_a",
+  "frame_idx": 16387,
+  "timestamp_ms": 655480,
+  "lines_detected": {
+    "left_sideline": true,
+    "right_sideline": true,
+    "baseline": true,
+    "ft_line": true,
+    "left_lane": true,
+    "right_lane": true,
+    "center_line": false,
+    "three_pt_arc": true,
+    "ft_circle": true
+  },
+  "line_segments_found": 28,
+  "inlier_segments": 4,
+  "reprojection_error_px": 1.0,
+  "condition_number": 10.292,
+  "homography_valid": true,
+  "H_img2court": [
+    [
+      0.05370612,
+      0.08378523,
+      -43.3851104
+    ],
+    [
+      0.0,
+      0.0142067,
+      -5.95092329
+    ],
+    [
+      -0.0,
+      -0.00218655,
+      1.0
+    ]
+  ],
+  "hoop_img_xy": [
+    154.341,
+    418.881
+  ],
+  "scale_x_ft_per_px": 0.638624,
+  "scale_y_ft_per_px": 1.037488,
+  "half_court_y_ft": null,
+  "court_length_ft": null,
+  "court_half_width_ft": 35.0,
+  "success": true,
+  "analysis_seconds": 9.253
+}

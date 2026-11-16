@@ -1,0 +1,27 @@
+**16 passed** (`python3 -m pytest .team/shot_detectors/test_game_session.py -q`). New files only; not committed.
+
+### Functions
+`parse_clock`, `find_board_boxes`, `sample_board`, `clean_and_runs`, `period_length`, `periods`, `in_session`, plus CLI `run` / `check-reader` / `filter` (`build_session`, `filter_moments`).
+
+### Exact reset rule
+```420:428:.team/shot_detectors/game_session.py
+        if cur > before:
+            jump = cur - before
+            if (
+                jump >= RESET_JUMP_S
+                and _reset_holds(cleaned, i, cur, before)
+                and not _returns_near_pre(clocks, samples, i, before)
+            ):
+                continue  # real reset — keep
+            cleaned[i] = None  # smaller, non-holding, or false reset -> misread
+```
+`_reset_holds`: next 3 legal samples all `>= new - 5`, none within 5 s of pre-jump. Merge safety net still stitches a period that ended without 0 to a continuation within 10 s at `<= last + 5`.
+
+### Choices not spelled out
+- `periods(runs, L, samples)` — samples required for tip / FT window.
+- Tenths raw: two digit groups with a 1-digit trailer → `SS.t`; else `_clock_text`, then digit-string fallback.
+- Clock crop read: `_warm_mask` first, yellow mask if empty (Notus-dim).
+- Period box: yellow (then warm) cluster under clock midpoint; never score clusters.
+- FT window: `start_ms ==` session end; `in_session` treats FT as `start < t <= end`.
+- `_returns_near_pre` within merge gap nullifies a held rise that returns near pre-jump (feeds the false-split path before merge).That background check hit a missing `.venv/bin/python`; the suite was already re-run with `python3` and **16 passed**. Spec 48 files are in place, uncommitted.
+[cursor_wsl] exit 0 at 12:48:29

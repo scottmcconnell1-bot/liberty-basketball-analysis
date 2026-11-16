@@ -1,0 +1,66 @@
+{
+ "L": null,
+ "periods": [
+  {
+   "start_ms": 3000,
+   "end_ms": 963000,
+   "stops": 25,
+   "end": "z",
+   "n_in_game": 1
+  },
+  {
+   "start_ms": 1062000,
+   "end_ms": 1935000,
+   "stops": 20,
+   "end": "z",
+   "n_in_game": 2
+  },
+  {
+   "start_ms": 2394000,
+   "end_ms": 3318000,
+   "stops": 17,
+   "end": "z",
+   "n_in_game": 3
+  },
+  {
+   "start_ms": 3390000,
+   "end_ms": 3898000,
+   "stops": 4,
+   "end": "end",
+   "n_in_game": 4
+  }
+ ],
+ "intervals": [
+  {
+   "start_ms": 3000,
+   "end_ms": 963000
+  },
+  {
+   "start_ms": 1062000,
+   "end_ms": 1935000
+  },
+  {
+   "start_ms": 2394000,
+   "end_ms": 3318000
+  },
+  {
+   "start_ms": 3390000,
+   "end_ms": 3898000
+  }
+ ],
+ "ft_windows": [
+  {
+   "start_ms": 963000,
+   "end_ms": 984000
+  },
+  {
+   "start_ms": 1935000,
+   "end_ms": 1969000
+  },
+  {
+   "start_ms": 3318000,
+   "end_ms": 3334000
+  }
+ ],
+ "error": null
+}

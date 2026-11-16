@@ -1,0 +1,49 @@
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/36_rim_first_extras_fix_spec.md: top block = Claude Code's VETTED 
+WITH CONDITIONS K1-K8; below it Hermes's v2. Also read 
+.team/specs/36_rim_first_extras_fix_spec_v1_REJECTED.md (top block R1-R7), 
+.team/specs/36_extras_truth_labels.json, 
+.team/shot_detectors/rim_first_finder.py, rim_first_measure.py. Edit nothing, 
+run nothing that writes.
+Scott's rules 2026-11-05: fouled shot that misses = not a shot; blocked = not a 
+shot; put-back and tip = own shot; same shot twice = our bug; unclear = orange 
+card; ball held by referee = not a shot. Finder is video-only (no tags, no 
+scoreboard, no DB) - on a new game there are no tags.
+Check: 1. Do K1-K8 fix what v2 still got wrong (tag excuses in C/D, status vs 
+shot_call, merge window)? 2. Will K2 keep put-backs separate and merge rim 
+bounces / FT rattles? Any case it gets wrong? 3. Golden Rules: core edits, 
+banned trials, tuning after results, new numbers without Scott, Adrian Q4, 
+training. 4. Is the make/miss safety check kept?
+Under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE: 
+DISAGREE: <reason>".
+📖 Read 36_rim_first_extras_fix_spec.md  0.1s
+📖 Read 36_rim_first_extras_fix_spec_v1_REJECTED.md  0.1s
+📖 Read 36_extras_truth_labels.json  0.1s
+📖 Read rim_first_finder.py  0.2s
+📖 Read rim_first_measure.py  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Muse check on spec 36 v2 and the VETTED K1-K8 block.
+
+1. K1-K8 fix the v2 gaps: K1 (R2) splits shot_call {shot, orange, not_a_shot} from shooter {found, orange} and scores on shot_call; K2 (R3) drops merge_window_ms, adds the ball_inside_player strictly-between decider; K3 (R1) kills tag excuses and sends C/D/B through finder orange or scores WRONG; K4 (R4) referee holding is not_a_shot; K5 (A) drops bad hoop series to not_a_shot for audit; K6 cost check; K7 frames.json v6+referee; K8 numbers.
+
+2. K2 put-back/merge: later moment merges into earlier unless the ball was inside a player box strictly between, so put-backs/tips keep separate and rim bounces/FT rattles merge. Sound in outline; strictly-between frame edge cases unverified.
+
+3. Golden Rules: core edits, banned trials, tuning-after-results, training, Q4 blind ordering all as stated. Numbers gated Scott-decides in K8.
+
+4. Make/miss safety: KEPT — section 8 marked unchanged; before/after make_review_queue_page.py --wide-combined run required, gray 30 / orange 9 / 42 shots, same 3 combined groups, any difference -> STOP for Scott.
+
+Package inconsistency: K2 says no merge_window_ms and K8's Scott-decides list omits it, but the numbers table still lists merge_window_ms 300 ms (Scott decides).
+
+MUSE: DISAGREE: merge_window_ms 300 ms is still in the numbers table although K2 forbids the merge window and K8 dropped it from the Scott-decides list.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-fe8270d4cbf5df965f2519f8063e7479be5f1033ef41b35f3db684a5ef287c4d
+  hermes -c "You are Muse, the checker of Claude Code's… #4"
+
+Session:        local-fe8270d4cbf5df965f2519f8063e7479be5f1033ef41b35f3db684a5ef287c4d
+Title:          You are Muse, the checker of Claude Code's… #4
+Duration:       2m 6s
+Messages:       8 (1 user, 6 tool calls)

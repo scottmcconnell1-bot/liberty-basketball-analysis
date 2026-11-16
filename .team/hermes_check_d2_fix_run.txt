@@ -1,0 +1,60 @@
+﻿Query: Hermes, you check this; Claude Code orchestrates.
+CHECK Claude Code fix of the Stage D2 frame picker (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Scott said "Yes" to Claude Code fixing OpenCode version, which Hermes, Muse and 
+Claude Code all rejected today (old code kept as 
+.team/shot_detectors/d2_pick_frames_opencode_REJECTED.py; reasons in 
+.team/drift_log.md last entry). Do not edit files. Nothing new has been run on 
+the full films yet; the old 600-frame output will be moved aside before the run.
+Spec: .team/specs/22_d2_label_job_spec.md (v2, VETTED, Muse AGREE). Code: 
+.team/shot_detectors/d2_pick_frames.py, tests 
+.team/shot_detectors/test_d2_pick_frames.py (Claude Code, repo venv: 15 passed).
+Claude Code also ran: (a) label.html in headless Chrome opened from a folder: 
+loads "1 of 3", mouse drag box, touch drag box, ArrowLeft/ArrowRight, Back then 
+Next keeps the box, reload keeps labels, No ball, Export gives spec-format 
+labels.json, 0 errors; (b) a smoke run of process_film on the first 7000 frames 
+of Notus A: 25 moments, 468 candidates (413 SEEN, 55 LOST), every LOST 1-8 
+frames after its SEEN, 57 s.
+Check, citing spec section and code line: (1) the rejected points are fixed: 
+holdout read from holdout_names.json with round(ms*fps/1000) (holdout_frames); 
+LOST = first 8 frames after the LAST SEEN frame of the window (classify_window);
+label page works opened from a folder (frames embedded, no fetch), arrow keys, 
+touch; the 8 spec section 6 checks run before anything is written (verify, 
+called in main) and are tested; the 3-frame gap is never relaxed (pick_film); 
+(2) nothing else drifted from spec 1-5: 7 films only, BODD conf 0.12 imgsz 960 
+stride 25 median hoop, v6 conf 0.28 imgsz 640, crop same as 
+keep_ball_detections.crop_bounds, D1 zone in full-frame coordinates, pass 2 one 
+seek then sequential reads moment-10..moment+30, quotas 86x5/85x2 with shortfall
+spread, half SEEN half LOST with fill, seed 42, crops native JPEG q90, 
+frames.json fields, output outside the repo, stop before training; (3) judgement
+calls to accept or reject: pass 1 now reads sequentially with grab() instead of 
+a seek per stride (same frames 0,25,50,...); overlapping windows keep a frame 
+once (first window wins); export leaves out frames not yet labelled rather than 
+calling them no ball; crop files are named <film stem>_frNNNNNN.jpg per spec 4 
+(the spec 5 example shows .mp4 in the name); pick_log.json added for the checks;
+the run stops if the output folder is not empty; (4) no protected file touched, 
+applied_to_core false, no ground truth, no training; (5) anything else wrong.
+End with exactly one line: "CHECK: AGREE" or "CHECK: DISAGREE: <reason with file
+and line>".
+📖 Read 22_d2_label_job_spec.md  0.2s
+📖 Read d2_pick_frames.py  0.2s
+📖 Read test_d2_pick_frames.py  0.2s
+📖 Read drift_log.md  0.3s
+📖 Read d2_pick_frames_opencode_REJECTED.py  0.3s
+🔎 Find keep_ball_detections  3.6s
+🔎 Find keep_ball_detections\.py  3.5s
+📖 Read keep_ball_detections.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+CHECK: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-f4fefcf3fe43ad986eb7606dd7aa319ad9e4a687ec3f1ce8f5fdbf9f8949a6a9
+  hermes -c "Check Claude Code fix of Stage D2 frame picker"
+
+Session:        local-f4fefcf3fe43ad986eb7606dd7aa319ad9e4a687ec3f1ce8f5fdbf9f8949a6a9
+Title:          Check Claude Code fix of Stage D2 frame picker
+Duration:       3m 58s
+Messages:       14 (1 user, 12 tool calls)

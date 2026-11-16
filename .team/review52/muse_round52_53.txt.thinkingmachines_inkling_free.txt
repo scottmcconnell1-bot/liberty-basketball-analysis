@@ -1,0 +1,67 @@
+Query: You are MUSE, the REVIEWER on the Liberty basketball team (not Hermes, 
+not the architect). READ-ONLY: do not edit,
+create or rewrite ANY file. Your only output is this review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner) wants every AI's input. Your last three requests ended without a 
+Muse verdict, so answer all three here.
+
+ITEM A - retrain decision. Read .team/review52/prompt_team_retrain52.txt 
+(questions Q1-Q4) and the answers already
+given: .team/review52/hermes_retrain52.txt and 
+.team/review52/cursor_retrain52.txt (they disagree on Q2: Hermes =
+score fouled/waved-off as not-shots, Cursor = exclude them from the auto e2e 
+denominator). Give your answers to
+Q1-Q4 and pick a side on Q2 with a reason.
+
+ITEM B - epoch choice. Read .team/review52/prompt_team_choose_e52.txt, 
+choose_e52_curves.txt, and the replies
+hermes_choose_e52.txt and cursor_choose_e52.txt (both AGREE E=5, rule change 
+only pre-registered for a future run).
+Protocol integrity check: is carrying E=5 into the 3-seed LOGO gate valid? Any 
+peeking?
+
+ITEM C - spec 53 referee signals. Read .team/specs/53_referee_signals_spec.md 
+(v2), .team/review52/
+nfhs_signals_reference.md (official chart), addendum_ref53_scott.txt (Scott: "Go
+with the book, but some wiggle
+room ... deduced with several factors"), and cursor_ref53.txt (Cursor's audit of
+v1: fix the spec-36 cause, v1 =
+arm-raised / both-arms / wave / chop only, moment-window pose on referee boxes, 
+pass bar on Scott's 6 examples plus
+false fires on labelled true shots). Note: spec 53 v2 was written by a model run
+in the Muse slot that edited the
+file by mistake; judge it on content. Review feasibility (ref size 47-93 px 
+wide, panning, occlusion), protocol
+(seen films only, no blind peeking, no new human review loops), and whether v2 
+covers Cursor's v1 changes.
+
+Answer briefly and concretely. End with exactly these three lines (each line 
+starts with MUSE:):
+MUSE: A AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: B AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (this last line = ITEM 
+C, spec 53 v2)
+⚠️  Attempt 1/3 failed: HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+⏳ Retrying in 2.0s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+⏳ Retrying in 6.0s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+❌ API failed after 3 retries — HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+   💀 Final error: HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter didn't answer after 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 404: This model is unavailable for free. The paid version is available now - use this slug instead: thinkingmachines/inkling
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a9924d70b1bb5ca6a101cee62110bf0e63017dc852efe2c33a52b53bdb1a1956
+  hermes -c "You are MUSE, the REVIEWER on the Liberty… #6"
+
+Session:        local-a9924d70b1bb5ca6a101cee62110bf0e63017dc852efe2c33a52b53bdb1a1956
+Title:          You are MUSE, the REVIEWER on the Liberty… #6
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

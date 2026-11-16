@@ -1,0 +1,4 @@
+Muse, you check the Vetter. Read-only: do not change any file. Checked BEFORE code exists; "not coded yet" is normal.
+You said MUSE: DISAGREE on spec 48 (.team/muse_spec48_run.txt): V2 reset guard too loose; end-of-period FT (clock stopped at 0) unconditioned. Claude Code's answer is in the block at the top of .team/specs/48_game_session_spec.md: V2 replaced (reset needs a >= 30 s jump that holds 3 samples; smaller rises are misreads; a false split is merged back), V10 added (90 s post-buzzer window while the clock reads 0, keeping only moments the spec-43 FT step flags), V11 added (own parser for M:SS and SS.t because legal_clock accepts only M:SS).
+Is the real-shot drop path now closed? Does V10 let warm-ups at quarter breaks back in? Anything else that would silently drop real shots or keep warm-ups?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

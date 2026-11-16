@@ -1,0 +1,53 @@
+Query: You are advising the Liberty basketball team on ONE decision: what to do 
+next. Read-only: do not change files.
+
+Context: free-throw (FT) rule = spec 43 
+(.team/shot_detectors/ft_half_circle.py). See the last 4 entries of 
+.team/drift_log.md.
+Seen films (Adrian, Notus): FTs found 23/29, 9/9, 5/5 (Adrian Q4 blind), 0 
+false, a few orange "maybe" items.
+Idaho City BLIND (one try): 2 real FT moments -> found 2/2, right shooter 2/2. 
+False FT flags 2 (1827320 halftime warm-up shot; 2838600 live play, clock 
+running). Maybe 3, none FT (coach clears 3 orange items). 6 FT-setup moments 
+(ref holding ball) correctly NOT flagged.
+Big gap: on the Idaho camera the shot finder (rim_first_finder.py) mostly fires 
+during the FT setup while the ref holds the ball and does NOT fire on the FT 
+shot itself, so most Idaho FTs never reach the FT rule.
+Make/miss: separate pipeline (make_review_queue_page.py, D1 v6 + d2v1 vote) 
+built on tag times; not yet wired to rim-first moments. Scott said yes to 
+labeling makes/misses on the next test game.
+Rules: Scott does not want the coach overwhelmed. No scoreboard dependency in 
+the finder. Anything chosen from Idaho must be tested on a new unseen game (e.g.
+Garden Valley, home gym), one try.
+
+Options:
+A) Guards for the 2 FT false flags (warm-up shot, live play).
+B) Diagnose and fix why the shot finder misses FT shots on the Idaho camera 
+(fires on the setup instead).
+C) Wire make/miss to rim-first moments and score it.
+Any combination, and order, on the next blind game.
+
+Claude Code recommends: B first (biggest loss: FTs never found), plus C wired in
+the same blind test so makes/misses are labeled at once; leave A for later (2 
+false flags is small coach load, and the fixes are guesses from n=2).
+
+Give YOUR recommendation in at most 8 short lines: agree / change what / any 
+risk. End with one line: RECOMMEND: <one sentence>.
+
+────────────────────────────────────────
+☤ Hermes
+Agree with Claude Code: B first — the shot finder missing FT shots is the biggest loss (FTs never reach the FT rule). Wire C into the same blind test so makes/misses are labeled at once. Leave A for later: 2 false flags is a small coach load, and fixes from n=2 are guesses.
+
+Risk: B's root cause is unconfirmed on a single Idaho game, so the fix may not transfer to Garden Valley; C is untested on rim-first moments and could add false labels on the blind run — score C separately so it doesn't block B.
+
+RECOMMEND: Do B first and wire C into the same blind test on Garden Valley; defer A until after that test.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b4f1ced9f9614f04e90f64206f895b7b2236fc6563b7a3e7ae11b93ac85502b7
+  hermes -c "Fix rim-first finder to flag Idaho free throws"
+
+Session:        local-b4f1ced9f9614f04e90f64206f895b7b2236fc6563b7a3e7ae11b93ac85502b7
+Title:          Fix rim-first finder to flag Idaho free throws
+Duration:       16s
+Messages:       2 (1 user, 0 tool calls)

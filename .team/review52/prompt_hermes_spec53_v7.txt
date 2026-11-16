@@ -1,0 +1,11 @@
+You are HERMES, the architect. Update .team/specs/53_referee_signals_spec.md to v7 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v6 review: CURSOR AGREE WITH CHANGES (review52/cursor_spec53_v6.txt). Apply:
+1. Pass-bar vs rules conflict: where a cue is not available (rimrock has no score track; travel has no detectable
+   boolean), the pure-function output is 'unknown' (coach flag). Change the pass bar so rimrock:253 (waved off) and
+   rimrock:77 (travel) PASS if output is waved_off/violation OR 'unknown' (coach-flagged), and FAIL if 'none'
+   (shot kept silently). Keep travel_inferred out unless you can write it as a DETECTABLE boolean; otherwise
+   violation on travel = unknown. State this plainly (Scott's 0-false-fire rule wins over coverage).
+2. Add ft_next to the fouled_miss predicate (arm_raised + timing + play_stopped + ft_next) so it cannot fire on a
+   plain stop-clock (#2) under the 0-false-fire bar; keep it consistent with the DETECTABLE EVENTS fist-fusion prose.
+3. Status line v7; nothing else changed. End with "HERMES: SPEC WRITTEN".

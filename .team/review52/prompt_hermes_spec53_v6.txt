@@ -1,0 +1,17 @@
+You are HERMES, the architect. Update .team/specs/53_referee_signals_spec.md to v6 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v5 reviews: MUSE AGREE (minor wording, review52/muse_spec53_v5.txt); CURSOR AGREE WITH CHANGES
+(review52/cursor_spec53_v5.txt). Apply exactly:
+1. Rewrite each combination-table row as boolean fusion predicates over DETECTABLE inputs only (arm_raised,
+   both_arms_up, wave_scissor, chop, timing vs rim/release, nearest ref, play_stopped (ft.stillness / clock hold),
+   ft_next (decide_ft ft_reason), score_changed where readable). No #4 fist / #22 travel / #18 fingers as pose
+   primitives; those NFHS meanings are what a predicate INFERS.
+2. Define waved_off when the score cue is omitted (no readable score track, e.g. Rimrock): with Scott's 0-false-fire
+   rule, a predicate that would cancel a real shot without the score cue -> 'unknown' (coach flag), unless you
+   state a stricter no-score rule; write it explicitly.
+3. One name: foul_ref_window_ms everywhere.
+4. Drop violation "etc."; list exactly which violation predicates exist; add category precedence order.
+5. Muse: "FT setup / throw-in next" -> "FT setup / restart context"; re-add Scott's "by a margin" to 3PT
+   (wrist above nose/eye keypoints by a stated margin, e.g. >= 0.25 x shoulder width).
+6. cue table: free_throw_line / maybe_free_throw are ft_reason strings from decide_ft, not functions.
+Status line v6. End with "HERMES: SPEC WRITTEN".

@@ -1,0 +1,25 @@
+Spec 45 film-scale is in the two wrapper files only. No commit.
+
+**Pytest**
+```
+python3 -m pytest .team/shot_detectors/test_rim_first_make_miss.py .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_ft_half_circle.py -q
+```
+(`.venv/bin/python` not usable here → `python3`)
+**Result:** `94 passed in 2.20s`
+
+**Functions added/changed**
+- Added: `REF_HOOP_W`, `film_scale_info`, `apply_film_scale`, `_load_side_film_scale`
+- Changed: `cmd_d1` (`--film-scale` path), `cmd_vote` (pair `film_scale.json`), `write_vote_outputs` (optional Film scale line), `build_parser` (`--film-scale`)
+
+**Where d1 switches to the scaled path** — ```350:367:.team/shot_detectors/rim_first_make_miss.py```  
+Flag on → `film_scale_info` / `apply_film_scale` → write `tracks_scaled.json` + `film_scale.json` → `tracks = scaled` and `tracks_path = scaled_path.resolve()` before `build_shot_list_from_tracks` / `kbd.FILMS`.
+
+**Choices not spelled out**
+- Print / summary line: `film_scale=… film_hoop_median=… n_tracks_used=…`
+- Zero-hoop exit text: `film scale: no tracks with a non-empty hoop list (n_tracks_total=…)`
+- Vote mismatch/missing messages as written in `cmd_vote`
+- `tracks_scaled.json` via `json.dumps(scaled)` (no indent); `film_scale.json` with `indent=2`
+- Vote equality: full loaded dict `==`
+- Hoop filter: `isinstance(hoop, list) and len(hoop) > 0` only (tuples/None/`[]` skipped)
+- No V6 0.55–0.80 Riverstone stop in code (manual Claude Code gate; would break Adrian 1.0)Spec 45 is done in the two wrapper files; pytest was **94 passed**. Those two files show as untracked (`??`) in git — not committed, as requested.
+[cursor_wsl] exit 0 at 21:47:54

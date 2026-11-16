@@ -1,0 +1,17 @@
+## Spec 52c v2 — final check vs Cursor v1
+
+**SHA:** disk `f5b4d5df…` matches `.team/review52/spec52c_v2_sha.txt`. Filename aligned.
+
+| v1 ask | v2 |
+|--------|-----|
+| F1 `extras_require_seed_disagreement: true` + `shot_list` + 52b tests; no “shot_list UNCHANGED” | Yes (§2.3, Step 2–4 JSON + tests) |
+| F3 per-film seq over full T (incl. −1/0); no cross-film | Yes (§2.1) |
+| `(t,t+6000]` inclusive + matching test | Yes (§2.1 + Step 3: flag at +6000, none at +6001) |
+| F4 dropout on 512 pool → concat → `Linear(513,3)`; no silent-P scale; old `.pt` incompat | Yes (§2.2–2.3, Step 2–3) |
+| F5 soften 6000 | Yes (round possession bound; covers 3 gaps; 4000 misses rimrock; not from silent P / gate %) |
+| F2 confound + in-session-only NO + reason | Yes (§3) |
+
+**New broken?** No. Step 2 files (`train_clip.py`, `ensemble_predict.py` / `shot_list`) match where the wiring lives. Residual nit only: §2.1 still says “NOT chosen to include or exclude the 3 gaps” beside the 4000/rimrock admission — soft leftover, not a build miss.
+
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 12:45:04

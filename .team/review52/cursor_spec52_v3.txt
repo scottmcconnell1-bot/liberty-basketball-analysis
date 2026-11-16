@@ -1,0 +1,22 @@
+## Spec 52 v3 review (read-only)
+
+**Verdict:** All three Cursor v2 blockers are in v3 correctly; original items 1–9 still hold; the recipe is buildable against `.team/mm_clip/{train_clip,extract_clips,ensemble_predict}.py`.
+
+### Cursor v2 → v3
+
+| # | Asked on v2 | In v3? |
+|---|-------------|--------|
+| C1 | Outer LOGO train-on-4 for exactly `E`, seeds 0–2 = gate; final fit all 5 for `E`, seeds 0–4 | Yes — R5 + R6 |
+| C2 | E search seed 0 only per fold; `E = median` of the 5 fold best-epochs | Yes — R5 |
+| C3 | `miss_recall = mean(pred>0 \| Y==1)`; tie-break `shots_correct_overall` | Yes — R5 (`pred_class`; same meaning); metric already in `train_clip` report |
+
+### Cursor v1 items 1–9 (still present)
+
+Unmatched→`-1` + adrian/notus rebuild (R1); honest review + used-set (R8); silent-reject = 0 (R6); all-shots e2e (R6); buildable E (R5); M-seed disagreement (R7); hard ≤20 checks (R6/R10); second-person spot-check (R3); HSB1 diagnostic + deliverables (R2 / G). Claude V1–V4 still present.
+
+### Buildability
+
+Two-phase train is unambiguous: choose `E` on nested 3/1 (seed 0) → gate with outer 4-game fits for exactly `E` (seeds 0–2) → final 5-game fits for exactly `E` (seeds 0–4). Inner-val game is pinned by the fixed wrap order. `postproc52.json` is paste-ready. Hyperparams match current OneCycle/AdamW settings. Wording-only (not DISAGREE): “final fit runs exactly E” appears twice in R5; `--seed` plumbing lives in deliverables rather than its own R number.
+
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 21:41:56

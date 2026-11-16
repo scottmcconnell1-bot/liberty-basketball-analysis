@@ -1,0 +1,430 @@
+{
+ "by": "Claude Code",
+ "when": "2026-11-06, written BEFORE reading measure38 shooter numbers",
+ "rule": ".team/specs/38_handcheck_rule.json",
+ "rows": [
+  {
+   "film": "adrian",
+   "i": 0,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 2505040,
+   "verdict": "agree",
+   "note": "layup/put-back player boxed"
+  },
+  {
+   "film": "adrian",
+   "i": 1,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 1774280,
+   "verdict": "disagree",
+   "note": "REFEREE boxed; shooter #40"
+  },
+  {
+   "film": "adrian",
+   "i": 2,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 2587840,
+   "verdict": "disagree",
+   "note": "FT: lane player next to shooter boxed"
+  },
+  {
+   "film": "adrian",
+   "i": 3,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 2416840,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 4,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 2890200,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 5,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 899600,
+   "verdict": "disagree",
+   "note": "FT: lane player boxed; shooter #13"
+  },
+  {
+   "film": "adrian",
+   "i": 6,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 1437520,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 7,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 2872440,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 8,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 3021000,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 9,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 2940040,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 10,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 757040,
+   "verdict": "disagree",
+   "note": "REFEREE boxed; shooter #21"
+  },
+  {
+   "film": "adrian",
+   "i": 11,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 2609000,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 12,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 531640,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 13,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 2443600,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 14,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 950760,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 15,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 37800,
+   "verdict": "disagree",
+   "note": "dribbler boxed in transition; hoop marker on referee head"
+  },
+  {
+   "film": "adrian",
+   "i": 16,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 1464160,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 17,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 250600,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 18,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 1777360,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 19,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 1517800,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "adrian",
+   "i": 20,
+   "group": "orange",
+   "kind": "3PT",
+   "t_ms": 1838920,
+   "verdict": "agree",
+   "note": "orange ok: crowded, unclear"
+  },
+  {
+   "film": "adrian",
+   "i": 21,
+   "group": "orange",
+   "kind": "3PT",
+   "t_ms": 2400840,
+   "verdict": "disagree",
+   "note": "orange avoidable: two boxes on the same shooter"
+  },
+  {
+   "film": "adrian",
+   "i": 22,
+   "group": "orange",
+   "kind": "2PT",
+   "t_ms": 340320,
+   "verdict": "agree",
+   "note": "orange ok: shooter and defender overlap"
+  },
+  {
+   "film": "adrian",
+   "i": 23,
+   "group": "orange",
+   "kind": "FT",
+   "t_ms": 237680,
+   "verdict": "disagree",
+   "note": "orange avoidable: two boxes on the same FT shooter"
+  },
+  {
+   "film": "adrian",
+   "i": 24,
+   "group": "orange",
+   "kind": "3PT",
+   "t_ms": 1717960,
+   "verdict": "agree",
+   "note": "orange ok: transition, no shot"
+  },
+  {
+   "film": "notus",
+   "i": 0,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 255120,
+   "verdict": "disagree",
+   "note": "player near loose ball boxed; not a shot frame"
+  },
+  {
+   "film": "notus",
+   "i": 1,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 647720,
+   "verdict": "disagree",
+   "note": "dribbler at centre boxed; hoop marker on bench"
+  },
+  {
+   "film": "notus",
+   "i": 2,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 763760,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 3,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 235400,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 4,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 242040,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 5,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 144920,
+   "verdict": "disagree",
+   "note": "FT: lane player boxed; shooter #0"
+  },
+  {
+   "film": "notus",
+   "i": 6,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 212480,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 7,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 382320,
+   "verdict": "disagree",
+   "note": "defender boxed; shooter white #40"
+  },
+  {
+   "film": "notus",
+   "i": 8,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 371600,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 9,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 277040,
+   "verdict": "disagree",
+   "note": "REFEREE under rim boxed"
+  },
+  {
+   "film": "notus",
+   "i": 10,
+   "group": "found",
+   "kind": "3PT",
+   "t_ms": 883320,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 11,
+   "group": "found",
+   "kind": "FT",
+   "t_ms": 775520,
+   "verdict": "disagree",
+   "note": "FT: lane player boxed; shooter #53"
+  },
+  {
+   "film": "notus",
+   "i": 12,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 194720,
+   "verdict": "disagree",
+   "note": "REFEREE under rim boxed"
+  },
+  {
+   "film": "notus",
+   "i": 13,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 423720,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 14,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 481120,
+   "verdict": "disagree",
+   "note": "dribbler in transition; hoop marker on bench"
+  },
+  {
+   "film": "notus",
+   "i": 15,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 591760,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 16,
+   "group": "found",
+   "kind": "2PT",
+   "t_ms": 434600,
+   "verdict": "agree",
+   "note": ""
+  },
+  {
+   "film": "notus",
+   "i": 17,
+   "group": "orange",
+   "kind": "FT",
+   "t_ms": 359120,
+   "verdict": "disagree",
+   "note": "orange avoidable: FT shooter clear, lane player also boxed"
+  },
+  {
+   "film": "notus",
+   "i": 18,
+   "group": "orange",
+   "kind": "2PT",
+   "t_ms": 695880,
+   "verdict": "disagree",
+   "note": "orange avoidable: two boxes on same shooter"
+  },
+  {
+   "film": "notus",
+   "i": 19,
+   "group": "orange",
+   "kind": "FT",
+   "t_ms": 95800,
+   "verdict": "disagree",
+   "note": "orange avoidable: FT shooter clear"
+  },
+  {
+   "film": "notus",
+   "i": 20,
+   "group": "orange",
+   "kind": "2PT",
+   "t_ms": 55800,
+   "verdict": "agree",
+   "note": "orange ok: contested"
+  },
+  {
+   "film": "notus",
+   "i": 21,
+   "group": "orange",
+   "kind": "FT",
+   "t_ms": 159080,
+   "verdict": "disagree",
+   "note": "orange avoidable: FT shooter clear"
+  }
+ ]
+}

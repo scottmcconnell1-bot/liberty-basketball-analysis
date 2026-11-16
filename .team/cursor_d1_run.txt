@@ -1,0 +1,73 @@
+Stage D1 code is in place. Stopped here — no D2/B/C, no commit, no real arc-rule-report (no `candidates.json` yet).
+
+## Files created (only these two)
+
+- `.team/shot_detectors/keep_ball_detections.py`
+- `.team/shot_detectors/test_keep_ball_detections.py`
+
+## Commands run (verbatim output)
+
+**1. pytest**
+
+```text
+$ python3 -m pytest .team/shot_detectors/test_keep_ball_detections.py -q --tb=short
+...........                                                              [100%]
+=============================== warnings summary ===============================
+.team/shot_detectors/test_keep_ball_detections.py::test_truth_not_touched_by_arc_or_rule
+.team/shot_detectors/test_keep_ball_detections.py::test_arc_picks_real_ball_over_false_saved
+.team/shot_detectors/test_keep_ball_detections.py::test_seed_makes_two_runs_identical
+  .../keep_ball_detections.py:217: RankWarning: Polyfit may be poorly conditioned
+    a, b, c = np.polyfit(ts, ys, 2)
+...
+11 passed, 4 warnings in 1.07s
+```
+
+**2. Real arc-rule-report — skipped**
+
+```text
+$ test -f /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/candidates.json
+→ MISSING (exit 1)
+```
+
+No `--step arc-rule-report` on the 140 shots. Claude Code still needs `--step extract` on Windows first.
+
+**3. CLI help (sanity)**
+
+```text
+$ python3 .team/shot_detectors/keep_ball_detections.py --help
+usage: keep_ball_detections.py [-h] --step {extract,arc-rule-report,overlays}
+...
+```
+
+## Constants (exact values in the file)
+
+| Constant | Value |
+|---|---|
+| `BALL_CLASS_NAME` | `"basketball"` |
+| `BALL_CONFIDENCE` | `0.25` |
+| `ZONE_HOOP_WIDTHS_H` | `3.0` |
+| `ZONE_ABOVE_HOOP_WIDTHS` | `4.0` |
+| `ZONE_BELOW_PX` | `300` |
+| `CANDIDATE_CAP` | `3` |
+| `MIN_POINTS_BEFORE` | `4` |
+| `MIN_POINTS_AFTER` | `3` |
+| `RANSAC_ITERATIONS` | `100` |
+| `RANSAC_SEED` | `42` |
+| `RESIDUAL_HOOP_W_FRAC` | `0.15` |
+| `WINDOW_BEFORE_START` / `END` | `-15` / `0` |
+| `WINDOW_AFTER_START` / `END` | `1` / `12` |
+| `MAPPING_MATCH_PX` | `3` |
+| `MAPPING_MIN_MATCH_RATE` | `0.90` |
+| `DIAGNOSTIC_HALF_WINDOW` | `8` |
+| `FPS_FALLBACK` | `25.0` |
+| `EXPECTED_BUILD` | `140` |
+| `BASELINE_MAKES_RIGHT` | `28` |
+
+## Proven / Inferred / Unknown
+
+- **Proven:** 11 pytest passed; only the two new files under `.team/shot_detectors/`; `candidates.json` absent; CLI exposes the three steps.
+- **Inferred:** Track fallbacks under `Liberty_Shot_Outputs/tracks/` and Temp will work once extract runs (copies exist on disk).
+- **Unknown:** Real 140 mapping rate, arc verdicts, hard-gate outcome — extract has not run.
+
+Next for Claude Code on Windows: `--step extract`, then sandbox/Windows `--step arc-rule-report`, then `--step overlays`.That check finished as expected: `candidates.json` is still missing, and the only new D1 files are the two untracked scripts under `.team/shot_detectors/`. Nothing further to run until Windows extract writes that file.
+[cursor_wsl] exit 0 at 20:21:21

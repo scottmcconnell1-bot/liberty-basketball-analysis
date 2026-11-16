@@ -1,0 +1,41 @@
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/40_free_throw_half_circle_spec.md (Claude Code's VETTED WITH 
+CONDITIONS block Q1-Q9 on top, then Hermes v1), 
+.team/stage1b_frozen_0943/measurement_report.md (top 12 lines), last 8 lines of 
+.team/drift_log.md. Read only; write nothing.
+Scott's rule (binding): "If there is no player movement and one is in the half 
+circle, then players are preparing for a free throw." Scott does not approve 
+settings; Claude Code fixes them before the run.
+Check, 1-3 lines each:
+1. Do Q1-Q9 implement Scott's rule exactly (stillness + exactly one player in 
+the half circle -> FT, that player shoots), without the rejected "most isolated 
+player" rule?
+2. Is the Q7 mask check before the run a sensible guard given Stage 1b's 0 of 
+60, and is it free of tuning-after-results?
+3. Golden Rules: no core edits, no training, no tracker/interpolation (is RANSAC
+ellipse fitting a banned trial? it is not on the list), finder reads no tags, 
+shot calls/make-miss untouched, one try, Q4 blind last.
+Last line exactly "MUSE: AGREE" or "MUSE: DISAGREE <reason>".
+📖 Read 40_free_throw_half_circle_spec.md  0.1s
+📖 Read measurement_report.md  0.1s
+💻 $ tail -n 8 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md
+
+────────────────────────────────────────
+☤ Hermes
+Check 1: Yes. Q5 encodes the binding logic directly: still AND ellipse accepted AND exactly one player's feet inside -> free_throw true, shooter = that player; 0 or 2+ feet inside -> no flag, trace unchanged. The rejected "most isolated player" rule is not used; the exactly-one test replaces it.
+
+Check 2: Yes. Stage 1b's 0 of 60 was the whole-court line/homography fit, which Q4 and Q7 avoid (region + RANSAC half-ellipse, no homography, no whole-court fit). The Q7 mask check is before the measured run with a STOP-if-2-of-3-per-gym no-tuning gate, so it is sensible given that and free of tuning-after-results.
+
+Check 3: Yes. Golden Rules hold: no core edits (court_homography and stage1b_court_lines read only), no training/tracker/interpolation, no banned trials; RANSAC ellipse fitting is not on the banned list, so not a banned trial. Finder reads no tags/DB, shot calls/make-miss untouched, one try, Q4 blind last (after Scott sees hand-check numbers).
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-aa080fe4ccb0dbc9e61a70e0bf7a9d48994afc3820e74910fc1f2fb0c239ffb4
+  hermes -c "You are Muse, the checker of Claude Code's… #9"
+
+Session:        local-aa080fe4ccb0dbc9e61a70e0bf7a9d48994afc3820e74910fc1f2fb0c239ffb4
+Title:          You are Muse, the checker of Claude Code's… #9
+Duration:       4m 10s
+Messages:       6 (1 user, 4 tool calls)

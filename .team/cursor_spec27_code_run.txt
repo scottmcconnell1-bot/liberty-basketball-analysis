@@ -1,0 +1,18 @@
+**Done on `team/auto`. No commit. No video run.**
+
+### Choice
+**Third return value** on `resolve_clip_centres` — `extents` dict keyed by tag ms, only for flagged shots (`clip_end`, `next_gap_s`). Simpler than a second function: conflict logic stays in one place; centres/flags behaviour unchanged.
+
+### Files changed
+1. `.team/shot_detectors/clip_moment_fix.py` — third return; helpers `too_short_conflict_note`, `review_storage_key`
+2. `.team/shot_detectors/make_review_queue_page.py` — flagged clips = `tag_frame - BEFORE .. clip_end`; too-short note appended; `KEY = coach_review_<out-dir name>` (flag off too)
+3. `.team/shot_detectors/test_clip_moment_fix.py` — clip_end, next_gap_s, no extents for last/unflagged, helper tests
+
+### Summary
+Flag ON: flagged clip length follows next anchor − 1; mark index stays `BEFORE`; short gaps get the “same shot tagged twice” note. Flag OFF: clip frames unchanged. Storage key is per out-dir folder.
+
+### Test command (for Claude Code)
+```
+.venv/Scripts/python.exe -m pytest .team/shot_detectors -q
+```Branch check finished: you’re on `team/auto`. Spec 27 code is already in the three named files; Claude Code can run the pytest command next.
+[cursor_wsl] exit 0 at 14:16:50

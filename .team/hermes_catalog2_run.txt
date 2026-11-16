@@ -1,0 +1,117 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-playbook (branch 
+team/playbook). You are the Architect. Your play catalog plan was REJECTED: read
+the first line of .team/specs/11_play_catalog_plan_v1_REJECTED.md for the seven 
+reasons, and .team/specs/10_jrhigh_requirements_scott.md item 8. Rewrite the 
+WHOLE plan .team/specs/11_play_catalog_plan.md so its body carries every fix (do
+not copy any REJECTED line into it); keep the good parts. Include a heading 
+exactly ## Files. STRICT: create or edit ONLY 
+.team/specs/11_play_catalog_plan.md. Do not create any other file and do not run
+code that writes files.
+📖 Read 11_play_catalog_plan_v1_REJECTED.md  0.1s
+📖 Read 10_jrhigh_requirements_scott.md  0.1s
+✗ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/11_play_catalog_plan.md [Refusing to overwrite /mnt/c/Users/scott/Docu...]
+📖 Read 11_play_catalog_plan.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/11_play_catalog_plan.md  0.1s
+│ .team/specs/11_play_catalog_plan.md
+│ @@ -1,6 +1,6 @@
+│  # Play Catalog Plan (Item 8)
+│
+│ -**Goal**: Build one de-duplicated catalog of every play from four sources. No DB writes. Output a catalog JSON + HTML review page under `.team/play_catalog/`.
+│ +**Goal**: Build one de-duplicated catalog of every play from four sources. No DB writes. Output a catalog JSON + HTML review page under `C:\Users\scott\Documents\Liberty_Play_Catalog\`.
+│
+│  ---
+│
+│ @@ -19,60 +19,76 @@
+│
+│  ## Matching Rule (must be in plan before any matching runs)
+│
+│ -**Primary key**: `(category, play_name)` — case-insensitive, trimmed.
+│ +**Primary key**: `(category, play_name)` — case-insensitive, trimmed. Subcategories (Man / Zone) are preserved within Offense.
+│
+│  **Confirmation**: First-frame player positions (o1..o5) in **court units** (COURT_W=500, COURT_H=470, basket at top). Two versions are "same drawing" iff every matched o-token is within **TOLERANCE = 12 court units** (≈ 2.5% court width). Unmatched tokens (missing in one version) count as mismatch.
+│
+│ -**Page grouping**: A play spans consecutive pages in a PDF. Grouping is determined by:
+│ -- Master/category PDFs: `diagram_json` from DB bulk import gives `start_page` / `end_page` (1-based master page numbers). Each play = contiguous page range.
+│ -- Patriots Playbook: Table of Contents entries → each entry maps to a contiguous block of Phase/Option pages (detected by "Phase N" / "Option" headers in extracted text).
+│ -- DB: `play_steps` rows per `play_id` already encode the page sequence (source_image → page number).
+│ -
+│ -**Category normalization**: Map source categories to canonical set:
+│ +**Page grouping**:
+│ +- **Master PDF**: Group consecutive pages by page header text — each page reads `"<category> | <play name> | ..."`. A play = contiguous page range with same header.
+│ +- **Category PDFs**: Same header-based grouping. Additionally, verify each page is a copy of a master page via text + drawing fingerprint; flag any that is not.
+│ +- **Patriots Playbook**: Table of Contents entries → each entry maps to a contiguous block of Phase/Option pages (detected by "Phase N" / "Option" headers in extracted text). **Probe step required first**: the extractor built for FastDraw (one diagram per letter page, 612x792, fixed court crop) does NOT work on Patriots (A4 pages, 595x842, multiple phases per page). Run a probe that reports the layout of 3 pages, then split each Patriots page into its phase panels before extraction. Do not compare Patriots positions numerically unless both are mapped to court units by landmarks; otherwise match Patriots by name only and show images side by side.
+│ +- **DB**: `play_steps` rows per `play_id` already encode the page sequence (source_image → page number).
+│ +
+│ +**Category normalization**: Map source categories to canonical set, preserving subcategories:
+│  ```
+│  BLOB / out_of_bounds / "BLOB"          → "BLOB"
+│  Defense / defense / "Defense"           → "Defense"
+│ -Offense / offense / "Offense"           → "Offense"
+│ +Offense-Man / offense-man / "Offense/Man" → "Offense/Man"
+│ +Offense-Zone / offense-zone / "Offense/Zone" → "Offense/Zone"
+│  Press Break / press / "Press Break"     → "PressBreak"
+│  Transition / transition / "Transition"  → "Transition"
+│ -Zone / Man subcategories roll up to parent.
+│  ```
+│
+│  ---
+│
+│  ## Pipeline Steps
+│
+│ -### 0. Prepare output dir
+│ -```
+│ -.team/play_catalog/
+│ +### 0. Prepare output dir (OUTSIDE the public repo)
+│ +```
+│ +C:\Users\scott\Documents\Liberty_Play_Catalog\
+│    catalog.json
+│    review.html
+│    pages/          # rendered page images (PNG, 1200px wide) for side-by-side comparison
+│  ```
+│
+│ -### 1. Extract & index every page from Sources 1–3
+│ +### 1. Probe Patriots Playbook layout (MANDATORY FIRST STEP)
+│ +- Open `Patriots Playbook.pdf` with PyMuPDF.
+│ +- For pages 1–3: report page size, number of drawings, text blocks, and detected "Phase N" / "Option" headers.
+│ +- Determine how to split each page into individual phase panels (by vertical bands, landmarks, or header regions).
+│ +- Output a layout report JSON. Stop here for Scott to review before proceeding.
+│ +
+│ +### 2. Extract & index every page from Sources 1–3
+│  - Reuse `playbook_vector_extract.py`:
+│    - `classify_pdf()` → confirm vector
+│    - `extract_page(pdf_path, page_1based)` → returns `{title, court_frac, positions (o1..o5 in court units), ink, pdf, page}`
+│ -- For Patriots Playbook (react-pdf): same extractor works (vector text + drawings). Parse TOC on page 1–2 to get play→page-range map.
+│ -- For each extracted page, compute **first-frame signature**: sorted list of `(oid, x, y)` for o1..o5 present.
+│ -
+│ -### 2. Load DB plays (Source 4) READ-ONLY
+│ +- **Master & Category PDFs**: use existing extractor (FastDraw format, one diagram per page).
+│ +- **Patriots Playbook**: after probe, apply the phase-panel splitter, then extract each panel as a separate "page" with its phase title (e.g., "Box 1 - Phase 1").
+│ +- For each extracted page/panel, compute **first-frame signature**: sorted list of `(oid, x, y)` for o1..o5 present.
+│ +
+│ +### 3. Load DB plays (Source 4) READ-ONLY
+│ +- Open DB with sqlite URI `file:...?mode=ro`.
+│  - Query `plays` + `play_steps` joined on `play_id`.
+│  - For each DB play: collect `{id, name, category, diagram_json, steps[{step_index, positions, source_image→page}]}`.
+│ … omitted 159 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten plan at .team/specs/11_play_catalog_plan.md incorporates all seven fixes from the rejection:
+
+1. Patriots probe step first — mandatory layout probe before extraction; phase-panel splitter; no numerical position comparison unless landmarks map to court units; otherwise name-only match with side-by-side images
+2. Master page grouping by header text — not DB diagram_json (only covers 66/380 pages)
+3. Category PDF verification — fingerprint each page against master; flag non-matches4. Subcategory preservation — Offense-Man / Offense-Zone kept separate, not rolled up5. Correct Python & DB — liberty-basketball-analysis/.venv/Scripts/python.exe; sqlite URI mode=ro
+6. Output outside repo — C:\Users\scott\Documents\Liberty_Play_Catalog\
+7. No review_decisions.json from browser — clipboard JSON buttons instead
+
+Plus the interactive confirmation requirement from item 8 (Scott confirms/fixes by clicking) and the 14 hand-made plays as answer key.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2190764cb9f2d4766be203d223db91b9508504372b8e05d95e4ee5151632b08f
+  hermes -c "Rewrite play catalog plan with fixes"
+
+Session:        local-2190764cb9f2d4766be203d223db91b9508504372b8e05d95e4ee5151632b08f
+Title:          Rewrite play catalog plan with fixes
+Duration:       6m 9s
+Messages:       11 (1 user, 9 tool calls)

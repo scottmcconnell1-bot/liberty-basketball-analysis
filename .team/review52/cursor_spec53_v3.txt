@@ -1,0 +1,44 @@
+## Verdict
+
+**v3 applies Muse C1/C2/C3, the Cursor v1 audit, NFHS chart numbers, and Scott’s addendum.** Nothing in the code surface hard-blocks starting the 3-clip prototype after team agree. Scott’s open numbers are clearly marked.
+
+### Applied checklist
+
+| Source | In v3? |
+|---|---|
+| **Muse C1** — spec-36 cause = ball-in-ref / ref-holding proxies (pose never used); `is_referee_player` = spec-39 | Yes (§3) |
+| **Muse C2** — pass = 6 Scott examples **and** false fires on labelled true shots (class 1/2); warm-ups alone not enough | Yes (§4) |
+| **Muse C3** — small-ref pose pad/upscale as **Step 0** first gate | Yes (§7) |
+| **Cursor v1** — arm-raised / both-arms / wave / chop only; moment-window on `"r"`; build surface `ref_signals.py`; 3 clips; no-ref → no change | Yes |
+| **Scott addendum** — book + cue fusion; unknown → coach ≤20; feed spec-52 via **exclude** from e2e denom | Yes (§2, §6, DETECTABLE EVENTS) |
+| **NFHS 2024-25** chart numbers (#1/#2/#4/#16/#17/#19/#22…) | Yes |
+
+### Buildability (Proven this session)
+
+- `rim_first_finder.py`: `REFEREE_CLASS`, `_compact_frame` writes `"r"`, `_referees_from_frames` reads it, `assign_shot_calls(..., referee_boxes, ...)` accepts and does not read (hook point as written).
+- `frames.json` with non-empty `"r"`: rimrock `run50gpu_rimrock` (75.3%, med ~202×81); **gvg boxes live under `run44_gv`** (82.7%, med ~124×47 — matches prior audit’s “gvg” row); hsb `run49_*`; notus on `run*_notus` (top-level `notus/frames.json` has **no** `"r"` key).
+- Spot wide clips exist: `rimrock_77_wide.mp4`, `gvg_149_wide.mp4`, `rimrock_253_wide.mp4`.
+- `ensemble_predict.py` / `postproc.py` exist; no referee override today — thin additive hook is fine; do not touch training.
+- GPU env `/mnt/c/Users/scott/.venvs/liberty-gpu`: ultralytics **8.4.189**, `yolov8-pose.yaml` with `kpt_shape: [17, 3]`. Interpreter is `Scripts/python.exe` (Windows venv).
+
+### Unknown / soft (not spec defects)
+
+- No `*pose*.pt` on disk yet — first YOLO pose load must fetch or pin weights.
+- Live pose inference on ~47–56 px refs unproven until Step 0.
+- By §7 order, Step 0 gates Step 2; that is intentional, not a missing requirement.
+
+### SCOTT DECIDES (clearly marked in §8)
+
+- `waved_off` window  
+- 3PT arm-up min height  
+- small-ref keypoint-found share (C3)  
+- labelled-true-shot false-fire pass bar (C2)  
+- `foul_ref_window_ms`: proposed **1500** (Scott confirms)  
+- Fixed already: coach-review ≤20; no-ref → no cue  
+
+No hard block on coding the 3-clip overlay prototype once the team agrees; pass/fail measurement waits on Scott’s numbers + C3.
+
+**CURSOR: AGREE**Those background lookups finished cleanly and already fed the audit: `"r"` boxes are on rimrock/hsb/gv(notus) runs, the three wide spot clips are present, and ultralytics 8.4.189 with pose YAML is in the GPU env.
+
+The read-only verdict stands: **CURSOR: AGREE** on spec 53 v3.
+[cursor_wsl] exit 0 at 14:53:44

@@ -1,0 +1,15 @@
+Yes — OK to start the planned logo52a train + gate.
+
+**Proven**
+- **V2:** `labels52_v2` `56f18cf0…`, `postproc52` `150ff7e6…` unchanged; `labels52a` `d8d2acd4…` matches `pre52a_sha256.txt`; code/postproc52a shas match freeze.
+- **V3:** Only `-1→0` on adrian (26) and notus (6); counts match prereg (`adrian -1:19/0:26/1:79/2:42`, `notus -1:3/0:6/1:22/2:8`, hsb 4 / gvg 145 / rimrock 241).
+- **V4:** `test_logo52_gate_byte_identical_with_filter_off` **passed**; report matches (adrian 94.5 PASS, notus 90.3 FAIL, gvg 95.9 checks 200 FAIL, hsb 98.6 PASS, rimrock 95.1 FAIL). No `runs/logo52a`; filter ON not applied to logo52 preds.
+- **V5:** All five films: `clips`/`t_ms`/`hoop_w`/`film` equal to clips7; `y` = labels52a; `clips7a_sha.txt` digests match files.
+- **52a tests:** 5/5 session_filter / postproc52a / logo52 regression passed; full `.team/mm_clip` → 17 passed.
+- **Planned run** matches prereg (clips7a → `runs/logo52a`, E=5, seeds 0 1 2, then `gate52 --postproc postproc52a.json`; fail → stop).
+
+**Inferred / not re-proven here**
+- **V1** Windows `.venv` 314/1: WSL cannot exec `.venv/Scripts/python.exe` (same interop block as the build note). Linux: mm_clip clean; shot_detectors 295 pass / 3 fail on hardcoded `C:/Users/.../holdout_names.json` (Windows-path env, not 52a).
+
+CURSOR: GO: V2–V5 + 52a/logo52 filter-OFF checks hold; planned train/gate matches prereg; no peeking.Both background checks finished cleanly: clips7a matches clips7 on `clips`/`t_ms`/`hoop_w`/`film` (only `y` from labels52a differs), and the five digests in `clips7a_sha.txt` match the files on disk. That still supports the earlier **GO**.
+[cursor_wsl] exit 0 at 17:36:56

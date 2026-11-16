@@ -1,0 +1,6 @@
+Small test job, do not edit any repo file. Run these and report each output verbatim:
+1) /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe -c "import cv2; c=cv2.VideoCapture(r'C:\Users\scott\Documents\liberty-basketball-analysis\uploads\LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4'); print('frames', c.get(7), 'read', c.read()[0])"
+2) python3 -c "import cv2; print(cv2.__version__)"
+3) echo test > /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/cursor_sandbox_test.txt && cat /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/cursor_sandbox_test.txt
+4) echo test > /mnt/c/Users/scott/Documents/sandbox_should_block.txt
+Say plainly which commands failed and why.

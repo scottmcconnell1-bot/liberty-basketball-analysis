@@ -1,0 +1,41 @@
+Query: You are Muse, the checker. CHECK Claude Code's VETTED verdict on 
+.team/specs/20_c_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). v1 was REJECTED 
+(first line of .team/specs/20_c_job_spec_v1_REJECTED.md says why). Stage C is a 
+measurement script that pairs Adrian scoreboard rises with the 140 build-set 
+shots; Scott chose it after D1.
+Check: (1) it is measurement only: applied_to_core false, scoreboard_clock.py 
+read only, no scoreboard track rebuild, a make is still ball_through_rim or 
+net_moved_after_shot (AGENT_OPERATIONAL_PROTOCOL.md Golden Rules); (2) the rise 
+rule and the 25 s window match docs/agent_handoffs/ACTIVE.md "Makes from the 
+scoreboard" and .team/specs/18_makes_misses_work_plan.md BINDING NOTE d, and the
+after-shot-only direction is narrower, never wider; (3) the CLEAN / AMBIGUOUS 
+rule can never count a guess as a recovered make, and 1-point rises can never 
+make a CLEAN make; (4) the hard gate (a real miss with a CLEAN 2/3-point rise) 
+is stated and must be 0; (5) all numbers are fixed before anything runs, with no
+tuning, second window or retry; (6) outputs are outside the repo; (7) the 
+binding note in section 5 (rise time) is in the body, not only the stamp; (8) 
+anything the stamp missed. Cite by section name. Do not edit files.
+End with exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE: <reason with file 
+and section>".
+📖 Read 20_c_job_spec.md  0.1s
+📖 Read ACTIVE.md
+📖 Read 20_c_job_spec_v1_REJECTED.md
+📖 Read 18_makes_misses_work_plan.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+
+────────────────────────────────────────
+☤ Hermes
+I have verified all eight points against the spec body, ACTIVE.md, BINDING NOTE d, AGENT_OPERATIONAL_PROTOCOL.md, and the v1 REJECTED file. The spec fixes every v1 flaw (backwards window fixed to shot t..t+25, counts corrected to 109/38/71/27/11, direction explicitly narrower "after-shot only", 1-point rises separated, binding note moved into section 5 body, hard gate 0 stated in section 6, numbers fixed, applied_to_core false, scoreboard read-only).
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-7ee8e11977f82d5d09a612eb46e50ba3c04fbe4318d24d6ebffa04d1006da0ca
+  hermes -c "Check Claude verdict on job spec"
+
+Session:        local-7ee8e11977f82d5d09a612eb46e50ba3c04fbe4318d24d6ebffa04d1006da0ca
+Title:          Check Claude verdict on job spec
+Duration:       54s
+Messages:       12 (1 user, 10 tool calls)

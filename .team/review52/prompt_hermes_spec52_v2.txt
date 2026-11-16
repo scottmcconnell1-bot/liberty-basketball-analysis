@@ -1,0 +1,19 @@
+You are Hermes, the ARCHITECT on the Liberty basketball film project. Your spec 52 v1 (.team/specs/52_label_audit_stable_ensemble_spec.md, copy kept at .team/review52/52_spec_v1_hermes.md) was reviewed. Both reviewers said DISAGREE. Rewrite it as v2, overwriting .team/specs/52_label_audit_stable_ensemble_spec.md. Edit no other file.
+
+Read (repo root /mnt/c/Users/scott/Documents/liberty-basketball-analysis):
+- .team/review52/vet52.txt (Claude Code V1-V4 - apply all four exactly)
+- .team/review52/cursor_spec52.txt (Cursor items 1-9 - apply all)
+- .team/review52/muse_spec52.txt (read from the LAST '☤ Hermes' on; Muse items 1-9 - apply all)
+- code: .team/mm_clip/train_clip.py, extract_clips.py, ensemble_predict.py, postproc_locked51.json, new_film.sh
+
+v2 must spell out, with concrete values, so Cursor can build it without guessing:
+A. Label rule (V1 wording: shot = FG/FT attempt toward this hoop incl. airballs, judged from shooter motion + ball flight; miss; not a shot; unclear = -1). Unmatched candidates -> -1 everywhere, including extract_clips labels_tagmatch/labels_tags for adrian/notus (rebuild those clips). Re-audit list (rimrock, hsb, gvg; hsb1 diagnostic only, never trained). Second-person (Scott/coach) spot-check before freeze: all 0<->1 flips up to 60 per film, plus a random 10% of unchanged 0/1 rows; record in drift_log.
+B. Training (train_clip.py): bf16 autocast without GradScaler; WeightedRandomSampler class-balanced, plain CE + label_smoothing 0.05, no loss weights; softer aug values; epoch count E chosen per Cursor item 5 (inner split, miss-recall metric, tie-break, search 1..18, E = median); --seed plumbing for logo and fit; per-seed saves.
+C. Gate (all must hold or stop for Scott): END-TO-END scoring vs ALL real shots (coach tags for adrian/notus; complete labelled lists for others; a shot with no candidate = not found); per held-out game: 3-seed ensemble (mean softmax) auto >= 90%; seed spread defined (per game, best seed minus worst seed auto %) <= 5 pts; honest coach-review >= 90%; checks <= 20 per game (hard, no truncation); silent-reject diagnostic = 0 (labelled misses with mean P(shot) < floor and every seed P(shot) < 0.5).
+D. Coach-check rule in a NEW locked file postproc52.json: thr 0.5, dedup 800 ms, weak-shot flag P(shot) < 0.65, make/miss flag |P(make|shot) - 0.5| < 0.3, floor 0.2, M-model seed-disagreement flag (>= 1 shot and >= 1 non-shot, or make/miss split; M=3 LOGO, M=5 final). ensemble_predict reads postproc52.json.
+E. Honest review scoring: non-flagged auto calls stand as predicted; each flagged item is answered once by the (simulated) coach = its own label (flagged candidate that is a real shot -> added with true call, one-to-one, a tag already matched by a non-flagged auto shot cannot be reused; flagged non-shot -> removed); never insert truth at times nobody flagged.
+F. Freeze list (sha256 in drift_log before blind): corrected label files, rebuilt clips, postproc52.json, ens52 models, train_clip.py, extract_clips.py, ensemble_predict.py, finder config / new_film.sh.
+G. Blind: >= 2 new unseen films from Scott, at least one in an unseen gym; candidates labelled before any model output; random 20% second-person label check with a fixed sampling seed; if checker disagrees on > 10% of the sample, labels are redone before scoring; pass bar fixed now: end-to-end found-and-called-right >= 90% WITH honest review on EACH film, checks <= 20 per film.
+H. Deliverables list for Cursor (files and functions to change) and a Disagreements section if you disagree with any reviewer item (with reason).
+
+Keep it under 170 lines. Final line exactly "HERMES: SPEC WRITTEN" or "HERMES: NO SPEC:" + reason.

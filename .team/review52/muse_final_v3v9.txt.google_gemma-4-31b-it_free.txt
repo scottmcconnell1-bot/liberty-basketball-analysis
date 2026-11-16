@@ -1,0 +1,38 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+FINAL check. (1) .team/specs/52a_class0_restore_prereg.md v3: counts fix (Claude
+Code verified: adrian out-of-session rows are all also far-from-tag, so unique =
+26, not 32) (adrian unique 26, pool 277, oos
+definition 48b in_session(is_ft=True)), build order (Cursor builds 
+session_filter + gate path + tests + labels52a + sha
+first; Claude Code verifies; Muse + Cursor confirm; then training), R7 
+amendment, dissent record. (2)
+.team/specs/53_referee_signals_spec.md v9: pass bar only when the step is 
+enabled; violation wording.
+End with two lines:
+MUSE 52a: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (spec 53 v9)
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.3s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.9s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-3d8330fa7a006f559e6e7624a256096573ff16738cc9e85fa71a6ee01a9600d3
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #11"
+
+Session:        local-3d8330fa7a006f559e6e7624a256096573ff16738cc9e85fa71a6ee01a9600d3
+Title:          You are MUSE, the REVIEWER (not Hermes)… #11
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

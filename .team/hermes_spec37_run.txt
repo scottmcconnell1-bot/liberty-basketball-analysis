@@ -1,0 +1,223 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/37_rim_first_cue_fix_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "RIM-FIRST CUE FIX SPEC v1 - not run". Plain markdown, no line-number 
+prefixes, no literal "\n", no "||" table pipes. Edit nothing else, run nothing 
+that writes. One to two pages.
+
+Read first: .team/specs/36_rim_first_extras_fix_spec.md (K1-K8 block on top is 
+binding), .team/shot_detectors/rim_first_finder.py (assign_shot_calls, 
+emit_moments, assign_frame_hoops, pair_hoops_to_series, hoop_series_ok, 
+series_hoop_width), .team/shot_detectors/shot_rules_measure.py 
+(ball_inside_player, its catch/release modes), the last 20 lines of 
+.team/drift_log.md.
+
+SCOTT'S DECISION 2026-11-06 (plan approved, three points):
+1. Drop the referee checks completely: remove possible_fouled_miss AND 
+referee_holding from shot calls. Referee boxes may stay saved in frames.json. 
+Fouled misses and blocks are then counted WRONG by the measure, said plainly.
+2. Warm-up check needs the extra balls to LAST: possible_shoot_around fires only
+when, in the 3000 ms before the trigger (TRACE_BEFORE_MS, reused), at least 12 
+frames have >= 3 BODD basketballs (SHOOT_AROUND_MIN_BALLS 3, Scott approved spec
+36). New number SHOOT_AROUND_MIN_FRAMES = 12, Scott decided 2026-11-06. State 
+whether the 12 frames are total or consecutive - say "total" unless you find a 
+reason in a file.
+3. Fix the order of steps so merge and fake-hoop checks can work: shrink the 
+player "has the ball" circle used by same_shot_merged, and run the fake-hoop 
+size check BEFORE hoops are paired into series.
+
+FACTS FROM THE SPEC 36 RUN (Claude Code, read from saved run36 frames.json / 
+moments.json / measure36 results.json; Proven):
+- Run: Adrian Q1-Q3 found 71/109 (spec 35: 98), extras 10 (26); Notus Q1 17/31 
+(28), extras 5 (12). 38 real shots taken off the shot list: shoot_around 19, 
+fouled_miss 13, referee_holding 5, match shift 1. 33 went orange, 5 not_a_shot.
+- Warm-up: of the 19 real shots hidden by shoot_around, most had >=3 balls on 
+only 1 frame of the 75 before; a few 7-21. Halftime moments: 13-54 frames, two 
+had 3.
+- Referee: on the labelled fouled shots (C) the ball was never inside a referee 
+box in the 1.5 s after (5 of 7 not within 3 s either). Hidden real shots had 1-6
+frames of contact.
+- Fake hoop: hoop series filter dropped NO series (4 per film, all kept, series 
+widths 0.94-1.04 x film median). pair_hoops_to_series pairs by nearest x with no
+distance limit, so a fake hoop box joins a real series and is averaged away 
+before hoop_series_ok runs.
+- Hoop box AT THE MOMENT (moment["hoop"], median over the run) vs film median 
+width (Adrian 97.6 px, Notus 64.2 px): real shots 0.79-1.17 x; the 8 labelled 
+fake-hoop moments: 1.36, 1.54, 0.62, 1.71, 3.95, 1.74 (Adrian), 1.55, 3.60 
+(Notus). With the approved 0.5-1.5 band, 6 of 8 would be caught. Real-shot hoop 
+h/w 1.00-1.33 and box bottom in the top 32% of the picture; fakes h/w 0.25-1.72,
+several at the bottom edge (y about 1051 of 1080).
+- Merge: same_shot_merged fired 0 times. ball_inside_player mode "release" uses 
+distance < max(w,h) x 0.6 of the player box centre - a big circle; under the rim
+some player is almost always "holding" the ball on a frame between two moments.
+
+WHAT TO WRITE:
+A. The exact new rule for each of the three points, with the function to change 
+and where it runs in the order (detect -> hoop check -> series pairing -> runs 
+-> moments -> calls).
+B. Fake hoop: the per-hoop (per frame, before pairing) size check using the 
+approved 0.5-1.5 band against the film median. Say what happens to a dropped 
+hoop box (does not pair, does not start a series, does not feed the carry). 
+Optional shape/position check (h/w, box bottom) ONLY as a proposal with a number
+marked "Scott decides before the run" and its risk; the h/w and bottom numbers 
+above came from the same film, so say so.
+C. Merge: the smaller circle. Prefer an existing proven rule (file:line) - e.g. 
+ball_inside_player mode "catch" or a factor already approved in spec 33 - over a
+new number. If a new number is needed, propose one, mark "Scott decides before 
+the run", say it was not picked from these results.
+D. Numbers table: every number used, source (file:line, spec, or "Scott decided 
+2026-11-06") or "Scott decides before the run" + proposed value. No looser 
+cutoffs.
+E. Measure unchanged (rim_first_measure.py --truth). Runs: re-detect Adrian 
+0..3317100 ms and Notus 0..883400 ms into NEW dirs rim_first/run37_adrian, 
+run37_notus; measure37_adrian, measure37_notus. If shot calls can be recomputed 
+from the saved run36 frames.json + series points without video, say how and 
+whether that is exact; otherwise re-detect. Make/miss check before and after 
+(make_review_queue_page.py --wide-combined -> gray 30 / orange 9 / 42 / same 3 
+groups). Q4 blind only after Scott sees the numbers.
+F. Honest limits: what this cannot fix (fouled misses, blocks, after-buzzer 
+shot), and that the 12-frame number and any shape number were chosen after 
+seeing these films, so the Q4 blind run is the real test.
+
+Rules: no core edits, no training, no banned trials (linear interpolation, 
+ByteTrack, DeepSORT, early windows, wider column, hoop recenter), no tuning 
+after results, finder reads no tags/scoreboard/DB, DB read-only, one try then 
+stop for Scott, images local only. Files Cursor may edit: rim_first_finder.py, 
+test_rim_first.py (rim_first_measure.py only if needed - say why). Roles: Claude
+Code vets, Muse checks, Cursor codes.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading the required files to ground this spec in facts.
+────────────────────────────────────────
+
+📖 Read 36_rim_first_extras_fix_spec.md  0.2s
+📖 Read rim_first_finder.py  0.3s
+📖 Read shot_rules_measure.py  0.3s
+📖 Read drift_log.md  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+All four source files are read. The facts are grounded: spec 36's K1-K8 binding block (lines 1-9), the current finder code (assign_shot_calls :830-1020, pair_hoops_to_series :637-656, film_median_hoop_w called at :1403 after the v6 pass, possession_between :931-946 using release 0.6), shot_rules_measure.py ball_inside_player catch mode at :42-43 with factor 0.5 at :42, and the drift_log run36 facts. Now I'll write the single spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/37_rim_first_cue_fix_spec.md
+│ .team/specs/37_rim_first_cue_fix_spec.md
+│ @@ -0,0 +1,163 @@
+│ +RIM-FIRST CUE FIX SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+│ +Deliverable: this one file only. Nothing else is edited; nothing runs that writes outputs.
+│ +Author: Hermes (Architect). Cursor codes; Claude Code vets; Muse checks AGREE/DISAGREE.
+│ +Binding input: .team/specs/36_rim_first_extras_fix_spec.md K1-K8 (top block) stays binding unless changed here.
+│ +
+│ +1. SCOTT'S DECISION 2026-11-06 (three points, all binding)
+│ +
+│ +The spec-36 run hid real game shots: 38 real shots taken off the shot list -
+│ +shoot_around 19, fouled_miss 13, referee_holding 5, match shift 1 (run36
+│ +frames.json / moments.json + measure results).
+│ +
+│ +Point 1 - drop the referee checks completely.
+│ +  Remove possible_fouled_miss AND referee_holding from assign_shot_calls
+│ +  (.team/shot_detectors/rim_first_finder.py). Referee boxes are still
+│ +  collected and saved in frames.json (key "r" in _compact_frame; collection in
+│ +  detect_span) but are never used for a shot call. Fouled misses and blocks are
+│ +  then counted WRONG by the measure (rim_first_measure.py --truth), said
+│ +  plainly; the finder does not guess foul, block, or game time.
+│ +
+│ +Point 2 - warm-up check needs the extra balls to LAST.
+│ +  possible_shoot_around fires only when, in the 3000 ms before the trigger
+│ +  (TRACE_BEFORE_MS = 3000 ms, rim_first_finder.py:70, reused), at least
+│ +  SHOOT_AROUND_MIN_FRAMES = 12 frames contain >= SHOOT_AROUND_MIN_BALLS = 3
+│ +  BODD basketballs (SHOOT_AROUND_MIN_BALLS = 3, spec 36 K8,
+│ +  rim_first_finder.py:84). The 12 frames are TOTAL in the window, not
+│ +  consecutive: no file read for this spec says consecutive, and the spec-36
+│ +  grounding is a frame count (most of the 19 hidden real shots had >= 3 balls
+│ +  on only 1 frame of the 75 before; a few had 7-21). This replaces the current
+│ +  any-frame check (_frames_touch_window on hot_frames,
+│ +  rim_first_finder.py:982-985) with a count of frames in
+│ +  [trigger_ms - TRACE_BEFORE_MS, trigger_ms].
+│ +
+│ +Point 3 - fix the order so merge and fake-hoop checks can work.
+│ +  Order inside one detect span: detect -> hoop check -> series pairing -> runs
+│ +  -> moments -> calls.
+│ +  3a. Fake-hoop size check PER FRAME, BEFORE hoops are paired into series: keep
+│ +      a BODD hoop box only when its width is in
+│ +      [HOOP_W_MIN_WIDTHS, HOOP_W_MAX_WIDTHS] = [0.5, 1.5] x the film median
+│ +      hoop width (spec 36 K8; rim_first_finder.py:78-80). A dropped hoop box
+│ +      does not pair to a series, does not start a series, and does not feed the
+│ +      hoop carry (resolve_frame_hoops / build_hoop_carry).
+│ +      Rationale from the run: pair_hoops_to_series pairs by nearest x with NO
+│ +      distance limit (rim_first_finder.py:637-656), so a fake hoop joins a real
+│ +      series and is averaged away before hoop_series_ok (:332-363) runs; the
+│ +      series filter dropped NO series (4 per film, all kept, widths 0.94-1.04x
+│ +      of film median).
+│ +      Where: compute film_median_hoop_w (:675-686) right after the BODD pass,
+│ +      before the v6 pass (it is currently called after the v6 pass at
+│ +      detect_span :1403); filter each frame's hoops by the band before
+│ +      assign_frame_hoops (:723-754); build hoop_samples and the carry from kept
+│ +      hoops only (_hoop_samples_from_raw :1182-1198).
+│ +  3b. Smaller "has the ball" circle for the merge: possession_between
+│ +      (rim_first_finder.py:931-946) calls ball_inside_player in mode "catch"
+│ +      with factor 0.5 (shot_rules_measure.py:42-43, spec 33 Scott-approved)
+│ +      instead of mode "release" at 0.6 (rim_first_finder.py:72). trace_shooter
+│ +      keeps release mode 0.6. No new number is needed - catch 0.5 is an
+│ +      existing proven rule. If Scott wants a different merge factor, that is a
+│ +      new number "Scott decides before the run", not picked from these results
+│ +      (same_shot_merged fired 0 times in run 36, so the run gives no merge
+│ +      number).
+│ +
+│ +2. SHOT-CALL ORDER (assign_shot_calls, rim_first_finder.py:830-1020)
+│ +
+│ +First rule that fires sets shot_call; flags list every rule that fired:
+│ +  1 not_a_hoop -> not_a_shot (series filter, unchanged from spec 36)
+│ +  2 same_shot_merged -> not_a_shot + merged_into_frame, catch-mode circle
+│ +      (Point 3b)
+│ +  3 possible_shoot_around -> orange, 12-of-3000-ms frame count (Point 2)
+│ +  4 otherwise shot, shot_reason None
+│ +Referee_holding and possible_fouled_miss are REMOVED (Point 1). K1-K3 shapes
+│ +stay binding: shot_call in {shot, orange, not_a_shot} plus shot_reason;
+│ +shooter kept separate with shooter_reason; scorecard on shot_call; any group
+│ +entry called shot is WRONG whatever its tags say. Referee groups now land in
+│ +that "called shot = WRONG" bucket plainly.
+│ +test_rim_first.py: add pure-function tests for the 12-of-3000-ms count, the
+│ +per-hoop pre-pair width filter, and catch-mode merge.
+│ … omitted 85 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+The file is written. Let me verify line 1 and the formatting constraints (no pipes, no line-number prefixes, no literal "\n").
+────────────────────────────────────────
+
+📖 Read 37_rim_first_cue_fix_spec.md  0.7s
+🔎 Grep \|  0.7s
+🔎 Grep \\n  0.7s
+🔎 Grep ^\d+[|.]  0.7s
+
+────────────────────────────────────────
+☤ Hermes
+Done. One new file written, nothing else touched, nothing executed.
+
+File: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/37_rim_first_cue_fix_spec.md (line 1 exactly RIM-FIRST CUE FIX SPEC v1 - not run; verified no pipe characters, no literal \n, no per-line numbering — only standard section headings).
+
+What the spec covers (grounded in the files read):
+1. Point 1 — drop referee checks: possible_fouled_miss and referee_holding removed from assign_shot_calls (rim_first_finder.py:830-1020); referee boxes still saved in frames.json (key r) but unused for calls; fouled misses/blocks counted WRONG by the measure, plainly.
+2. Point 2 — warm-up lasts: possible_shoot_around fires only when ≥ SHOOT_AROUND_MIN_FRAMES = 12 total frames (not consecutive — no file says so) have ≥ SHOOT_AROUND_MIN_BALLS = 3 BODD basketballs in [trigger - TRACE_BEFORE_MS 3000ms, trigger] (rim_first_finder.py:70, :84), replacing the any-frame touch check at :982-985.
+3. Point 3 — order: detect → per-hoop size check → series pairing → runs → moments → calls. Per-hoop [0.5, 1.5] × film-median width check runs before pairing (pair_hoops_to_series has no distance limit, :637-656); dropped hoops don't pair, start series, or feed the carry; film_median_hoop_w moves from :1403 to right after the BODD pass. Merge uses ball_inside_player mode "catch" factor 0.5 (shot_rules_measure.py:42-43, spec 33) instead of release 0.6 in possession_between (:931-946); trace keeps release 0.6. No new merge number.
+4. Shot-call order: not_a_hoop → same_shot_merged (catch circle) → possible_shoot_around (12-of-3000) → shot.
+5. Optional shape/position proposal only (h/w, box bottom), marked "Scott decides before the run" with same-film overfit risk; width-only for run 37.
+6. Numbers table with sources (spec 36 K8, spec 33, Scott decided 2026-11-06 for the new 12); removed FOUL_REF_WINDOW_MS 1500; no looser cutoffs.
+7. Measure/runs: rim_first_measure.py --truth unchanged (not edited — it only reads tags); new dirs run37_adrian/run37_notus (Adrian 0..3317100, Notus 0..883400 ms) and measure37_adrian/measure37_notus. Shoot-around and merge are exactly recomputable from saved run36 frames.json; the pre-pair fake-hoop check is NOT (run36 series already absorbed fake hoops), so both films re-detect from video. Q4 blind only after Scott sees numbers. Make/miss before/after via make_review_queue_page.py --wide-combined (gray 30 / orange 9 / 42, same 3 groups).
+8. Honest limits: can't fix fouled misses/blocks or the after-buzzer shot; 12-frame and any shape number chosen after seeing these films, so Q4 blind is the real test. Plus rules: no core edits, no training, no banned trials, finder tag/scoreboard/DB-free, one try, stop for Scott.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-93f60ff44549b2684210a5366f2c4b90d9cb345618131926b731e0d8a6267dfd
+  hermes -c "Write rim first cue fix spec file"
+
+Session:        local-93f60ff44549b2684210a5366f2c4b90d9cb345618131926b731e0d8a6267dfd
+Title:          Write rim first cue fix spec file
+Duration:       3m 47s
+Messages:       14 (1 user, 12 tool calls)

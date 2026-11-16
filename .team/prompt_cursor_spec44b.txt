@@ -1,0 +1,9 @@
+You are the Coder. Small fix to YOUR new file .team/shot_detectors/rim_first_make_miss.py (spec 44, V1-V7) + its test. Edit no other file. Do not commit.
+
+Claude Code's review found (keep_ball_detections.py, unchanged):
+1. step_extract writes candidates.json THEN raises SystemExit("MAPPING CHECK GATE FAILED ...") when the rate < 0.90 (line ~1111-1118). For d2v1 this always happens (drift log: d2v1 extract stopped at its own 0.90 gate as before; report used --mapping-proof-json). cmd_d1 currently dies there and never runs arc-rule-report.
+   Fix: in cmd_d1, if --mapping-proof-json is given AND kbd.main(extract) raises SystemExit whose message starts with "MAPPING CHECK GATE FAILED" AND candidates.json exists -> print "extract mapping gate stop (expected for d2v1; proof file used, spec 23 v3)" and continue to arc-rule-report. Any other SystemExit, or no proof file -> re-raise.
+2. step_arc_rule_report writes results.json and report.md THEN raises SystemExit for "HARD GATE FAILED" or "LOST MAKES" (lines ~1307-1320). Those are truth-based gates; with gt_make None they are meaningless.
+   Fix: in cmd_d1, if results.json exists and the SystemExit message starts with "HARD GATE FAILED" or "LOST MAKES" -> print "truth-based gate ignored: truth absent (spec 44 V2)", write out_dir/wrapper_note.json {"truth_absent": true, "ignored_exit": <message>}, return 0. Any other SystemExit (e.g. NO-OP PROOF FAILED, MAPPING PROOF MISMATCH, MAPPING CHECK GATE FAILED from the report step) -> re-raise.
+Tests: monkeypatch kbd.main to simulate each case (extract mapping stop with/without proof, hard gate after results written, lost makes, NO-OP PROOF FAILED re-raised, mapping proof mismatch re-raised).
+Run: python3 -m pytest .team/shot_detectors/test_rim_first_make_miss.py .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_ft_half_circle.py -q and print the command + result.

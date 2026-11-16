@@ -1,0 +1,70 @@
+Query: You are checking Claude Code's code (Scott 2026-10-30: Cursor is out of 
+credits, "go ahead and take over"; Hermes and Muse check Claude Code's code). 
+Repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis. Do not edit any 
+file.
+Spec: .team/specs/19_d1_job_spec.md (v4, VETTED, Muse AGREE). Code: 
+.team/shot_detectors/keep_ball_detections.py and 
+.team/shot_detectors/test_keep_ball_detections.py. Reference: v6_ball() in 
+collect_q4_bodd.py (lines 106-145).
+Claude Code changed only: (1) constants BALL_CONFIDENCE 0.25 -> 0.28 and new 
+CROP_LEFT_RIGHT=260, CROP_ABOVE=200, CROP_BELOW=240, PREDICT_IMGSZ=640; (2) new 
+functions crop_bounds() and detect_on_crop(); (3) in step_extract, one seek to 
+the earliest needed frame then sequential cap.read() to the last needed frame, 
+calling detect_on_crop on needed frames (was: a seek per frame and a full-frame 
+model call); (4) load_build_shot_list raises SystemExit unless exactly 140 shots
+(was a warning); (5) tests: 0.28, crop constants, two new tests (crop offset 
+added back; every box kept). Claimed test result: 13 passed (python -m pytest 
+.team/shot_detectors/test_keep_ball_detections.py -q).
+Check: (a) crop bounds, clamping, conf, imgsz and the offset add-back match 
+v6_ball exactly; (b) every box is kept (no single-pick, no 220 px filter, no 
+continuity weight); (c) the sequential read reads the right absolute frames 
+(frame index = earliest + count of reads); (d) nothing else in the file changed 
+behaviour: arc windows, zone, cap, truth only in scoring, unchanged rule copy, 
+mapping gate 90%, hard gate 0 misses called makes; (e) no protected file touched
+(git status). Run the tests if you can.
+End with exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE: <reason with file 
+and function>".
+📖 Read 19_d1_job_spec.md  0.2s
+📖 Read keep_ball_detections.py  0.2s
+📖 Read test_keep_ball_detections.py  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read the reference v6_ball() in collect_q4_bodd.py (lines 106-145) and check git status.
+────────────────────────────────────────
+
+📖 Read collect_q4_bodd.py L95-154  0.1s
+✗ $ git status + 2 commands  180.5s [exit 124]
+
+────────────────────────────────────────
+☤ Hermes
+The repo shows massive git status noise (likely CRLF/LF line-ending differences on WSL). Let me verify whether the protected files (ai_bridge.py, collect_q4_bodd.py) have real content changes vs. just line-ending noise, and run the tests.
+────────────────────────────────────────
+
+💻 $ echo "=== content diff (ignoring CR) ai_bridge.py ===" + 9 commands  2.4s
+✗ $ ls .team/shot_detectors/ + 5 commands [BLOCKED: Command flagged as dangerous (script...]
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.8s (attempt 2/3)...
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.5s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.1s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-8532a1b8f266fe2171b5344d6cabf8f7230453a625c3856ef3445a51f761587a
+  hermes -c "Review Claude Code changes to shot detector"
+
+Session:        local-8532a1b8f266fe2171b5344d6cabf8f7230453a625c3856ef3445a51f761587a
+Title:          Review Claude Code changes to shot detector
+Duration:       3m 58s
+Messages:       12 (1 user, 10 tool calls)

@@ -1,0 +1,166 @@
+﻿Query: Hermes, you are the Architect. EDIT ONE file: 
+.team/specs/23_d2_train_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Change line 1 to "D2 TRAIN JOB SPEC v2 - nothing built". Plain markdown, no 
+line-number prefixes, no literal "\n". Create nothing else, run nothing. If your
+write tool refuses, say so plainly. v1 was REJECTED; read line 1 of 
+.team/specs/23_d2_train_job_spec_v1_REJECTED.md. Also read 
+.team/specs/19_d1_job_spec.md lines 110-160 and 
+.team/shot_detectors/keep_ball_detections.py lines 40-45, 1036-1090, 1340-1400.
+
+Make ONLY these changes, keep the rest:
+1. Section 4, interpreter: D1 step 1 (extract) ran on the repo venv 
+C:/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe 
+(spec 19 line 120). The D2 test uses the SAME venv for both steps, so only the 
+weights change. Python312 is for training and val metrics only. Remove the NOT 
+FOUND note.
+2. Section 4, two steps, write both commands in full (Windows paths):
+   step 1: venv python keep_ball_detections.py --step extract --v6-weights <d2v1
+best.pt> --tracks-dir "C:/Users/scott/AppData/Local/Temp" --out-json 
+"C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test/candidates.json"
+   step 2: venv python keep_ball_detections.py --step arc-rule-report 
+--candidates-json <that candidates.json> --tracks-dir 
+"C:/Users/scott/AppData/Local/Temp" --out-json 
+".../d2_train/test/d2_results.json" --out-md 
+".../d2_train/test/d2_test_report.md"
+   makes_right and misses_called_makes come from step 2's d2_results.json.
+3. Section 4, before training (step 0, a proof the test path is unchanged): run 
+step 2 with the venv on D1's own 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/candidates.json, writing 
+to d2_train/test/d1_repeat_results.json and d1_repeat_report.md. It must give 
+makes_right 29 and misses_called_makes 0; if not, stop for Scott.
+4. Section 4, mapping check: step 1 compares every saved v6 ball point with the 
+model's raw detections and exits (SystemExit) when fewer than 90% match 
+(MAPPING_MIN_MATCH_RATE 0.90, lines 43 and 1080-1087). It writes candidates.json
+BEFORE that exit (line 1078 area). The frame mapping itself was proven with v6 
+on this same unchanged code: D1 candidates.json mapping_check = 3798/3800 = 
+0.9995. With new weights the rate measures agreement with v6, not mapping. Rule,
+fixed now: no code change; record the rate in the report as "agreement with v6 
+ball points"; if step 1 exits only because of that gate and candidates.json was 
+written, go on to step 2; any other error stops for Scott.
+5. Section 3: add workers 2 (as v6). Training command: Python312 using 
+ultralytics YOLO(v6 best.pt).train(data=<ds>/data.yaml, ...all section 3 
+numbers..., project, name, exist_ok False). data.yaml written by the build 
+script with absolute paths, names {0: basketball}.
+6. Section 5: v6 and d2v1 val metrics both by Python312 
+model.val(data=<ds>/data.yaml, split val, imgsz 640, batch 16, device 0); v6 
+measured before training starts. Add the agreement rate and the step 0 result to
+the report.
+7. New section "Files": build script .team/shot_detectors/d2_build_dataset.py, 
+its test .team/shot_detectors/test_d2_build_dataset.py, train/val runner 
+.team/shot_detectors/d2_train.py (writes the report). Written by Claude Code, 
+checked by Hermes and Muse before anything runs. No other repo file changes; 
+keep_ball_detections.py not edited.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read 23_d2_train_job_spec_v1_REJECTED.md  0.2s
+📖 Read 19_d1_job_spec.md L110-164  0.2s
+📖 Read keep_ball_detections.py L40-49  0.2s
+📖 Read keep_ball_detections.py L1036-1095  0.2s
+📖 Read keep_ball_detections.py L1340-1404  0.2s
+📖 Read 23_d2_train_job_spec.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/23_d2_train_job_spec.md  0.1s
+│ .team/specs/23_d2_train_job_spec.md
+│ @@ -1,4 +1,4 @@
+│ -D2 TRAIN JOB SPEC v1 - nothing built
+│ +D2 TRAIN JOB SPEC v2 - nothing built
+│
+│  # Stage D2 Train Job: Fine-tune Ball Detector v6 on Scott's 514 Labels
+│
+│ @@ -69,6 +69,7 @@
+│  - `deterministic: true`
+│  - `epochs: 30` (small set, modest)
+│  - `patience: 10` (small set, modest)
+│ +- `workers: 2` (as v6)
+│  - Augmentation: ultralytics defaults (no reason to change)
+│
+│  **Project / name (explicit, outside repo):**
+│ @@ -76,6 +77,22 @@
+│  - `name: d2v1`
+│  - New weights land at `Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best.pt` — **never copied to `models/`**.
+│
+│ +**Training command (Python312):**
+│ +```bash
+│ +C:/Users/scott/AppData/Local/Programs/Python/Python312/python.exe -c "
+│ +from ultralytics import YOLO
+│ +model = YOLO('C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt')
+│ +model.train(
+│ +    data='C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/ds/data.yaml',
+│ +    imgsz=640, batch=16, freeze=10, single_cls=True,
+│ +    device=0, seed=42, deterministic=True,
+│ +    epochs=30, patience=10, workers=2,
+│ +    project='C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/runs',
+│ +    name='d2v1', exist_ok=False
+│ +)"
+│ +```
+│ +`data.yaml` written by the build script with absolute paths, names {0: basketball}.
+│ +
+│  **Production gate unchanged:** `models/ball_detector.pt` and `ball_confidence 0.28` stay as they are (Scott gates per `AUTHORITY.md` lines 23, 17; Golden Rule 1: No Loosening).
+│
+│  **Training environment:** `C:/Users/scott/AppData/Local/Programs/Python/Python312/python.exe` (torch 2.11.0+cu128, cuda True, ultralytics 8.4.99). Repo venv (`.venv`, torch 2.14.1+cpu) is NOT used for training.
+│ @@ -84,20 +101,32 @@
+│
+│  ## 4. The One Test (rerun D1 script with new weights)
+│
+│ -**After training completes:** Run the D1 test script exactly as D1 did, only swapping the weights file.
+│ -
+│ -**Command:**
+│ -```
+│ -C:/Users/scott/AppData/Local/Programs/Python/Python312/python.exe .team/shot_detectors/keep_ball_detections.py --step extract --v6-weights "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best.pt" --out-json "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/d2_test_results.json"
+│ -```
+│ -
+│ -**Python that runs it:** D1's own GPU python at `C:/Users/scott/AppData/Local/Programs/Python/Python312/python.exe` (NOT FOUND - Claude Code to confirm this is the exact interpreter D1 used).
+│ +**Interpreter:** D1 step 1 (extract) ran on the repo venv at `C:/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe` (spec 19 line 120). The D2 test uses the SAME venv for both steps, so only the weights change. Python312 is for training and val metrics only.
+│ +
+│ +**Step 0 — proof the test path is unchanged (before training):**
+│ +Run step 2 with the venv on D1's own `C:/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/candidates.json`, writing to `d2_train/test/d1_repeat_results.json` and `d1_repeat_report.md`. It must give `makes_right 29` and `misses_called_makes 0`; if not, stop for Scott.
+│ +
+│ +**Two steps (Windows paths, both run with the repo venv):**
+│ +
+│ +Step 1 — extract with new weights:
+│ +```bash
+│ +C:/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe .team/shot_detectors/keep_ball_detections.py --step extract --v6-weights "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best.pt" --tracks-dir "C:/Users/scott/AppData/Local/Temp" --out-json "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test/candidates.json"
+│ +```
+│ +
+│ +Step 2 — arc-rule-report (produces makes_right and misses_called_makes):
+│ +```bash
+│ +C:/Users/scott/Documents/liberty-basketball-analysis/.venv/Scripts/python.exe .team/shot_detectors/keep_ball_detections.py --step arc-rule-report --candidates-json "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test/candidates.json" --tracks-dir "C:/Users/scott/AppData/Local/Temp" --out-json "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test/d2_results.json" --out-md "C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test/d2_test_report.md"
+│ +```
+│
+│  **Nothing else changed:** confidence 0.28, D1 crop zone, 140 shots, rule as D1 (Stage A copy all switches OFF).
+│ +
+│ +**Mapping check (keep_ball_detections.py lines 43, 1080-1087):** Step 1 compares every saved v6 ball point with the model's raw detections and exits (SystemExit) when fewer than 90% match (MAPPING_MIN_MATCH_RATE 0.90). It writes `candidates.json` BEFORE that exit (line 1078 area). The frame mapping itself was proven with v6 on this same unchanged code: D1 `candidates.json` mapping_check = 3798/3800 = 0.9995. With new weights the rate measures agreement with v6, not mapping. Rule, fixed now: no code change; record the rate in the report as "agreement with v6 ball points"; if step 1 exits only because of that gate and `candidates.json` was written, go on to step 2; any other error stops for Scott.
+│
+│  **Pass criteria (hard gate):**
+│  - `makes_right > 29` (D1 achieved 29)
+│  - `misses_called_makes == 0` (D1 achieved 0)
+│ +
+│ +`makes_right` and `misses_called_makes` come from step 2's `d2_results.json`.
+│
+│  **One try, then stop for Scott (gate 3).** No tuning, no retry.
+│
+│ @@ -117,6 +146,21 @@
+│ … omitted 36 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 23_d2_train_job_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. Line 1 now reads D2 TRAIN JOB SPEC v2 - nothing built. All seven changes from the instructions are in the file:
+
+1. Section 4 interpreter — repo venv for both test steps; Python312 only for training/val; "NOT FOUND" note removed.
+2. Section 4 two steps — full Windows commands with venv python, tracks-dir, and exact output paths.
+3. Section 4 step 0 — runs step 2 on D1's candidates.json first; must produce 29/0 or stop for Scott.
+4. Section 4 mapping check — rule recorded: rate labeled "agreement with v6 ball points"; exit on that gate with candidates.json written → continue to step 2; any other error → stop for Scott.
+5. Section 3 — workers: 2 added; training command written in full with Python312 + ultralytics YOLO.train().
+6. Section 5 — val metrics by Python312 model.val() for both v6 and d2v1; step 0 result and agreement rate added to report.
+7. New section 9 (Files) — three files listed; written by Claude Code, checked by Hermes/Muse; no other repo changes; keep_ball_detections.py not edited.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4a343547df2890dc5c430626d39205258dd85a9fb3ef08c68ac3014899160ad8
+  hermes -c "Edit D2 train job spec section 4 interpreter"
+
+Session:        local-4a343547df2890dc5c430626d39205258dd85a9fb3ef08c68ac3014899160ad8
+Title:          Edit D2 train job spec section 4 interpreter
+Duration:       1m 15s
+Messages:       14 (1 user, 12 tool calls)

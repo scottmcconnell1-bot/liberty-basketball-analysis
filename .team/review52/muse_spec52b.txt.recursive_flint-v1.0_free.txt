@@ -1,0 +1,121 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY.
+TEAM REVIEW - .team/specs/52b_check_rule_prereg.md v1 (Hermes). READ-ONLY: do 
+not edit or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided: team writes a first-principles R7 check rule, pre-registered; 
+Scott approves before re-gate.
+NEW FACT - Scott's one-time 3-clip check 
+(review52/silent3/silent3_answers.json): ALL 3 silent-reject labels are
+CORRECT real misses. notus 252520 = 3PT miss then a missed putback (both 
+labelled: 252520 y1, 255120 y1);
+rimrock 274807 = miss then make 5.2 s later (280040 y2); gvg 1158600 = miss, 
+second miss 1.2 s later (1159760 y1).
+Every silent reject is the FIRST shot of a 2-shot sequence; the model catches 
+the second shot (P 0.94-0.995) but
+gives the first P 0.08-0.18 (all seeds < 0.5). Not label errors -> model blind 
+spot.
+CLAUDE CODE OBSERVATIONS (verify):
+O1 corroborated(i) names ball_near_rim_cue, ball_trajectory_cue, 
+referee_score_cue: none exists in the mm_clip
+   predict path today (referee = spec 53, not built). Only seed_disagreement is 
+available. Which cues are real
+   for the re-gate? If only seed_disagreement, say so and what the rule then 
+reduces to.
+O2 The spec says it read logo52a preds/report although the prompt said not to 
+use them to pick values. Is the rule
+   still a clean pre-registration (Muse)?
+O3 silent_reject_count ignores flags (P-only). So no check rule can clear the 3 
+silents; with labels confirmed,
+   notus/gvg/rimrock fail on silent regardless. Options: (i) keep silent as is 
+-> needs a model change (e.g. a
+   2-shot-sequence cue / putback-aware context); (ii) redefine silent from first
+principles as "real shot neither
+   auto-called nor flagged" (coach never sees it) and add a sequence 
+corroboration cue (candidate shortly BEFORE a
+   confident auto shot). Note (ii) would be designed after seeing these 3 cases 
+-> disclosure / peeking risk.
+   Which is honest and smallest?
+O4 dedup_ms is written 800 - check postproc52/52a actual value.
+Roles: MUSE protocol (pre-reg honesty, peeking), CURSOR audit (cues that exist, 
+values, code surface; estimate
+nothing from logo52a numbers). End with one line: MUSE:/CURSOR: AGREE | AGREE 
+WITH CHANGES: ... | DISAGREE: ...
+📖 Read 52b_check_rule_prereg.md  0.4s
+✗ Read silent3_answers.json  0.5s [File not found: silent3_answers.json]
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -iname "*silent3*" -o -iname "*silent*" 2>/dev/null | grep -v node_modules  15.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ 2>/dev/null  1.7s
+📖 Read silent3_answers.json
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read ensemble_predict.py
+📖 Read postproc52.json
+📖 Read postproc52a.json
+💻 $ grep -rn "dedup_ms" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py --include=*.json --include=*.md -l  50.4s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -i 52b + 2 commands  1.9s
+📖 Read postproc.py  0.5s
+📖 Read test_mm52.py  0.5s
+✗ Read muse_spec52b.txt  0.5s [File not found: muse_spec52b.txt]
+✗ Read cursor_spec52b.txt  0.5s [File not found: cursor_spec52b.txt]
+✗ Read muse_spec52b.txt  0.9s [error]
+✗ Read cursor_spec52b.txt  0.9s [error]
+✗ Read prompt_hermes_spec52b_checkrule.txt  0.9s [error]
+✗ Read prompt_team_spec52b.txt  0.9s [error]
+✗ Read prompt_muse_spec52b.txt  0.9s [error]
+✗ Read muse_spec52b.txt [error]
+✗ Read cursor_spec52b.txt [error]
+✗ Read prompt_hermes_spec52b_checkrule.txt [error]
+✗ Read prompt_team_spec52b.txt [error]
+✗ Read prompt_muse_spec52b.txt [error]
+
+────────────────────────────────────────
+☤ Hermes
+The read tool is failing on those paths; let me verify exact filenames via terminal.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team -maxdepth 2 -name "*52b*" -o -maxdepth 2 -name "*spec52b*"  0.2s
+📖 Read muse_spec52b.txt
+📖 Read cursor_spec52b.txt
+📖 Read prompt_hermes_spec52b_checkrule.txt
+📖 Read prompt_team_spec52b.txt  0.1s
+📖 Read prompt_muse_spec52b.txt  0.1s
+📖 Read hermes_spec52b.txt
+📖 Read gate52.py
+📖 Read muse_gate52a.txt
+📖 Read cursor_gate52a.txt
+💻 $ grep -rn "ball_near_rim_cue\|ball_trajectory_cue\|referee_score_cue\|near_rim\|trajectory_cue\|referee" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py --include=*.json --include=*.md -l 2>/dev/null | grep -v node_modules  54.5s
+💻 $ grep -rn "def corroborated\|corroborated" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py 2>/dev/null | grep -v node_modules + 1 command  47.9s
+💻 $ grep -rn "ball_near_rim_cue\|ball_trajectory_cue\|referee_score_cue\|near_rim\|trajectory_cue" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ 2>/dev/null  0.5s
+✗ $ grep -rln "ball_near_rim_cue\|ball_trajectory_cue\|referee_score_cue" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py 2>/dev/null | grep -v node_modules  48.3s [exit 1]
+
+────────────────────────────────────────
+☤ Hermes
+TEAM REVIEW - Spec 52b v1 (Hermes) - READ-ONLY - no files touched by me.
+
+O1 - CUE AUDIT: VERDICT: CONFIRMED THAT THE PROBLEM IS REAL. In the mm_clip predict path today (ensemble_predict.py, gate52.py, postproc52*.json, test_mm52.py), the only corroboration-adjacent signal that exists is seed_disagreement - it is wired into the flagged-auto check inside shot_list (flag_seed -> seed_disagreement(PM, i, thr)). The below-thr extras loop currently applies NO corroboration: every in-session candidate with floor <= P(shot) < thr is flagged as an extra. The names ball_near_rim_cue, ball_trajectory_cue, referee_score_cue appear nowhere in the code (zero hits in the mm_clip / shot_detectors python); referee is spec 53 territory and not built, and spec 53 does not touch mm_clip. So the v1 predicate corroborated(i) := seed_disagreement OR ball_near_rim_cue OR ball_trajectory_cue OR referee_score_cue is overclaimed and not implementable as written.
+
+If only seed_disagreement is real for the re-gate, the rule reduces cleanly to: check(i) := flagged_auto(i) OR (not auto-called AND in-session AND floor <= P_shot(i) < thr AND seed_disagreement(PM, i)). Corroboration collapses to multi-seed disagreement (shot-vs-nons at thr, or make/miss split among shot-callers). That is a real, minimal, implementable v1 cue - but the band-candidate disagreement threshold handling should be pinned in the amendment before Cursor builds it.
+
+O2 - PRE-REGISTRATION CLEANLINESS: VERDICT: NOT CLEAN AS WRITTEN, though the first-principles intent is genuine. The substance (what a check is FOR; why corroboration over rank-and-cap; why not raise floor / drop extras / truncate; values carried over unchanged from postproc52 / postproc52a) reads as honest first-principles derivation. BUT the prompt said not to open logo52a preds/report to pick values, while the spec lists Liberty_Shot_Outputs/mm_clip/runs/logo52a/ (logo_preds.npz, gate52_report.json) under "Inputs read this session" - a credibility tension with the "NOT from logo52a numbers used to pick values" disclosure. Together with the wish-list-style cue list, my ruling: the pre-registration is weakened as written and should be amended before Scott approves. Also stale: the Next step still says "wait for Scott's 3-clip label check" - that check is now resolved.
+
+O3 - SILENT VS CHECK RULE: VERDICT: RESOLVED BY CODE READ + NEW FACT. silent_reject_count is P-only (labelled miss AND ens P(shot) < floor AND all M seeds P(shot) < 0.5 -> silent; flags ignored) - confirmed in ensemble_predict.py. The check predicate (flagged_auto OR corroborated_extra) requires corroborated_extra to sit in the band floor <= P < thr, so the check surface structurally cannot touch the 3 silents (P ~0.08 / 0.10 / 0.18, all < floor 0.2). Silent zone and check band are disjoint. Hence no check rule can clear the 3; notus / gvg / rimrock fail silent regardless of the check fix.
+
+With the NEW FACT (all 3 silent labels correct; each silent = first shot of a 2-shot sequence; model caught the 2nd shot P 0.94-0.995 but gave the 1st P 0.08-0.18, all seeds < 0.5), this is a model blind spot (sequence context / putback-aware context), not a label error and not a check-rule error.
+
+Options: (i) keep silent as-is -> needs model change (2-shot-sequence cue / putback-aware context). Honest and smallest, and consistent with the spec's own pinned relation (silent fail-backstop stays reachable; new rule must not raise floor / drop extras / truncate; real shot below every flag must still fail). (ii) redefine silent as "real shot neither auto-called nor flagged" + add sequence corroboration (candidate before confident auto) -> designed after seeing these 3 cases -> peeking risk; larger; and it would not clear the fail within the pinned band anyway (below-floor candidates are outside the check band). My ruling: choose (i); do not bake (ii) into 52b v1.
+
+O4 - DEDUP_MS: VERDICT: CLEAN / CONFIRMED. 800 in postproc52.json, postproc52a.json, and test_mm52.py REQUIRED_POSTPROC52; the spec line matches. No change needed. (Only note: postproc.py carries a legacy default of 2500 in its own shot_list - irrelevant to the pinned gate path, which reads the config via ensemble_predict.)
+
+SYNTHESIS / REQUIRED CHANGES BEFORE SCOTT APPROVAL: (1) strip or mark FUTURE the three unimplemented cues; pin seed_disagreement-only corroboration as the v1 rule; (2) state explicitly that the check rule does not fix/clear the 3 silents and that silent stays as the fail-backstop, with the model-side sequence fix as the separate path; (3) refresh the stale next step (3-clip check resolved, no labels52b needed).
+
+MUSE ruling: direction (corroboration) is defensible from first principles and the silent handling is right, but the v1 as written is not yet a clean pre-registration and needs the above amendment before Scott approves.
+
+MUSE:/CURSOR: AGREE WITH CHANGES: O1 verified - strip/FUTURE unimplemented cues, seed_disagreement-only; O2 not clean as written - amend inputs/read-scope + refresh stale next-step before Scott approval; O3 keep silent unchanged - check rule cannot clear the 3 silents, model-side fix separate; O4 dedup_ms 800 confirmed clean.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-cbb5af84be4f9198aaa6abd0c2b1c01554a04eb3a35b87e355f503ee5ae8593d
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #22"
+
+Session:        local-cbb5af84be4f9198aaa6abd0c2b1c01554a04eb3a35b87e355f503ee5ae8593d
+Title:          You are MUSE, the REVIEWER (not Hermes)… #22
+Duration:       6m 39s
+Messages:       55 (1 user, 53 tool calls)

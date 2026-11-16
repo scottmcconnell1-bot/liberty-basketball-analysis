@@ -1,0 +1,21 @@
+Hermes, you are the Architect. WRITE ONE new file: .team/specs/38_shooter_finder_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "SHOOTER FINDER SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing else, run nothing that writes. One to two pages.
+
+Read first: .team/specs/37_rim_first_cue_fix_spec.md (L1-L6 block on top), .team/specs/33_shot_flight_rules_measure_spec.md, .team/shot_detectors/rim_first_finder.py (trace_shooter, slice_trace_window), .team/shot_detectors/shot_rules_measure.py (release_estimate_frame :270, rises_above_rim, ball_inside_player :132, combine_ball_track :163, SCOTT_APPROVED_2026_11_04 :37), .team/shot_detectors/rim_first_measure.py, last 12 lines of .team/drift_log.md.
+
+GOAL (Scott, agreed plan): after the shot finder, the next step is finding the SHOOTER of each shot moment from video only: shooter box at release and floor spot (bottom-centre of the box, picture pixels). The finder still reads no tags, no scoreboard, no DB.
+
+FACTS (Claude Code, Proven, read-only on run37 frames.json / moments.json, Adrian Q1-Q3 and Notus Q1; Q4 NOT used):
+- Shooter found: Adrian 10/116, Notus 8/36. Reasons: "ball not inside a player box" 85 / 18, "no release frame" 21 / 10.
+- On the "ball not inside a player box" moments, at the chosen release frame: the ball is ABOVE the head of the nearest player in 98% (Adrian) and 100% (Notus), median 0.64 / 0.71 player heights above the box top; nearest player centre is a median 1.2 / 1.3 x max(w,h) away (circle is 0.6). The chosen release frame is a median 1.04 s (Adrian) / 0.78 s (Notus) before the rim trigger; for the moments where the shooter WAS found it is a median 2.96 / 2.98 s before.
+- So release_estimate_frame (last ball frame before the ball first rises above the rim) picks a point already in flight; the true release is earlier.
+- Spec 37 also lowered found from 21/124 to 10/116 on Adrian; cause Unknown (Inferred: fewer series means fewer v6 crops feeding the track) - say how the plan checks this.
+
+WHAT TO WRITE:
+A. A video-only release rule that walks BACKWARD from the in-flight point along detected ball points (v6 first, else BODD best-conf, combine_ball_track, no filling of missing frames - not interpolation) until the ball is inside a player box (ball_inside_player, release mode 0.6, Scott approved) or the track breaks (gap > MAKE_GAP_FRAMES 8 or a Scott-decided number), all inside the existing 3000 ms look-back (TRACE_BEFORE_MS, Scott approved; do not widen it). Pick the player on that frame. Say what counts as "track breaks" and what happens if two players hold it.
+B. What goes orange (no hold found, two players, ball track broken) with reasons.
+C. How to MEASURE without Scott hand-tagging (Scott: "I do not want to manually tag video then you check my tags"): existing tags have player name and 2PT/3PT/FT. Use only what is already tagged: e.g. FT shots - the shooter should be at the FT spot (same floor spot within a few hoop widths across the FTs at one hoop) - and 3PT vs 2PT distance from the hoop in hoop widths. Propose measures, each number "Scott decides before the run". Claude Code may also hand-check a small fixed sample of still frames (local only, minors) - say how many and how chosen before the run.
+D. Numbers table: each with source (file:line, spec, Scott-approved) or "Scott decides before the run" + proposed value.
+E. Scope: Cursor edits rim_first_finder.py (trace only), test_rim_first.py, and rim_first_measure.py (shooter measures). Shot calls, make/miss, numbers from spec 36/37 untouched. Can it run from saved run37 frames.json + series points without video? Say yes/no and why (saved: per-frame BODD balls/players/referees, per-series v6 points). If yes, no video re-run is needed for the build films.
+F. Banned trials: no linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter. The exact definition of "early windows" in OLLAMA.md is not written down - if you cannot find it, write "NOT FOUND - Claude Code to check" and explain why the backward walk is not a wider or earlier detection window.
+G. Honest limits. One try, then stop for Scott. Q4 blind only after Scott sees the numbers.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to check".

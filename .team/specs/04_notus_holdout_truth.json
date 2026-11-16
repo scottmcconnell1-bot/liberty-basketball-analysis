@@ -1,0 +1,13 @@
+{
+  "read_by": "Claude Code (vetter), by eye, 2026-10-26 22:30, from .team/specs/holdout_*.png (board region x 1000-1290, y 540-690 at 720p)",
+  "rule": "HELD OUT. Never use these frames for fitting, tuning, or diagnosis. Run the reader on them once, after a fix is final.",
+  "timestamps": "gate crop time + 45 s; inside the 60 s gaps the fit skipped, so unseen by fitting and by the first gate",
+  "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": {
+    "246900": [2, 7], "650700": [2, 11], "1054500": [5, 11], "1458300": [5, 15], "1862100": [10, 15],
+    "2265900": [13, 19], "2669700": [15, 25], "3073500": [21, 30], "3477300": [29, 38], "3881100": [29, 40]
+  },
+  "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": {
+    "232300": [5, 4], "606800": [11, 4], "981300": [13, 8], "1356000": [16, 9], "1730600": [16, 11],
+    "2105100": [16, 15], "2479600": [21, 15], "2854100": [23, 17], "3229600": [27, 21], "3603900": [36, 21]
+  }
+}

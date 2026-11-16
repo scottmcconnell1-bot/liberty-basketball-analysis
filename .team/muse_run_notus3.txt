@@ -1,0 +1,21 @@
+Now the plan and its history files:
+I am Muse. Reading the record is done; now I verify the Vetter's claims against the repo before answering. First batch of checks:
+`scoreboard_clock.py` matches (7 named functions, no `read_digits`/`seven_segment_templates`). Adrian track exists. But the uploads glob found nothing — I need to verify the videos, scorebooks, tags, and the record in `ACTIVE.md`:
+Videos exist; A1 book is 29–48 with `home_team: Liberty` ✓. But the grep for the EndQTR/883400 tag in the film tags returned nothing — I must disambiguate whether the file exists or the tag simply doesn't match those patterns:
+The A1 film tags file exists, yet no EndQTR/883400 match inside it. Repo-wide search for the timestamp, plus head of the tags file, plus ACTIVE.md record:
+`ACTIVE.md` confirms the proven Adrian record (43 makes, 51–26, 25 s window, same 3-sample rule) and that this exact task is its "Next" item. The A1 tags show `lastTaggedTime: 14:43.4`. Now I verify the "End QTR tag" claim by reading the tail of the tags file, plus the existing build script's interface:
+The A1 tags end with an `EndQTR` row at `14:43.4` in Q1 — so the 883400 ms claim is true (883.4 s arithmetic also checks out; earlier grep misses were a gitignore artifact of the search tool). Tags' Q1 score (3–11) matches both the book's Q1 line and MUSE.md. Last check: the `.team/specs` directory — whether the v3 stamp and verdict are recorded:
+All Vetter claims verified against the repo:
+
+- **Imports:** all seven named functions exist in `scoreboard_clock.py` (`_red_mask` :73, `_warm_mask` :66, `_segment_digit` :138, `_digit_groups` :177, `_score_value` :116, `_load_templates` :126, `read_scoreboard` :278); `read_digits`/`seven_segment_templates` verified absent. v3 §1 carries this and bans the phantom imports.
+- **Stop-and-审批 gate:** §2 is non-interactive, 10 times/game, 20 crops, "coder stops after this step" — also in the command block.
+- **`## Files` heading** lists every artifact the commands create, including both track JSONs and the crops.
+- **Red/yellow digits, fixed 3-sample rule, 25 s tag window** — same wording as the proven Adrian rule in `ACTIVE.md:9,11`.
+- **Team mapping:** both scorebooks exist with `home_team: Liberty`/`away_team: Notus`; A1 book 29–48 matches the expected output, and the book's Q1 line (3–11) matches the tags' score field — the plan follows the book fields.
+- **Adrian 43/43, 51–26 regression** matches the `ACTIVE.md` Proven record (value split sums exactly to 51/26).
+- **Q1 end:** the A1 tag file's final row is `End QTR`, Q1, start `14:43.4` → 883,400 ms. True. (My earlier grep misses were the gitignore in the search tool, confirmed by reading the file.)
+- **Constraints:** no protected file edit, no cutoff touched, no banned trial, no DB writes, no hard-coded results outside the Proven ledger. Both videos, the existing `scripts/build_scoreboard_track.py`, and the Adrian track are all real.
+
+Minor notes the Vetter didn't need to flag: command paths are WSL-flavored for a PowerShell coder (the session already runs from the repo root, cosmetic); `load_scoreboard_track` must accept the legacy Adrian track schema (the regression test forces that compatibility anyway); "PATRIOTS" is a display label while the operative mapping stays the scorebook fields. None is a contradiction between parts of the plan.
+
+MUSE: AGREE

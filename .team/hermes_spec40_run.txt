@@ -1,0 +1,200 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/40_free_throw_half_circle_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "FREE THROW 
+HALF CIRCLE SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing 
+else, run nothing that writes. One to two pages.
+
+Read first: .team/specs/39_shooter_fix_spec.md (P0-P6 + SETTINGS FIXED block), 
+.team/stage1b_frozen_0943/measurement_report.md (top 15 lines) and 
+.team/stage1b_frozen_0943/stage1b_court_lines.py (skim), 
+.team/shot_detectors/rim_first_finder.py (trace, retrace), last 12 lines of 
+.team/drift_log.md, memory rule below.
+
+SCOTT 2026-11-06 (binding): "The FT line ... is actually a half circle. The FT 
+shooter will always be in that half circle by him or herself when shooting 
+freethrows." and "I wouldn't go with player space, that would only be effective 
+for fts. I would use the half circle. If there is no player movement and one is 
+in the half circle, then players are preparing for a free throw." Scott also: 
+Claude Code picks settings before the run (he does not approve cutoffs), and 
+"aim for higher results".
+
+FACTS (Claude Code, Proven, read-only on saved run39 files):
+- Player stillness 1-3 s before the rim trigger (median per-player move per 
+second, in player heights, nearest-box match between frames 1 s apart): FT 0.11 
+(n 38, Q3 0.13, max 0.55), 2PT 0.42 (n 56, Q1 0.32), 3PT 0.38 (n 30, Q1 0.28).
+- Shooter trace on FTs is the worst case: in the hand-checked FTs the current 
+trace is right 8/21; a lane player is picked or the card goes orange.
+- "Most isolated player" fixed FTs (16/21) but broke 21/30 non-FT picks - 
+REJECTED by Scott; do not use it.
+- Earlier full-court line fit (Stage 1b, frozen) succeeded 0 of 60 frames 
+(Adrian, Notus). So do NOT fit the whole court. Target only the FT half circle 
+in front of the hoop the shot goes to, on still frames.
+- The half circle is painted: Adrian gym black, Notus gym red (Claude Code 
+looked at frames). FT lane lines are also painted (Adrian white, Notus 
+blue/red).
+- Saved per frame: BODD player/ball/referee boxes, hoop box per series 
+(frames.json); video files are local (uploads/...). Film shows minors: images 
+stay local.
+
+WRITE:
+A. FT detector (video only): stillness (number and window chosen by Claude Code 
+before the run; propose a value with the facts above) AND exactly one player's 
+feet (box bottom-centre) inside the detected FT half circle -> moment flagged 
+free_throw, shooter = that player. If stillness holds but the half circle is not
+found -> orange "ft_circle_not_found" (never guess).
+B. Half circle finder: smallest thing that can work - e.g. in the still frame, 
+search a region set by the hoop box (the FT line is 15 ft from the backboard; 
+give the region in hoop widths with the reason), find painted-line pixels by 
+colour/edges, fit an arc/ellipse (perspective) or a line + half-ellipse; say 
+what is reused from stage1b_court_lines.py and what is new; how the finder knows
+the court colour per gym without a hand setting (or say it needs one per gym, 
+and how few frames). No trained model, no tracker, no interpolation.
+C. Where it plugs in: after the trace, only on still moments; it overrides the 
+trace shooter only for free_throw moments; everything else untouched. Shot 
+calls, make/miss, hoop steps untouched.
+D. Measure: tags only to measure (FT tags vs free_throw flags: found / missed / 
+false); FT shooter right/wrong on a NEW frozen hand-check sample (seed 40, FT 
+moments not in the spec-38/39 samples where possible); count of non-FT moments 
+wrongly flagged free_throw (must be near 0). Q4 blind only after Scott sees 
+numbers.
+E. 3-point arc: say how the same finder extends to the 3PT arc later (not in 
+this run).
+F. Numbers table: each number with source, or "fixed by Claude Code before the 
+run" + proposed value + reason.
+Rules: no core edits (court_homography.py is not to be edited), no training, no 
+banned trials (linear interpolation, ByteTrack, DeepSORT, early windows = 
+OLLAMA.md:31-39, wider column, hoop recenter), finder reads no 
+tags/scoreboard/DB, one try then stop for Scott. Cursor edits 
+rim_first_finder.py / test_rim_first.py and ONE new file 
+.team/shot_detectors/ft_half_circle.py (+ its tests in test_rim_first.py or a 
+new test_ft_half_circle.py).
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading all the required source files in parallel.
+────────────────────────────────────────
+
+📖 Read 39_shooter_fix_spec.md  0.2s
+📖 Read measurement_report.md  0.2s
+📖 Read stage1b_court_lines.py  0.2s
+📖 Read rim_first_finder.py  0.2s
+📖 Read drift_log.md L1-50  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+I have the main files. Now let me read the last 12 lines of drift_log.md (lines 168-179).
+────────────────────────────────────────
+
+📖 Read drift_log.md L168
+
+────────────────────────────────────────
+☤ Hermes
+I have all the source material. Now writing the single spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/40_free_throw_half_circle_spec.md
+│ .team/specs/40_free_throw_half_circle_spec.md
+│ @@ -0,0 +1,64 @@
+│ +FREE THROW HALF CIRCLE SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+│ +File: .team/specs/40_free_throw_half_circle_spec.md (new file only; nothing else edited).
+│ +Cursor edits rim_first_finder.py / test_rim_first.py and one new file .team/shot_detectors/ft_half_circle.py, plus its tests (test_rim_first.py or test_ft_half_circle.py). No other file touched.
+│ +
+│ +1. GOAL (Scott 2026-11-06, binding)
+│ +Scott: "The FT line ... is actually a half circle. The FT shooter will always be in that half circle by him or herself when shooting freethrows."
+│ +Scott: "I wouldn't go with player space ... I would use the half circle. If there is no player movement and one is in the half circle, then players are preparing for a free throw."
+│ +Add a video-only FT detector: stillness plus exactly one player's feet inside a detected FT half circle flags the moment free_throw and sets shooter = that player. It overrides the trace shooter only for free_throw moments; everything else untouched. Claude Code chooses every number before the run (Scott: aim for higher results); no tuning after results.
+│ +
+│ +2. FACTS (each from a file read this session or the prompt; otherwise NOT FOUND - Claude Code to check)
+│ +- Stillness 1-3 s before the rim trigger, median per-player move per second in player heights (nearest-box match, frames 1 s apart): FT 0.11 (n 38, Q3 0.13, max 0.55), 2PT 0.42 (n 56, Q1 0.32), 3PT 0.38 (n 30, Q1 0.28) (.team/drift_log.md:179).
+│ +- Hand-checked FTs from both samples, 21 FTs: current trace right 8/21; a lane player is picked or the card goes orange (.team/drift_log.md:177).
+│ +- "Most isolated player" rule: right FT shooter 16/21 but changed 21/30 right non-FT picks - REJECTED by Scott; never used (.team/drift_log.md:177).
+│ +- Full-court line fit (Stage 1b, frozen): 0 of 60 frames, Adrian and Notus - do NOT fit the whole court; target only the FT half circle in front of the hoop the shot goes to, on still frames (.team/stage1b_frozen_0943/measurement_report.md, top lines).
+│ +- Half circle painted: Adrian gym black, Notus gym red; FT lane lines painted: Adrian white, Notus blue/red (Claude Code looked at frames).
+│ +- Saved per frame: BODD player/ball/referee boxes, hoop box per series (frames.json); video files local (uploads/...); film of minors stays local.
+│ +- rim_first_finder.py: trace_shooter :938, _trace_walk_back :782, emit_moments :1590, RELEASE_TRACE_FACTOR 0.6 :75, TRACE_BEFORE_MS 3000 ms :73, referee boxes key "r", players key "p", hoop per series, is_referee_player :576, _box_xyxy centre-based boxes :491, floor spot = box bottom-centre :776.
+│ +- stage1b_court_lines.py: build_paint_mask :118 (gym colour split), extract_lines :185 (Canny + HoughLinesP), CourtModel :276 with ft_circle structure :299-303 and ft_circle_radius_ft / ft_line_y_ft court constants, analyze_frame :652 fits a whole-court homography per frame (the approach to avoid here).
+│ +- NFHS: FT line 15 ft from the backboard (NOT FOUND in repo; Claude Code to confirm; ft-per-hoop-width NOT FOUND).
+│ +- Spec 39: settings fixed by Claude Code before the run, no change after results (.team/specs/39_shooter_fix_spec.md SETTINGS FIXED block).
+│ +
+│ +3. SECTION A - FT DETECTOR (VIDEO ONLY)
+│ +Per moment, after the trace, only when the moment is still:
+│ +- Stillness: in [trigger - STILL_WINDOW_MS, trigger], measure each detected player's median move per second between frames 1 s apart, in player heights, nearest-box match. Moment is still when every player present is at or below STILL_MOVE_MAX. Not still -> no FT test, moment untouched.
+│ +- Still -> run the half circle finder (B) on the still frame, region from the hoop box of the series.
+│ +- Circle found and exactly one player's feet (box bottom-centre) inside the half circle -> moment free_throw = true, shooter = that player (overrides the trace shooter), shooter_box = that player's box.
+│ +- Circle found with zero or more than one player inside -> not an FT, no override, no guess which player.
+│ +- Stillness holds but the half circle is not found -> orange "ft_circle_not_found"; never guess a circle.
+│ +Applies to make and rim moments alike; shot calls, make/miss, and hoop steps untouched.
+│ +
+│ +4. SECTION B - HALF CIRCLE FINDER (SMALLEST THING THAT WORKS)
+│ +One still frame, one hoop box:
+│ +1. Region from the hoop box. FT line is 15 ft from the backboard; the half circle sits in front of the hoop the shot goes to, centred on the FT line, radius 6 ft. Region: x in [hx - REGION_HALF_W * hoop_w, hx + REGION_HALF_W * hoop_w], y from hoop centre to hoop centre + REGION_DEPTH * hoop_w toward mid-court. Proposed REGION_HALF_W 3 hoop widths (covers the 12 ft circle width once ft-per-hoop-width is known) and REGION_DEPTH 6 hoop widths (reaches toward the 15 ft FT line); both fixed by Claude Code before the run. ft-per-hoop-width NOT FOUND - measured from frames.json hoop boxes before the run. Image direction "toward mid-court" confirmed on the first still frames (NOT FOUND yet).
+│ +2. Painted-line pixels by colour/edges. Reuse build_paint_mask (stage1b_court_lines.py:118): gym branch for Adrian (white top-hat + dark black-hat) and liberty (red/blue HSV). Gym colour known without a hand setting: on the first still frame where the region yields line pixels, classify the dominant line colour (dark vs red vs blue vs white) and cache it per gym; Adrian = dark half circle, Notus = red half circle per the frames Claude Code already looked at. Needs <= 3 still frames per gym, frozen before the run; if auto-classification is unclear, one hand-set colour per gym (Claude Code's pre-run choice).
+│ +3. Fit. Canny edges on the region paint mask (reuse extract_lines edge scale, stage1b_court_lines.py:185-261), then cv2.fitEllipse on the edge points - NEW, no homography, no whole-court fit (0 of 60 frames Stage 1b). Keep the half of the ellipse nearest the hoop centre (the painted half faces the hoop). Validate: ellipse axes sane, centre inside region, enough edge pixels on the arc; else circle not found.
+│ +4. Feet test. Point-in-half-ellipse for each player's box bottom-centre (x, y + h/2, centre-based boxes as in _box_xyxy :491). Exactly one inside -> shooter.
+│ +Reused from stage1b_court_lines.py: build_paint_mask (paint extraction), extract_lines Canny/Hough parameter scale, CourtModel ft_circle_radius_ft / ft_line_y_ft court constants only (no homography fit, no analyze_frame). New: ft_region, gym colour auto-detect, ellipse fit + half selection, point-in-half-ellipse, ft_half_circle.py module. No trained model, no tracker, no interpolation.
+│ +
+│ +5. SECTION C - WHERE IT PLUGS IN
+│ +New function in .team/shot_detectors/ft_half_circle.py called from emit_moments (rim_first_finder.py :1590) right after trace_shooter returns and before assign_shot_calls, for still moments only. It adds free_throw to the moment and overrides moment["shooter"] / shooter_box only when exactly one player is inside the half circle; orange "ft_circle_not_found" when still but no circle. Shot calls (assign_shot_calls), make/miss (is_make), hoop steps, and every non-FT moment untouched. Finder reads video frames, boxes, and hoop only - no tags, no scoreboard, no database. No new tags.
+│ +
+│ +6. SECTION D - MEASURE
+│ +- Tags only to measure: FT tags vs free_throw flags -> found / missed / false counts.
+│ +- FT shooter right/wrong on a NEW frozen hand-check sample, seed 40 (random.Random(40) on the sorted t_ms list), FT moments not in the spec-38/39 samples where possible; same hand-check format as spec 39 (release frame with shooter box drawn, plus release-10 and release+5 frames), written to .team/specs/40_handcheck_results.json before any numbers are read.
+│ +- Non-FT moments wrongly flagged free_throw: counted, must be near 0 (proposed cap <= 1, fixed by Claude Code before the run).
+│ +- Q4 blind only after Scott sees these numbers.
+│ +
+│ +7. SECTION E - 3-POINT ARC (LATER, NOT THIS RUN)
+│ +Same finder extends: region set by the hoop box, much wider and deeper (3PT arc radius ~19.75 ft NFHS, centred at the hoop, in front of it), painted-line pixels by colour/edges, same gym colour auto-detect, ellipse/arc fit, no stillness needed (players move around the arc). Reuse CourtModel three_pt_arc structure (:312) for geometry constants. Whether the 3PT arc is painted in these gyms is NOT FOUND - Claude Code to check on frames.
+│ +
+│ +8. SECTION F - NUMBERS TABLE (each number: source, or fixed by Claude Code before the run + proposed value + reason)
+│ +STILL_WINDOW_MS - TRACE_BEFORE_MS reuse (rim_first_finder.py:73) - 3000 ms [trigger-3000, trigger], matches the 1-3 s stillness fact
+│ +STILL_MOVE_MAX - drift_log.md:179 FT 0.11 median, Q3 0.13, max 0.55 vs 2PT Q1 0.42 / 3PT Q1 0.38 - proposed 0.15 player heights/s, all players in the window at or below
+│ +REGION_HALF_W - NFHS 15 ft FT line, half circle radius 6 ft - proposed 3 hoop widths each side of hoop centre x
+│ +REGION_DEPTH - 15 ft backboard to FT line - proposed 6 hoop widths toward mid-court; ft-per-hoop-width NOT FOUND, Claude Code sets before the run
+│ +GYM_COLOUR_FRAMES - Adrian black / Notus red half circle (frames) - auto from <= 3 still frames per gym, frozen; one hand-set colour per gym only if auto fails
+│ +FT_CIRCLE_R_FT - NFHS, NOT FOUND in repo - proposed 6 ft
+│ +NON_FT_FT_FALSE_CAP - measure rule "near 0" - proposed <= 1 non-FT moment wrongly flagged free_throw
+│ +HANDCHECK_SEED - spec 39 seed 39 pattern - seed 40, FT moments outside spec-38/39 samples where possible
+│ +
+│ +9. RULES
+│ +No core edits (court_homography.py and stage1b_court_lines.py read only). No training, no tracker, no interpolation. No banned trials: linear interpolation, ByteTrack, DeepSORT, early windows (OLLAMA.md:31-39), wider column, hoop recenter. Finder reads no tags, no scoreboard, no DB. One try, then stop for Scott. Cursor edits rim_first_finder.py / test_rim_first.py and ONE new file .team/shot_detectors/ft_half_circle.py (+ tests). Every fact from a file read this session or above; otherwise "NOT FOUND - Claude Code to check".
+
+────────────────────────────────────────
+☤ Hermes
+File written. Let me verify line 1 and the formatting constraints (no literal "\n", no "||").
+────────────────────────────────────────
+
+📖 Read 40_free_throw_half_circle_spec.md
+💻 $ grep -c '\\n' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/40_free_throw_half_circle_spec.md + 2 commands
+
+────────────────────────────────────────
+☤ Hermes
+Done. Single file written, nothing else touched, nothing executed.
+
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/40_free_throw_half_circle_spec.md — 64 lines (~1.5 pages).
+
+Verified: line 1 is exactly FREE THROW HALF CIRCLE SPEC v1 - not run; zero literal \n; zero || (plain text, no markdown tables).
+
+Contents: binding Scott quotes (Goal), sourced-facts block (drift_log stillness 0.11 FT vs 0.42/0.38, trace 8/21 FTs, isolated-player rejected 21/30, Stage 1b 0/60 full-court fit, Adrian black / Notus red half circle), then sections A–F:
+
+- A FT detector: stillness (median per-player move/s, frames 1 s apart, all players at/below threshold) in a pre-trigger window, then half-circle finder; exactly one player's box bottom-centre inside → free_throw + shooter override; zero or >1 → no guess; still but no circle → orange ft_circle_not_found.
+- B Finder: hoop-box region in hoop widths (15 ft FT-line reason), paint-mask edges by colour, gym colour auto-detected from ≤3 still frames per gym (Adrian black, Notus red; one hand-set colour per gym only if auto fails), cv2.fitEllipse, half nearest the hoop, feet-in-half-ellipse test. Reuse: build_paint_mask, extract_lines edge scale, CourtModel ft_circle constants only (no homography, no whole-court fit). New: region, colour auto-detect, ellipse fit, point-in-half-ellipse. No model/tracker/interpolation.
+- C Plug-in: ft_half_circle.py called from emit_moments after trace_shooter, before assign_shot_calls, still moments only; overrides shooter only for free_throw; shot calls/make/miss/hoops untouched; reads no tags/scoreboard/DB.
+- D Measure: FT tags vs flags (found/missed/false); seed-40 frozen hand-check sample (40_handcheck_results.json before numbers), FT shooter right/wrong, non-FT false-flag count near 0 (cap proposed ≤1); Q4 blind only after Scott sees numbers.
+- E 3PT arc extension (later, not this run).
+- F Numbers table: each number sourced or "fixed by Claude Code before the run + proposed value + reason" (STILL_MOVE_MAX proposed 0.15 player heights/s, REGION_HALF_W 3, REGION_DEPTH 6 pending ft-per-hoop-width NOT FOUND, seed 40, etc.).
+
+Rules block: no core edits, no banned trials, one try then stop for Scott. All unattributed figures marked NOT FOUND.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-12ac7d027e71d5c551a4e5aa97a29f96cbd990a94803a93f5f4902367bc7bc86
+  hermes -c "Write free throw half circle spec"
+
+Session:        local-12ac7d027e71d5c551a4e5aa97a29f96cbd990a94803a93f5f4902367bc7bc86
+Title:          Write free throw half circle spec
+Duration:       3m 11s
+Messages:       15 (1 user, 13 tool calls)

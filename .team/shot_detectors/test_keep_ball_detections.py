@@ -17,6 +17,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import keep_ball_detections as kbd  # noqa: E402
+from small_fixes_v6_copy import fall_through_check, decide_shot  # noqa: E402
 
 
 def _track_base(*, ball, bodd, hoop, result="make"):
@@ -441,3 +442,240 @@ def _write_three_shot_candidates(
 
 def test_mapping_gate_message_constant():
     assert kbd.MAPPING_MIN_MATCH_RATE == 0.90
+
+
+# --- spec 23 v3: --mapping-proof-json (default behaviour unchanged) ------------------------
+def _cands_with_rate(tmp_path, name, rate, **change):
+    src = _write_three_shot_candidates(tmp_path, 1000, 1010, [100.0, 100.0, 50.0, 40.0], {}, [], [])
+    data = json.loads(src.read_text(encoding="utf-8"))
+    data["mapping_check"]["rate"] = rate
+    data["constants"] = {"BALL_CONFIDENCE": 0.28}
+    data.update(change)
+    out = tmp_path / name
+    out.write_text(json.dumps(data), encoding="utf-8")
+    return out
+
+
+def _no_tracks(monkeypatch):
+    monkeypatch.setattr(kbd, "load_build_shot_list", lambda tracks_dir: ([], {}, None))
+    monkeypatch.setattr(kbd, "prove_noop_identity", lambda shots, tracks: None)
+
+
+def _run(tmp_path, cand, proof=None):
+    return kbd.step_arc_rule_report(candidates_json=cand, tracks_dir=None, out_json=tmp_path / "r.json",
+                                    out_md=tmp_path / "r.md", mapping_proof_json=proof)
+
+
+def test_without_proof_a_low_rate_still_stops(tmp_path, monkeypatch):
+    _no_tracks(monkeypatch)
+    with pytest.raises(SystemExit, match="MAPPING CHECK GATE FAILED"):
+        _run(tmp_path, _cands_with_rate(tmp_path, "new.json", 0.8629))
+
+
+def test_good_proof_lets_low_rate_go_on_and_records_agreement(tmp_path, monkeypatch):
+    _no_tracks(monkeypatch)
+    new = _cands_with_rate(tmp_path, "new.json", 0.8629)
+    proof = _cands_with_rate(tmp_path, "proof.json", 0.9995)
+    assert _run(tmp_path, new, proof) == 0
+    out = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert out["agreement_with_v6"] == 0.8629
+
+
+def test_no_agreement_key_without_proof(tmp_path, monkeypatch):
+    _no_tracks(monkeypatch)
+    assert _run(tmp_path, _cands_with_rate(tmp_path, "new.json", 0.95)) == 0
+    assert "agreement_with_v6" not in json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+
+
+def test_proof_below_gate_stops(tmp_path, monkeypatch):
+    _no_tracks(monkeypatch)
+    with pytest.raises(SystemExit, match="MAPPING CHECK GATE FAILED"):
+        _run(tmp_path, _cands_with_rate(tmp_path, "new.json", 0.99), _cands_with_rate(tmp_path, "proof.json", 0.85))
+
+
+def test_proof_with_other_constants_or_shots_stops(tmp_path, monkeypatch):
+    _no_tracks(monkeypatch)
+    new = _cands_with_rate(tmp_path, "new.json", 0.8629)
+    bad_const = _cands_with_rate(tmp_path, "p1.json", 0.9995, constants={"BALL_CONFIDENCE": 0.20})
+    with pytest.raises(SystemExit, match="MAPPING PROOF MISMATCH"):
+        _run(tmp_path, new, bad_const)
+    data = json.loads(new.read_text(encoding="utf-8"))
+    bad_shots = _cands_with_rate(tmp_path, "p2.json", 0.9995, shots=data["shots"][:2], n_shots=2)
+    with pytest.raises(SystemExit, match="MAPPING PROOF MISMATCH"):
+        _run(tmp_path, new, bad_shots)
+    same_n_other_t = [dict(s) for s in data["shots"]]
+    same_n_other_t[0]["t"] = 999
+    bad_t = _cands_with_rate(tmp_path, "p3.json", 0.9995, shots=same_n_other_t)
+    with pytest.raises(SystemExit, match="MAPPING PROOF MISMATCH"):
+        _run(tmp_path, new, bad_t)
+
+
+# --- Fall-through guard tests (spec §3, §4) -------------------------------------
+
+
+def _make_track(ball, bodd=None, hoop=None, result="make"):
+    if hoop is None:
+        hoop = [100.0, 100.0, 50.0, 40.0]  # x, y, w, area
+    if bodd is None:
+        bodd = []
+    return {
+        "t": 1000,
+        "result": result,
+        "hoop": hoop,
+        "ball": ball,
+        "bodd": bodd,
+    }
+
+
+def test_fall_through_check_straight_drop_inside_rim_passes():
+    """Straight drop inside rim (|x - hoop_x| < 0.5*hoop_w) -> None (pass)."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    # ball above rim at frame 9, then crossing at 10, then 3+ points below rim within 0.5*hoop_w
+    ball = [
+        (9, 100.0, 90.0),   # above rim
+        (10, 100.0, 100.0), # crossing
+        (11, 100.0, 110.0), # below rim, centered
+        (12, 100.0, 120.0),
+        (13, 100.0, 130.0),
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) is None
+
+
+def test_fall_through_check_one_point_at_half_hoop_w_fails_outside_rim():
+    """One point at exactly 0.5*hoop_w -> 'outside_rim' (>= is fail)."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    ball = [
+        (9, 100.0, 90.0),
+        (10, 125.0, 100.0),  # crossing at 0.5*hoop_w (125 = 100 + 25)
+        (11, 125.0, 110.0),
+        (12, 125.0, 120.0),
+        (13, 125.0, 130.0),
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) == "outside_rim"
+
+
+def test_fall_through_check_rises_after_going_deeper_fails_went_up():
+    """Rises 6px ( > 5*scale_y ) after going deeper -> 'went_up'."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    ball = [
+        (9, 100.0, 90.0),
+        (10, 100.0, 100.0),
+        (11, 100.0, 120.0),  # depth 20
+        (12, 100.0, 114.0),  # rose 6px (> 5)
+        (13, 100.0, 130.0),
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) == "went_up"
+
+
+def test_fall_through_check_only_two_points_below_rim_fails_short_fall():
+    """Only 2 points below rim (min 3) -> 'short_fall'."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    ball = [
+        (9, 100.0, 90.0),
+        (10, 100.0, 100.0),
+        (11, 100.0, 110.0),
+        (12, 100.0, 120.0),  # only 2 points strictly below rim (frames 11,12)
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) == "short_fall"
+
+
+def test_fall_through_check_first_point_below_rim_with_no_earlier_above_fails_no_ball_crossing():
+    """First point after crossing is below rim but no earlier ball point above rim -> 'no_ball_crossing'."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    ball = [
+        (10, 100.0, 100.0),  # crossing frame, but no point before with y < hoop_y
+        (11, 100.0, 110.0),
+        (12, 100.0, 120.0),
+        (13, 100.0, 130.0),
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) == "no_ball_crossing"
+
+
+def test_fall_through_check_empty_G_fails_no_ball_crossing():
+    """G empty (no points below rim within 180px) -> 'no_ball_crossing'."""
+    hoop_x, hoop_y, hoop_w = 100.0, 100.0, 50.0
+    scale_y = 1.0
+    cross_frame = 10
+    ball = [
+        (9, 100.0, 90.0),
+        (10, 100.0, 100.0),  # crossing
+        # no points with y > hoop_y
+    ]
+    assert fall_through_check(ball, cross_frame, hoop_x, hoop_y, hoop_w, scale_y) == "no_ball_crossing"
+
+
+def test_decide_shot_switch_false_equals_current_on_make_track():
+    """decide_shot with switch_fall_through=False equals current result on a make track."""
+    hoop = [100.0, 100.0, 50.0, 40.0]
+    # A simple make track that passes all existing checks
+    ball = [
+        (0, 100.0, 50.0),
+        (1, 100.0, 70.0),
+        (2, 100.0, 90.0),
+        (3, 100.0, 100.0),  # crossing
+        (4, 100.0, 110.0),
+        (5, 100.0, 120.0),
+        (6, 100.0, 130.0),
+        (7, 100.0, 140.0),
+        (8, 100.0, 150.0),
+        (9, 100.0, 160.0),
+        (10, 100.0, 170.0),
+    ]
+    bodd = []
+    track = _make_track(ball, bodd, hoop, "make")
+    pred_off, det_off = decide_shot(track, switch_fall_through=False)
+    pred_on, det_on = decide_shot(track, switch_fall_through=True)
+    # With switch off, should be make (assuming it passes other checks)
+    # With switch on and this clean track, should also be make
+    assert pred_off == pred_on
+    assert pred_off is True
+
+
+def test_decide_shot_switch_false_equals_current_on_miss_track():
+    """decide_shot with switch_fall_through=False equals current result on a miss track."""
+    hoop = [100.0, 100.0, 50.0, 40.0]
+    # A miss track (no crossing)
+    ball = [
+        (0, 100.0, 50.0),
+        (1, 100.0, 60.0),
+        (2, 100.0, 70.0),
+    ]
+    bodd = []
+    track = _make_track(ball, bodd, hoop, "miss")
+    pred_off, det_off = decide_shot(track, switch_fall_through=False)
+    pred_on, det_on = decide_shot(track, switch_fall_through=True)
+    assert pred_off == pred_on
+    assert pred_off is False
+
+
+def test_decide_shot_switch_true_never_turns_miss_into_make():
+    """switch_fall_through=True never turns a miss into a make."""
+    hoop = [100.0, 100.0, 50.0, 40.0]
+    # Various miss tracks
+    miss_tracks = [
+        # No crossing
+        _make_track([(0, 100.0, 50.0), (1, 100.0, 60.0)], hoop=hoop, result="miss"),
+        # Crossing but ball goes up
+        _make_track(
+            [(0, 100.0, 90.0), (1, 100.0, 100.0), (2, 100.0, 95.0), (3, 100.0, 110.0)],
+            hoop=hoop, result="miss"
+        ),
+        # Crossing but outside rim
+        _make_track(
+            [(0, 150.0, 90.0), (1, 150.0, 100.0), (2, 150.0, 110.0), (3, 150.0, 120.0)],
+            hoop=hoop, result="miss"
+        ),
+    ]
+    for track in miss_tracks:
+        pred, _ = decide_shot(track, switch_fall_through=True)
+        assert pred is False, f"Expected miss, got make on track: {track['ball']}"

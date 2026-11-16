@@ -1,0 +1,12 @@
+{
+  "shot_thr": 0.5,
+  "dedup_ms": 800,
+  "session_filter": true,
+  "review": {
+    "flag_below_thr_candidates_with_shot_prob_at_least": 0.2,
+    "flag_auto_shots_with_shot_prob_below": 0.65,
+    "flag_auto_shots_with_abs_pmake_minus_half_below": 0.3,
+    "flag_seed_disagreement": true,
+    "extras_require_seed_disagreement": true
+  }
+}

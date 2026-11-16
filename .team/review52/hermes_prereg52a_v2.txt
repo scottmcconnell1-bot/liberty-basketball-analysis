@@ -1,0 +1,218 @@
+Query: You are HERMES, the architect. Rewrite 
+.team/specs/52a_class0_restore_prereg.md as v2 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v1 reviews: CURSOR DISAGREE (review52/cursor_prereg52a.txt), MUSE DISAGREE -> 
+AGREE WITH CHANGES once fixed
+(review52/muse_prereg52a.txt). Scott binding: proposal (a); same-5 LOGO re-gate 
+(R6 unchanged) is binding.
+Apply ALL of:
+1. Paths: every path /mnt/c/Users/scott/Documents/... (v1 dropped "scott").
+2. Class-0 rule, pinned now, no logo52 predictions used: (i) 48b out-of-session 
+candidates -> 0, AND (ii) in-session
+   y=-1 candidates on adrian and notus whose distance to the nearest 
+coach-tagged shot is >= a gap you FIX NOW
+   (Cursor computed: >=8 s -> adrian ~26, notus ~6; >=15 s -> 18/4). Pick the 
+gap with a stated reason (risk: coach
+   misses some real shots/scrambles; Scott: putbacks are separate shots). 
+gvg/rimrock labels52_v2 unchanged; hsb
+   unchanged unless the same rules apply (state). Write the exact post-restore 
+class counts per film computed from
+   the rule (Cursor: adrian 6 / notus 0 / hsb 4 under rule (i) alone) and the 
+t_ms list source.
+3. Clips: say whether every class-0 row already has a clip in clips7 (same 
+t_ms); if not, pin the extract step.
+4. New frozen labels file review52/labels52a_class0_restore.json + sha in 
+.team/pre52a_sha256.txt BEFORE training.
+5. Session filter: pin exactly how it is enabled in the path gate52 actually 
+scores (ensemble_predict / postproc52
+   flag, tests), and scoring: a filtered candidate is omitted from the shot 
+list; a filtered real shot = recall miss.
+   Call out HSB miss t=2631233 (out of session -> expected recall loss) and 
+accept it in writing.
+6. Be honest: state whether the training change is expected to fix D1, and that 
+Item 2 (filter) is the main lever
+   on gvg checks; a fail stops for Scott.
+7. Keep: R4 recipe, E=5, seeds 0 1 2, R6 thresholds, floor 0.2, checks cap 20; 
+flip intent note; runs/logo52a.
+End with "HERMES: PREREG WRITTEN".
+✗ $ git status + 4 commands  31.5s [exit 2]
+✗ Read 52a_class0_restore_prereg.md  0.1s [File not found: 52a_class0_restore_prereg.md]
+📖 Read 52a_class0_restore_prereg.md
+📖 Read cursor_prereg52a.txt
+📖 Read muse_prereg52a.txt
+📖 Read TEAM_RECOVERY.md
+📖 Read AUTHORITY.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ 2>/dev/null + 2 commands  0.1s
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/gate52.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ensemble_predict.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/train_clip.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/postproc.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/test_mm52.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/game_session.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/hermes_gate52.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/cursor_gate52.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/hermes_prereg52a.txt /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/pre52_sha256.txt  0.2s
+📖 Read gate52.py
+📖 Read postproc.py
+📖 Read test_mm52.py
+📖 Read ensemble_predict.py
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read cursor_gate52.txt
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/pre52_sha256.txt + 2 commands
+📖 Read hermes_prereg52a.txt
+📖 Read train_clip.py
+📖 Read hermes_gate52.txt
+💻 $ grep -n "def \|^SESSION\|in_session\|filter_moments" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/game_session.py  0.1s
+📖 Read candidates.py
+📖 Read game_session.py L640-769
+📖 Read 48b_game_session_v2_spec.md
+💻 $ tail -60 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md + 4 commands  0.2s
+✗ $ python3 - <<'EOF' import json, hashlib p = "/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/labels52_v2.json" d = json.load(open(p)) print("TOP KEYS:", list(d.keys())) print("NOTE:", d.get("note")) print("OTHER:", {k: v for k, v in d.items() if k != "films"}) films = d.get("films") or {} for f, v in films.items(): t = v.get("t_ms") or [] y = v.get("y") or [] from collections import Counter print(f"FILM {f}: keys={list(v.keys())} t_n={len(t)} y_n={len(y)} y_counts={dict(Counter(int(x) for x in y))} t_range=({min(int(x) for x in t)},{max(int(x) for x in t)})") for k in ("changes_r2","changes_v2","note","sha","sha256","source","film"): if k in v: print(" ", k, "=", json.dumps(v[k])[:500]) print("SHA256 FILE:", hashlib.sha256(open(p,'rb').read()).hexdigest()) EOF [BLOCKED: Command flagged as dangerous (script...]
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+📖 Read 52a_class0_restore_prereg.md
+📖 Read prompt_hermes_prereg52a.txt
+📖 Read cursor_prereg52a.txt
+📖 Read muse_prereg52a.txt
+📖 Read gate52.py
+📖 Read postproc52.json
+📖 Read ensemble_predict.py
+📖 Read postproc.py
+📖 Read test_mm52.py
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -i "52\|prereg\|sha" + 7 commands  1.5s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/pre52a_sha256.txt + 4 commands  0.3s
+📖 Read extract_clips.py
+📖 Read hermes_gate52.txt
+📖 Read muse_gate52.txt
+📖 Read 52_label_audit_stable_ensemble_spec.md
+✗ Read AGENT_OPERATIONAL_PROTOCOL.md  0.4s [File not found: AGENT_OPERATIONAL_PROTOCOL.md]
+✗ Read .AUTHORITY.md  0.4s [File not found: .AUTHORITY.md]
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read AUTHORITY.md
+
+────────────────────────────────────────
+☤ Hermes
+I have all the context I need. The v1 spec, both reviewer disagreements, the gate results, and the fix requirements are now fully in hand. Writing the v2 pre-registration now:
+────────────────────────────────────────
+
+✍️ Write .team/specs/52a_class0_restore_prereg.md  0.2s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -1,20 +1,20 @@
+│ -# Spec 52A — Class-0 Restore + Predict-Time Game-Session Filter (PRE-REGISTERED)
+│ +# Spec 52A - Class-0 Restore + Predict-Time Game-Session Filter (PRE-REGISTERED) v2
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-14
+│  Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ -Outputs: /mnt/c/Users/Documents/Liberty_Shot_Outputs/
+│ +Outputs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/
+│
+│  ## Status
+│
+│ -PRE-REGISTERED. The change set below is frozen BEFORE any training. This is the binding
+│ +PRE-REGISTERED (v2). The change set below is frozen BEFORE any training. This is the binding
+│  pre-registration for proposal (a).
+│
+│  ## Binding decision (Scott, 2026-11-14)
+│
+│  - Scott decided (binding): approve proposal (a) from the gate review.
+│ -- The re-gate on the SAME 5 LOGO games (adrian, notus, gvg, hsb, rimrock) — spec 52 R6 unchanged —
+│ -  is the binding pass/fail.
+│ +- The re-gate on the SAME 5 LOGO games (adrian, notus, gvg, hsb, rimrock) - spec 52 R6 unchanged - is the
+│ +  binding pass/fail.
+│
+│  ## Inputs read this session (no source changed)
+│
+│ @@ -22,7 +22,7 @@
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/hermes_gate52.txt
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/muse_gate52.txt
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/cursor_gate52.txt
+│ -- /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md (last 40 lines read)
+│ +- /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md (tail)
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/labels52_v2.json
+│    sha256 = 56f18cf0a9c32b7ffb9768885f822d8bd7e1bc794a4a184526c5ca47ee4aec44
+│    (labels52_v2.json is FROZEN and is NOT to be changed by this work)
+│ @@ -30,7 +30,7 @@
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ensemble_predict.py
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/postproc52.json
+│  - /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/gate52.py
+│ -- /mnt/c/Users/Documents/Liberty_Shot_Outputs/game_session_48b/** (session.json outputs)
+│ +- /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/game_session_48b/** (session.json outputs)
+│
+│  ## Gate facts being answered (logo52 run, E=5, seeds 0 1 2, labels52_v2 frozen)
+│
+│ @@ -41,83 +41,167 @@
+│  - false shots: gvg 299 (seeds 0 and 2 call most GV not-shot moments a shot); the class-0 not-a-shot
+│    learned almost only from rimrock; adrian and notus have ZERO class-0 rows.
+│
+│ -## Item 1 — Class-0 restore (PRE-REGISTERED FIX)
+│ -
+│ -Pinned fix: restore multi-gym class-0 for training.
+│ -
+│ -Pinned rule (fixed BEFORE any training): a moment that is not a shot becomes class 0 (y=0) from the
+│ -48b out-of-session warm-up candidate source; in-session untagged moments stay -1; real shots keep
+│ -y=1 (miss) / y=2 (make).
+│ -
+│ -Per-film restore (expected counts):
+│ -
+│ -- gvg: keep labels52_v2 (no row changes). n=561; y0=145; y1=146; y2=72; y-1=198; real shots 218.
+│ -- rimrock: keep labels52_v2 (no row changes). n=398; y0=241; y1=88; y2=35; y-1=34; real shots 123.
+│ -- hsb: keep labels52_v2 class-0 rows (y0=4) and restore out-of-session warm-ups to class 0; n=146;
+│ -  real shots 140 (y1=89, y2=51); in-session untagged (y-1) = 2 stay -1.
+│ -- adrian: restore from 48b out-of-session warm-up candidates to class 0; n=166; real shots 121
+│ -  (y1=79, y2=42); in-session untagged (y-1) = 39 stay -1; class-0 rows after restore = 6.
+│ -- notus: restore not-a-shot candidates to class 0; n=39; real shots 30 (y1=22, y2=8); class-0 rows
+│ -  after restore = 9.
+│ -
+│ -New frozen labels file:
+│ +## v2 - fixes applied from the v1 reviews (Cursor DISAGREE; Muse DISAGREE -> AGREE WITH CHANGES after fixes)
+│ +
+│ +### O1 (Cursor/Muse DISAGREE -> AGREE WITH CHANGES): FIXED - paths
+│ +Every path is now written /mnt/c/Users/scott/Documents/... (the v1 text dropped the "scott" segment and
+│ +wrote /mnt/c/Users/Documents/...).
+│ +
+│ +### O2 (Cursor/Muse DISAGREE -> AGREE WITH CHANGES): FIXED - class-0 counts / notus source / far-from-tag
+│ +Cursor: under the pinned 48b out-of-session rule, class-0 after restore = adrian 6 / notus 0 / hsb 4
+│ +(gvg/rimrock unchanged). The v1 "notus 9" was wrong - it contradicted the pinned rule (48b dropped 0/36
+│ +notus finder moments as out-of-session, so notus gets no out-of-session restore). Muse required the
+│ +notus class-0 source to be pinned and the adrian 6-of-8 restore selection to be stated.
+│ … omitted 191 diff line(s) across 1 additional file(s)/section(s)
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+⚠️  Session compressed 2 times — accuracy may degrade. Consider /new to start fresh.
+
+────────────────────────────────────────
+☤ Hermes
+The rewrite landed. Let me verify the file content and confirm nothing else changed:
+────────────────────────────────────────
+
+💻 $ echo "=== tail ===" + 5 commands  29.1s
+
+────────────────────────────────────────
+☤ Hermes
+The rewrite is written and verified. The large git status output is pre-existing working-tree noise (unrelated files I never touched); the only file I modified is the target: .team/specs/52a_class0_restore_prereg.md.
+
+Let me confirm all required deliverables landed in the file:
+────────────────────────────────────────
+
+💻 $ for m in "/mnt/c/Users/scott/Documents/" "HERMES:" "HERMES: PREREG WRITTEN" "Gap pinned NOW: 8000 ms" "GAP pinned NOW: 8000 ms" "HERMES: PREREG WRITTEN" "class-0 AFTER restore = 32" "class-0 AFTER restore = 6" "t=2631233" "session_filter" "Item 2 (predict-time session filter) is the main lever" "a fail stops for Scott" "HERMES: PREREG WRITTEN" + 2 commands  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Done. The v2 rewrite is complete and landed at .team/specs/52a_class0_restore_prereg.md (208 lines, 12,312 bytes, written via write_file and verified) — and only that file was touched.
+
+What the v2 now pins:
+
+- Binding: Scott approved proposal (a); same-5 LOGO re-gate (R6 unchanged) is binding.
+- v2 fixes (O1–O5): all paths now /mnt/c/Users/scott/Documents/... (28 occurrences with "scott"); notus class-0 source pinned (48b dropped 0/36 → notus gets 0 from 48b, class-0 = 6); clips7 coverage answered (t_ms == labels52_v2, no new extract needed); session_filter wiring + scoring pinned; fixed far-from-tag gap pinned now at 8000 ms (≥8 s).
+- Item 1: pinned class-0 rule = (i) 48b out-of-session → 0 AND (ii) in-session far-from-tag (dist ≥ 8000 ms) → 0. Post-restore class-0: adrian = 32 (6 out-of-session + 26 far-from-tag), notus = 6 (far-from-tag), hsb = 4 (unchanged), gvg = 145, rimrock = 241; gvg-held-out train pool = 283.
+- Item 2: session filter pinned in ensemble_predict.shot_list via postproc52.json session_filter: True; scoring = filtered → omit, filtered real shot = recall miss; HSB miss t=2631233 accepted in writing.
+- Item 6: training change expected to fix D1 in mechanism but not certainty; Item 2 (filter) is the main lever on gvg checks (gvg 200 checks > cap 20); fail stops for Scott.
+
+Ended with: HERMES: PREREG WRITTEN.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-ff7688043de9f1b2cbc83e9a308896a7e04fad5424c4e2b406085fe39226cc9b
+  hermes -c "You are HERMES, the architect. Rewrite…"
+
+Session:        local-ff7688043de9f1b2cbc83e9a308896a7e04fad5424c4e2b406085fe39226cc9b
+Title:          You are HERMES, the architect. Rewrite…
+Duration:       12m 46s
+Messages:       8 (1 user, 6 tool calls)
+[hermes] exit 0 at 17:01:27

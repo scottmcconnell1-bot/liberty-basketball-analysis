@@ -1,0 +1,29 @@
+## CURSOR audit (code/run)
+
+**Q1 — Yes.** E=5 is a valid R5 result as written. Nested wrap order, seed 0, miss_recall-then-sco selection, epochs 1..18, and median([9,2,5,8,5])=5 all match `train_clip.py` and approved spec 52 v3 R5. Validity of the procedure ≠ claim that E=5 is a good fit; that is what the 3-seed LOGO gate judges.
+
+**Q2 — Keep E=5; let the gate judge.** O1–O3 are real (see Proven). Changing the selection rule after reading these inner-val curves is still peeking at the E-chooser, even with no outer-game scores. A rule fix belongs in a pre-registered amendment **before** a future `choose_e` re-run, not a reinterpretation of this run. If Hermes later wants a minimal pre-reg change for next time: e.g. among epochs within ε of max miss_recall, maximize sco (or take the latest plateau epoch) — not applied now.
+
+**Q3 — Run itself: no material error.**
+
+| Check | Result |
+|---|---|
+| Wrap pairs | adrian→notus, notus→gvg, gvg→hsb, hsb→rimrock, rimrock→adrian — matches FILM_ORDER |
+| Fold bests | Recomputed from curves → 9,2,5,8,5 — matches `choose_e.json` / log |
+| Seed / epochs | seed 0, max_epochs 18 |
+| Labels | `labels52_v2` sha `56f18cf0…` matches drift_log freeze |
+| Clips7 | sha prefixes match drift_log for all 5 films |
+| R4 defaults | `choose_e` → soft aug, sampler, plain CE, no GradScaler (train defaults) |
+
+**O1–O3 verified:** miss_recall saturates early on most folds; notus→gvg correctly picks ep2 (mr 1.000 over later 0.993); hsb→rimrock ep3 crash and adrian→notus ep2–5 dip are real; E=5 sits in that early band. O1 note: “22 misses / 0.045” is **notus** as inner-val (adrian fold), not the notus→gvg fold (gvg has 146 misses).
+
+**Unknown:** exact shell argv (clips path / flags) not logged; inferred from outputs + clips7 on disk.
+
+---
+
+**Proven:** `choose_e.json`, `log.txt`, `choose_e52_curves.txt`, `train_clip.py` R5, spec v3 R5, clips7 shas, labels sha.  
+**Inferred:** R4 recipe used (defaults; not printed in log).  
+**Unknown:** exact launch command line.
+
+CURSOR: AGREE E=5
+[cursor_wsl] exit 0 at 13:05:20

@@ -1,0 +1,45 @@
+I'll start by reading the required files.
+I'm the Coder; NEXT_TASK.md is VETTED and scoped to STEP 0 only. Let me inspect the relevant existing code and data.
+Notus videos are 1280x720 @25fps. Let me look at a frame to locate the scoreboard overlay.
+I've located and probed the Notus overlay (fixed bottom-right, 1280x720). Now creating the two files.
+The clock min/sec boxes fell back to inference; let me debug the clock clustering to measure them properly.
+Game A's clock digits are much dimmer (only 189 warm-mask pixels). Let me test a measurement-only clock mask on that frame.
+Fixing clock measurement: game A's clock needs a looser measurement mask, and clock clustering must not force-merge digits.
+Boxes now align. Let me sanity-check the new reader module on both games (no tracks built) and confirm only intended files exist.
+The reader module exposes a real issue: Adrian's glyph templates don't match Notus digits. Let me characterize it briefly.
+STEP 0 complete. I stopped after measuring; no tracks built, nothing committed, and no existing file edited (`scoreboard_clock.py` untouched).
+
+## Files created
+- `scoreboard_clock_720p.py` (exports `read_scoreboard_720p`, `load_scoreboard_track`, `scoreboard_at`; imports only the seven approved names from `scoreboard_clock.py`)
+- `scripts/measure_notus_rois.py` (non-interactive)
+- `data/roi/notus_scoreboard_rois.json` (written by the script)
+- 20 crops in `data/roi/notus_crops/`:
+
+```
+notus_A1_00_202s.png   notus_A_00_187s.png
+notus_A1_01_606s.png   notus_A_01_562s.png
+notus_A1_02_1010s.png  notus_A_02_936s.png
+notus_A1_03_1413s.png  notus_A_03_1311s.png
+notus_A1_04_1817s.png  notus_A_04_1686s.png
+notus_A1_05_2221s.png  notus_A_05_2060s.png
+notus_A1_06_2625s.png  notus_A_06_2435s.png
+notus_A1_07_3028s.png  notus_A_07_2810s.png
+notus_A1_08_3432s.png  notus_A_08_3184s.png
+notus_A1_09_3836s.png  notus_A_09_3559s.png
+```
+
+## ROI JSON (all boxes are `[x, y, w, h]`)
+
+| Game | Home tens | Home ones | Away tens | Away ones | Clock field | Clock min (M:SS) | Clock sec (M:SS) |
+|---|---|---|---|---|---|---|---|
+| Notus A1 | 1031,614,25,29 | 1057,613,26,30 | 1197,613,26,30 | 1223,613,26,30 | 1103,562,87,28 | 1103,562,24,28 | 1140,562,50,28 |
+| Notus A | 1032,615,22,28 | 1058,614,23,29 | 1199,615,22,28 | 1225,614,23,29 | 1079,562,110,28 | 1105,562,21,28 | 1141,562,48,28 |
+
+Cells: A1 home `1029,611,56,34`, away `1195,611,56,34`; A home `1030,612,53,33`, away `1197,612,53,33`. The JSON also has a `default` block and per-game sample/crop paths. The script completed with no warnings.
+
+## Uncertainties / things you should decide on
+1. **The new reader does not yet read Notus digits correctly.** `_segment_digit` uses `data/scoreboard_digits.npz`, which appears to be Adrian glyphs. Live tests: A1 202s read home `0` as `1` and away `4` as unreadable; A 2435s read home `19` as `18` and away `15` unreadable; A 187s read home `5` and away `2` unreadable. I did not tune this because the Golden Rules forbid it without a vet. Likely fix options for the Vetter: use the seven-segment `_slot_digit` path, or build Notus templates.
+2. **`_warm_mask` misses the Notus A clock.** At A 187s only 189 clock pixels pass `_warm_mask` (A1's clock is bright). The measure script uses a measurement-only looser yellow mask (H 8–40, S≥45, V≥140) to locate boxes; the reader still uses `_warm_mask` as the plan requires, so Notus A clock will likely read empty until that is addressed.
+3. **Clock text parsing:** the colon is segmented as a glyph and becomes `?` (A1 202s raw group `63?2`), so `_clock_text` returns `None`. Also under one minute the board shows `SS.T` (e.g. `45.7`, seen at A_07), which does not fit the M:SS logic.
+4. **Clock min/sec boxes are nominal M:SS only.** In `SS.T` crops (e.g. `notus_A_07_2810s.png`) those magenta boxes do not align; the orange `clock_field` is the authoritative box and does cover both formats.
+5. The board is confirmed as a fixed overlay in the crops. HOME is PATRIOTS, away is GUEST; single-digit scores sit in the ones slot with a blank tens slot, and the crops reflect that.

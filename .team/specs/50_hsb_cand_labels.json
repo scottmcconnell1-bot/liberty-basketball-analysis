@@ -1,0 +1,90 @@
+{
+ "moments": {
+  "357867": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "611667": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "831900": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "845167": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1036767": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "1052833": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1183100": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "1190967": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "1327967": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "1718533": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "2030900": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  },
+  "2249867": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "2459433": {
+   "shot": "no",
+   "result": null,
+   "ft": "no"
+  },
+  "2960700": {
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no"
+  },
+  "2997433": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "3170767": {
+   "shot": "yes",
+   "result": "make",
+   "ft": "no"
+  },
+  "3624900": {
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no"
+  }
+ },
+ "meta": "Claude Code 2026-11-12 visual labels of trigger2-only candidates (cand5), tracked crops"
+}

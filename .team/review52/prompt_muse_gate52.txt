@@ -1,0 +1,39 @@
+You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit or create any file. TEAM CHECK - spec 52 R6 LOGO GATE RESULT (read-only; do not edit or create files except your own reply).
+Scott (binding): everyone involved, each with their strengths; nothing more is trained or changed until you answer.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Run (approved by all three: E=5): train_clip.py logo on clips7 (labels52_v2 frozen), films adrian notus gvg hsb
+rimrock, --epochs 5 --seeds 0 1 2. Out: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52/
+{log.txt, logo_preds.npz, logo_report.json, gate52_report.json}. Gate: .team/mm_clip/gate52.py with truth =
+coach tags (adrian, notus) and .team/review52/truth52_{gvg,hsb,rimrock}.json (built from labels52_v2: y 1/2 =
+real shots; y 0 incl. Scott-ruled fouled/waved-off = not in the denominator; -1 = unclear).
+
+GATE (R6) per held-out game: ensemble auto | seeds | spread | honest review | checks | silent | verdict
+adrian  94.5% (120/127) | 94.5 93.7 94.5 | 0.8 | 94.5% | 5   | 0 | PASS
+notus   90.3% (28/31)   | 93.5 90.3 90.3 | 3.2 | 93.5% | 4   | 1 | FAIL (silent_reject)
+gvg     95.9% (209/218) | 94.5 96.3 95.9 | 1.8 | 96.8% | 200 | 0 | FAIL (checks)
+hsb     98.6% (138/140) | 98.6 97.9 99.3 | 1.4 | 99.3% | 3   | 0 | PASS
+rimrock 95.1% (117/123) | 95.9 95.9 89.4 | 6.5 | 96.7% | 97  | 1 | FAIL (spread, checks, silent)
+OVERALL FAIL. Auto >= 90% on all five games (last round HSB1 was 65-94% by seed).
+False shots (auto): adrian 40, notus 4, gvg 299, hsb 5, rimrock 23.
+
+CLAUDE CODE DIAGNOSTICS (verify)
+D1 gvg: seeds 0 and 2 call 113/145 and 137/145 of GV's labelled NOT-shots a shot; seed 1 only 7/145. Check flags:
+   seed_disagree 73, weak 72, below_thr 37, makemiss 18 (many on -1 rows = halftime/pre/post-game warm-ups).
+   Likely cause: adrian/notus now have NO class-0 rows (unmatched -> -1), hsb has 4, so with gvg held out the
+   not-a-shot class is learned almost only from rimrock (241) -> one gym/camera.
+D2 rimrock: 70 of 97 checks are below-threshold candidates (0.2 <= P(shot) < 0.5) on label-0 rows (floor 0.2);
+   seed 2 make recall 0.657 (8 makes called miss) -> spread 6.5.
+D3 silent rejects: notus t=252520 P(shot) 0.08; rimrock t=274807 P(shot) 0.103 (labelled misses, all seeds <0.5).
+D4 Per-clip pooled: miss_recall 0.991, make_recall 0.952, make_precision 0.971, nonshot_rejected 0.69.
+D5 R6 says STOP FOR SCOTT on any fail. No retune on these numbers without a pre-registered change.
+
+QUESTIONS
+Q1 (all): Are these numbers right and is the FAIL read correctly? CURSOR: re-run gate52.py yourself and confirm.
+Q2: Root cause of D1/D2 - agree or not? What else?
+Q3: Smallest next step to propose to Scott (he decides), e.g. (a) restore not-a-shot examples for training
+   (warm-up / non-shot candidates as class 0, game-session filter for warm-ups at predict time), (b) floor/check
+   rule change, (c) more seeds / more epochs, (d) other. Must be pre-registered and not tuned on these exact
+   numbers; say how it is validated (it cannot be judged again on the same 5 LOGO games without saying so).
+Roles: HERMES architect (next-step design), MUSE protocol (what is allowed after seeing a gate fail), CURSOR
+audit (re-run + code check).
+End with one line that STARTS with "MUSE: AGREE" or "MUSE: DISAGREE:" followed by your proposal.

@@ -1,0 +1,40 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code).
+The plan is NEXT_TASK.md (Notus reader v9); its first line is the Vetter v9 
+VETTED stamp: your v8 DISAGREE was decided by Scott (15% trigger removed; your 
+other two points were checked against lines 248-253 and int() and found not to 
+apply; verify that yourself). Earlier rejections: first line of 
+.team/specs/09_notus_reader_v6_REJECTED.md and _v7_REJECTED.md; failed runs in 
+.team/reader_run2_FAILED/ and .team/reader_run1_VOID/; history in 
+.team/drift_log.md. The goal is that the reader NEVER gives a wrong score (None 
+is acceptable). Check whether the Vetter missed anything: a path to a wrong 
+score, gate or holdout information leaking into any threshold, box or geometry, 
+a cutoff chosen to make the gate pass, a protected-file edit 
+(scoreboard_clock.py), a file outside ## Files, a code bug in the plan's 
+snippets (check _SEVEN_SEGMENT in scoreboard_clock.py), a remaining 
+contradiction. Do NOT open .team/specs/04_notus_holdout_truth.json or any 
+holdout_*.png. Do not edit or create any file. End with exactly one line: MUSE: 
+AGREE  or  MUSE: DISAGREE: <reason>
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.6s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.6s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-94b3471c9ed3de36b83a772b69ad7da4747c2233bd92850f8db85d1ebfe0c4a1
+  hermes -c "Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md… #14"
+
+Session:        local-94b3471c9ed3de36b83a772b69ad7da4747c2233bd92850f8db85d1ebfe0c4a1
+Title:          Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md… #14
+Duration:       11s
+Messages:       2 (1 user, 0 tool calls)
