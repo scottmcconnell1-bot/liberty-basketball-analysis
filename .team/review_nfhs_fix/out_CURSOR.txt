@@ -1,0 +1,31 @@
+**Proven:** Reviewed `nfhs.py`, `nfhs_download_jobs.py`, the review diff/tests, and yt-dlp 2025.12.08 (`fragment.py` / `external.py` / `FFmpegFixupM3u8PP`). Suite comparison file matches the claimed identical failure list.
+
+### Q1 — “final file exists ⇒ download finished”
+Mostly right for this app’s yt-dlp usage. Native HLS and the ffmpeg external downloader both write `*.part` (or equivalent temp), then rename to the final name only after the download step finishes. Fixup writes `name.temp.mp4` then `os.replace`s over the final file — matching the recovery paths.
+
+Partial acceptance is still possible in two cases:
+- **Stale file:** a prior good `nfhs_<id>.mp4` is still there, a *new* run fails early (never replaces it) → recovery can treat that old file as success.
+- **Truncated MPEG-TS** at the final name (uncommon with default `.part` behavior) can still probe/`-sseof` and remux into a shorter but “good” MP4.
+
+`--download-sections` uses the same rename rules; a recovered clip file is the section, not a half-finished full game (clips already use a separate filename).
+
+### Q2 — “good MP4” check
+Strong enough for Scott’s case and for cut-off MP4s (half-file test covers that). Weaker for incomplete TS that still decodes at its own end.
+
+Expected-duration is worth adding as a **soft** check when available (yt-dlp playlist duration / section length, or NFHS metadata if present): reject recovery if probed duration is far below expected (e.g. &lt; ~95% or missing &gt;30s). Do not hard-require metadata if NFHS doesn’t provide it.
+
+### Q3 — Replace / remux risks
+- **Data loss:** low — `os.replace` is atomic; failed remux leaves the original.
+- **Locks:** retry helps; if replace still fails, job errors (original kept). Orphan `.filmtool_fix.mp4` can remain.
+- **Disk:** remux `-c copy` needs ~another full copy (~8 GB free). Peak can be worse if a bad `.temp.mp4` is also present. Cancel path does not clean `.temp.mp4` / `.filmtool_fix.mp4`.
+
+### Q4 — Before Scott uses it
+Core fix matches the reported bug (valid final MP4 after fixup non-zero) and is safe to use for that. Before treating it as done:
+
+1. Put `warning` (and ideally `log_path`) into `_public_job` — today only the message suffix reaches the UI.
+2. Soft duration check when expected length is known.
+3. Stale-file guard (e.g. only recover if this run’s log shows postprocess/fixup failure, or final/temp mtime is from this run).
+4. Free-space check before remux; always delete `.filmtool_fix.mp4` on failure.
+
+CURSOR: AGREE WITH CHANGES: expose warning/log_path in job API; soft expected-duration gate; stale-file guard; remux free-space + temp cleanup
+[cursor_wsl] exit 0 at 10:23:36

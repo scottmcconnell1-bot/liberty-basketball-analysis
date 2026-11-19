@@ -1,0 +1,22 @@
+You are CURSOR. FINAL CHECK of the NFHS download fix, v2. Read-only.
+
+Round 1 verdicts: HERMES, MUSE, CURSOR all AGREE WITH CHANGES. Requested changes and what v2 does:
+C1 expected-duration gate (all 3): soft. Clips: expected = end_ms - start_ms. Full games: yt-dlp
+   writes %(duration)s via `--print-to-file before_dl:%(duration)s <tmp>` (verified with yt-dlp
+   2025.12.08 on a local HLS stream: wrote 12 for a 12 s stream; progress lines still printed; output
+   normal MP4). NFHS lookup metadata has no duration field. Reject when probed < 95% of expected AND
+   more than 30 s short. Unknown/NA -> gate skipped. Applied to final file, leftover .temp.mp4, remux.
+C2 stale-file guard (Cursor): recovery only accepts files with mtime >= run start - 2 s.
+C3 temp cleanup (Hermes, Cursor): .temp.mp4 / .filmtool_fix.mp4 removed after any recovery attempt
+   and on cancel; duration/header temp files removed on every exit path.
+C4 free-space check before remux (Cursor): needs 1.1 x file size free or fails with a message.
+   (Muse's "~1.4 GB free" was wrong: C: has 432 GB free; likely the WSL disk.)
+C5 job API (Cursor): warning + log_path now in _public_job; error jobs carry log_path.
+Not done: remux disk-peak reduction (Hermes: optional) - deleting the source before the remux is
+   verified would risk losing the only copy.
+Tests: 4 more (earlier-run file rejected, much-shorter rejected / exact OK, duration reader, full
+   fake-yt-dlp run with 600 s expected but 3 s file -> error + no temp files left). 38/38 NFHS pass.
+Files: .team/review_nfhs_fix/fix_v2.diff, .team/review_nfhs_fix/test_nfhs_recover_v2.py
+
+Check each C1-C5 is correctly applied and nothing new is broken. Then ONE verdict line starting exactly with:
+CURSOR: AGREE   or   CURSOR: AGREE WITH CHANGES: <list>   or   CURSOR: DISAGREE: <reason>

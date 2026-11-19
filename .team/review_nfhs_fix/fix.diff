@@ -1,0 +1,200 @@
+diff --git a/nfhs.py b/nfhs.py
+index 6fead1d..89c6fd3 100644
+--- a/nfhs.py
++++ b/nfhs.py
+@@ -556,17 +556,43 @@ def download_nfhs_vod(
+                 "error": "Download cancelled",
+                 "cancelled": True,
+             }
++        log_path = _write_download_log(game_id, output_lines, token, return_code)
++        _cleanup_files([header_file])
+         if return_code == 0 and os.path.exists(output_path):
+             file_size = os.path.getsize(output_path)
+-            _cleanup_files([header_file])
+             if progress_callback:
+                 progress_callback(percent=100.0, message="Download finished")
+-            return {"success": True, "file_path": output_path, "file_size": file_size, "error": None}
++            return {"success": True, "file_path": output_path, "file_size": file_size, "error": None,
++                    "log_path": log_path}
++
++        # yt-dlp reported a failure. If the finished file is there, check it and
++        # complete the last step ourselves instead of throwing away a full download.
++        if os.path.exists(output_path) or os.path.exists(os.path.splitext(output_path)[0] + ".temp.mp4"):
++            _emit_download_status(progress_callback, percent=100, message="Checking the downloaded video…")
++            try:
++                ok, done = _recover_finished_download(output_path)
++            except OSError as exc:
++                ok, done = False, f"could not finish the file: {exc}"
++            if ok:
++                if progress_callback:
++                    progress_callback(percent=100.0, message="Download finished")
++                return {
++                    "success": True,
++                    "file_path": output_path,
++                    "file_size": os.path.getsize(output_path),
++                    "error": None,
++                    "warning": f"yt-dlp reported a problem at the end; the Film Tool {done}.",
++                    "log_path": log_path,
++                }
+ 
+         combined = "".join(output_lines)
+         error_msg = (combined or "yt-dlp failed")[-500:]
+-        _cleanup_files([header_file])
+-        return {"success": False, "file_path": None, "file_size": 0, "error": f"yt-dlp error: {error_msg}"}
++        if token:
++            error_msg = error_msg.replace(token, "<token removed>")
++        if log_path:
++            error_msg += f"\n(Full log: {log_path})"
++        return {"success": False, "file_path": None, "file_size": 0, "error": f"yt-dlp error: {error_msg}",
++                "log_path": log_path}
+     except FileNotFoundError:
+         _cleanup_files([header_file])
+         return {
+@@ -580,6 +606,133 @@ def download_nfhs_vod(
+         return {"success": False, "file_path": None, "file_size": 0, "error": "Download timed out (2 hour limit)"}
+ 
+ 
++_NFHS_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
++
++
++def _write_download_log(game_id: str, lines: list[str], token: str | None, return_code) -> str | None:
++    """Keep the full yt-dlp output (token removed) so a failure can be diagnosed later."""
++    try:
++        os.makedirs(_NFHS_LOG_DIR, exist_ok=True)
++        path = os.path.join(
++            _NFHS_LOG_DIR, f"nfhs_download_{game_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
++        )
++        text = "".join(lines)
++        if token:
++            text = text.replace(token, "<token removed>")
++        with open(path, "w", encoding="utf-8", errors="replace") as f:
++            f.write(text)
++            f.write(f"\n[film tool] yt-dlp exit code: {return_code}\n")
++        return path
++    except OSError:
++        return None
++
++
++def _probe_video(path: str) -> dict | None:
++    """Return {format, has_video, duration} for a media file, or None if ffprobe cannot read it."""
++    ffprobe = shutil.which("ffprobe")
++    if not ffprobe or not os.path.exists(path) or os.path.getsize(path) == 0:
++        return None
++    try:
++        res = subprocess.run(
++            [ffprobe, "-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type",
++             "-of", "json", path],
++            capture_output=True, text=True, timeout=120,
++        )
++        if res.returncode != 0:
++            return None
++        info = json.loads(res.stdout or "{}")
++        fmt = info.get("format", {})
++        return {
++            "format": fmt.get("format_name", ""),
++            "has_video": any(s.get("codec_type") == "video" for s in info.get("streams", [])),
++            "duration": float(fmt.get("duration") or 0),
++        }
++    except (OSError, subprocess.TimeoutExpired, ValueError):
++        return None
++
++
++def _plays_to_end(path: str) -> bool:
++    """Decode the last few seconds: a cut-off or broken file fails here."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            [ffmpeg, "-v", "error", "-sseof", "-5", "-i", path, "-f", "null", "-"],
++            capture_output=True, text=True, timeout=300,
++        )
++        return res.returncode == 0
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _is_good_mp4(path: str) -> bool:
++    info = _probe_video(path)
++    return bool(
++        info and info["has_video"] and info["duration"] > 0
++        and ("mp4" in info["format"] or "mov" in info["format"])
++        and _plays_to_end(path)
++    )
++
++
++def _replace_with_retry(src: str, dst: str, attempts: int = 10, delay: float = 2.0) -> None:
++    """os.replace, retrying while Windows has the file open (virus scan, video preview)."""
++    import time
++
++    for n in range(attempts):
++        try:
++            os.replace(src, dst)
++            return
++        except PermissionError:
++            if n == attempts - 1:
++                raise
++            time.sleep(delay)
++
++
++def _remux_to_mp4(src: str, dst: str) -> bool:
++    """Copy the streams into a normal MP4 (what yt-dlp's final 'fixup' step does)."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            [ffmpeg, "-y", "-v", "error", "-i", src, "-map", "0", "-c", "copy",
++             "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart", "-f", "mp4", dst],
++            capture_output=True, text=True, timeout=3600,
++        )
++        return res.returncode == 0 and _is_good_mp4(dst)
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _recover_finished_download(output_path: str) -> tuple[bool, str]:
++    """
++    yt-dlp only writes the final file name after every piece has downloaded, so if that
++    file exists the download itself finished; a non-zero exit then means a last step
++    (usually the MP4 'fixup') failed. Check the file and finish that step ourselves.
++    Returns (ok, what_was_done).
++    """
++    base, _ext = os.path.splitext(output_path)
++    leftover = base + ".temp.mp4"  # yt-dlp's fixup output when its final rename failed
++    if os.path.exists(leftover) and _is_good_mp4(leftover):
++        _replace_with_retry(leftover, output_path)
++        return True, "finished yt-dlp's interrupted MP4 repair"
++    if not os.path.exists(output_path):
++        return False, "no finished file"
++    if _is_good_mp4(output_path):
++        _cleanup_files([leftover])
++        return True, "file checked: complete, plays to the end"
++    info = _probe_video(output_path)
++    if info and info["has_video"] and info["duration"] > 0:
++        fixed = base + ".filmtool_fix.mp4"
++        if _remux_to_mp4(output_path, fixed):
++            _replace_with_retry(fixed, output_path)
++            _cleanup_files([leftover])
++            return True, "repaired the stream into a normal MP4"
++        _cleanup_files([fixed])
++    return False, "file is not a playable video"
++
++
+ def _cleanup_files(paths: list):
+     """Clean up temporary files."""
+     for path in paths:
+diff --git a/nfhs_download_jobs.py b/nfhs_download_jobs.py
+index 807ad61..bf71283 100644
+--- a/nfhs_download_jobs.py
++++ b/nfhs_download_jobs.py
+@@ -199,7 +199,8 @@ def _run_download_job(
+                 job_id,
+                 status="complete",
+                 percent=100,
+-                message="Download complete",
++                message="Download complete" + (" (checked and repaired by the Film Tool)" if result.get("warning") else ""),
++                warning=result.get("warning"),
+                 file_size=result["file_size"],
+                 stored_filename=saved["stored_filename"],
+                 game_id=saved["game_id"],

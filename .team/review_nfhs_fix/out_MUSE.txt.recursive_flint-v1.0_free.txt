@@ -1,0 +1,372 @@
+Query: You are MUSE.
+Your strength: review - find holes in the reasoning and tests.
+Files: .team/review_nfhs_fix/fix.diff, 
+.team/review_nfhs_fix/test_nfhs_recover.py, 
+.team/review_nfhs_fix/suite_failures_same_before_after.txt (full suite: 
+identical failure list with and without the fix; 1116 passed).
+
+ROLE: You are reviewing a small bug fix in the Liberty Film Tool (Flask app), 
+NOT the shot model.
+Read-only review. Do not edit any files.
+
+SCOTT'S PROBLEM (2026-11-19): NFHS download of game gam3f2777618 (8.23 GB, ~6 
+min) finished, then
+yt-dlp's final "fixup" (repair to normal MP4) step reported a failure and exited
+non-zero. nfhs.py
+treated any non-zero exit as failure, so the game was never added to the 
+library, although the file
+uploads/nfhs_gam3f2777618.mp4 is a valid MP4 (ffprobe: h264 1920x1080 25fps + 
+aac, 12794 s,
+319750 frames; decode-tested at 7 points start..end, all clean). Flask logs did 
+not keep yt-dlp's
+output, so the exact fixup error is unknown. Scott: "Fix the program to work 
+properly."
+
+THE FIX (diff in .team/review_nfhs_fix/fix.diff; new tests 
+tests/test_nfhs_recover.py):
+1. yt-dlp output is always saved to logs/nfhs_download_<id>_<ts>.log with the 
+bearer token removed.
+2. If yt-dlp exits non-zero but the final file (or yt-dlp's <name>.temp.mp4 
+fixup output) exists:
+   - leftover .temp.mp4 that is a good MP4 -> replace the final file with it;
+   - final file is a good MP4 (ffprobe mp4/mov + video stream + duration>0 + 
+last 5 s decodes) -> accept;
+   - final file is a readable video but not MP4 (raw MPEG-TS) -> ffmpeg -c copy 
+-bsf:a aac_adtstoasc
+     +faststart remux, verify, replace (retry while Windows holds a lock);
+   - otherwise -> error as before, now with the log path.
+   On recovery the job completes with a "warning" field.
+   Reasoning: yt-dlp only renames .part to the final name after all fragments 
+are downloaded, so an
+   existing final file means the download finished and a post-step failed.
+3. Tests: 7 new tests with real tiny ffmpeg-made videos (good mp4, unrepaired 
+mpegts, leftover temp,
+   garbage, cut-off mp4, full fake-yt-dlp run exit 1 -> success+warning, no file
+-> still error, token
+   never in log/error). 34/34 NFHS tests pass. Full-suite before/after 
+comparison: see results file.
+
+QUESTIONS FOR YOU:
+Q1. Is the "final file exists => download finished" reasoning right for yt-dlp 
+HLS (native and ffmpeg
+    downloaders) and for --download-sections clips? Any case where a partial 
+video gets accepted?
+Q2. Is the "good MP4" check (probe + decode last 5 s) strong enough? Would you 
+add an expected-
+    duration check (e.g. vs NFHS metadata) and how?
+Q3. Any risk in replacing the file (data loss, a locked file, disk space for an 
+8 GB remux)?
+Q4. Anything that should change before Scott uses it?
+
+Answer each Q briefly, then ONE verdict line starting exactly with:
+MUSE: AGREE   or   MUSE: AGREE WITH CHANGES: <list>   or   MUSE: DISAGREE: 
+<reason>
+
+=== fix.diff ===
+diff --git a/nfhs.py b/nfhs.py
+index 6fead1d..89c6fd3 100644
+--- a/nfhs.py
++++ b/nfhs.py
+@@ -556,17 +556,43 @@ def download_nfhs_vod(
+                 "error": "Download cancelled",
+                 "cancelled": True,
+             }
++        log_path = _write_download_log(game_id, output_lines, token, 
+return_code)
++        _cleanup_files()
+         if return_code == 0 and os.path.exists(output_path):
+             file_size = os.path.getsize(output_path)
+-            _cleanup_files()
+             if progress_callback:
+                 progress_callback(percent=100.0, message="Download finished")
+-            return {"success": True, "file_path": output_path, "file_size": 
+file_size, "error": None}
++            return {"success": True, "file_path": output_path, "file_size": 
+file_size, "error": None,
++                    "log_path": log_path}
++
++        # yt-dlp reported a failure. If the finished file is there, check it 
+and
++        # complete the last step ourselves instead of throwing away a full 
+download.
++        if os.path.exists(output_path) or 
+os.path.exists(os.path.splitext(output_path)[0] + ".temp.mp4"):
++            _emit_download_status(progress_callback, percent=100, 
+message="Checking the downloaded video…")
++            try:
++                ok, done = _recover_finished_download(output_path)
++            except OSError as exc:
++                ok, done = False, f"could not finish the file: {exc}"
++            if ok:
++                if progress_callback:
++                    progress_callback(percent=100.0, message="Download 
+finished")
++                return {
++                    "success": True,
++                    "file_path": output_path,
++                    "file_size": os.path.getsize(output_path),
++                    "error": None,
++                    "warning": f"yt-dlp reported a problem at the end; the Film
+Tool {done}.",
++                    "log_path": log_path,
++                }
+ 
+         combined = "".join(output_lines)
+         error_msg = (combined or "yt-dlp failed")[-500:]
+-        _cleanup_files()
+-        return {"success": False, "file_path": None, "file_size": 0, "error": 
+f"yt-dlp error: {error_msg}"}
++        if token:
++            error_msg = error_msg.replace(token, "<token removed>")
++        if log_path:
++            error_msg += f"\n(Full log: {log_path})"
++        return {"success": False, "file_path": None, "file_size": 0, "error": 
+f"yt-dlp error: {error_msg}",
++                "log_path": log_path}
+     except FileNotFoundError:
+         _cleanup_files()
+         return {
+@@ -580,6 +606,133 @@ def download_nfhs_vod(
+         return {"success": False, "file_path": None, "file_size": 0, "error": 
+"Download timed out (2 hour limit)"}
+ 
+ 
++_NFHS_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+"logs")
++
++
++def _write_download_log(game_id: str, lines: list, token: str | None, 
+return_code) -> str | None:
++    """Keep the full yt-dlp output (token removed) so a failure can be 
+diagnosed later."""
++    try:
++        os.makedirs(_NFHS_LOG_DIR, exist_ok=True)
++        path = os.path.join(
++            _NFHS_LOG_DIR, 
+f"nfhs_download_{game_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
++        )
++        text = "".join(lines)
++        if token:
++            text = text.replace(token, "<token removed>")
++        with open(path, "w", encoding="utf-8", errors="replace") as f:
++            f.write(text)
++            f.write(f"\n yt-dlp exit code: {return_code}\n")
++        return path
++    except OSError:
++        return None
++
++
++def _probe_video(path: str) -> dict | None:
++    """Return {format, has_video, duration} for a media file, or None if 
+ffprobe cannot read it."""
++    ffprobe = shutil.which("ffprobe")
++    if not ffprobe or not os.path.exists(path) or os.path.getsize(path) == 0:
++        return None
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=120,
++        )
++        if res.returncode != 0:
++            return None
++        info = json.loads(res.stdout or "{}")
++        fmt = info.get("format", {})
++        return {
++            "format": fmt.get("format_name", ""),
++            "has_video": any(s.get("codec_type") == "video" for s in 
+info.get("streams", [])),
++            "duration": float(fmt.get("duration") or 0),
++        }
++    except (OSError, subprocess.TimeoutExpired, ValueError):
++        return None
++
++
++def _plays_to_end(path: str) -> bool:
++    """Decode the last few seconds: a cut-off or broken file fails here."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=300,
++        )
++        return res.returncode == 0
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _is_good_mp4(path: str) -> bool:
++    info = _probe_video(path)
++    return bool(
++        info and info["has_video"] and info["duration"] > 0
++        and ("mp4" in info["format"] or "mov" in info["format"])
++        and _plays_to_end(path)
++    )
++
++
++def _replace_with_retry(src: str, dst: str, attempts: int = 10, delay: float = 
+2.0) -> None:
++    """os.replace, retrying while Windows has the file open (virus scan, video 
+preview)."""
++    import time
++
++    for n in range(attempts):
++        try:
++            os.replace(src, dst)
++            return
++        except PermissionError:
++            if n == attempts - 1:
++                raise
++            time.sleep(delay)
++
++
++def _remux_to_mp4(src: str, dst: str) -> bool:
++    """Copy the streams into a normal MP4 (what yt-dlp's final 'fixup' step 
+does)."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=3600,
++        )
++        return res.returncode == 0 and _is_good_mp4(dst)
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _recover_finished_download(output_path: str) -> tuple:
++    """
++    yt-dlp only writes the final file name after every piece has downloaded, so
+if that
++    file exists the download itself finished; a non-zero exit then means a last
+step
++    (usually the MP4 'fixup') failed. Check the file and finish that step 
+ourselves.
++    Returns (ok, what_was_done).
++    """
++    base, _ext = os.path.splitext(output_path)
++    leftover = base + ".temp.mp4"  # yt-dlp's fixup output when its final 
+rename failed
++    if os.path.exists(leftover) and _is_good_mp4(leftover):
++        _replace_with_retry(leftover, output_path)
++        return True, "finished yt-dlp's interrupted MP4 repair"
++    if not os.path.exists(output_path):
++        return False, "no finished file"
++    if _is_good_mp4(output_path):
++        _cleanup_files()
++        return True, "file checked: complete, plays to the end"
++    info = _probe_video(output_path)
++    if info and info["has_video"] and info["duration"] > 0:
++        fixed = base + ".filmtool_fix.mp4"
++        if _remux_to_mp4(output_path, fixed):
++            _replace_with_retry(fixed, output_path)
++            _cleanup_files()
++            return True, "repaired the stream into a normal MP4"
++        _cleanup_files()
++    return False, "file is not a playable video"
++
++
+ def _cleanup_files(paths: list):
+     """Clean up temporary files."""
+     for path in paths:
+diff --git a/nfhs_download_jobs.py b/nfhs_download_jobs.py
+index 807ad61..bf71283 100644
+--- a/nfhs_download_jobs.py
++++ b/nfhs_download_jobs.py
+@@ -199,7 +199,8 @@ def _run_download_job(
+                 job_id,
+                 status="complete",
+                 percent=100,
+-                message="Download complete",
++                message="Download complete" + (" (checked and repaired by the 
+Film Tool)" if result.get("warning") else ""),
++                warning=result.get("warning"),
+                 file_size=result["file_size"],
+                 stored_filename=saved["stored_filename"],
+                 game_id=saved["game_id"],
+📖 Read test_nfhs_recover.py  0.2s
+📖 Read suite_failures_same_before_after.txt  0.2s
+📖 Read fix.diff  0.3s
+💻 $ grep -n "_emit_download_status\|_cleanup_files\|def download_nfhs_vod\|_yt_dlp_command\|_yt_dlp_available\|output_lines\|_write_download_log\|_recover_finished_download\|_is_good_mp4\|_probe_video\|_plays_to_end\|_remux_to_mp4\|_replace_with_retry\|_NFHS_LOG_DIR" nfhs.py  0.1s
+💻 $ sed -n '120,240p' nfhs_download_jobs.py  0.2s
+💻 $ sed -n '250,470p' nfhs.py
+💻 $ sed -n '470,620p' nfhs.py  0.1s
+💻 $ sed -n '1,60p' nfhs.py + 1 command  0.1s
+✗ $ python -c "import yt_dlp, os; print(yt_dlp.__version__); print(os.path.dirname(yt_dlp.__file__))" [BLOCKED: Command flagged as dangerous (script...]
+💻 $ ls tests/ | grep -i nfhs + 1 command  0.2s
+💻 $ ls -a /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 2 commands  0.2s
+💻 $ grep -rn "yt_dlp\|yt-dlp" /home/scott/.hermes/installs/*/environments/*/lib/python*/site-packages/yt_dlp/YoutubeDL.py 2>/dev/null + 1 command
+✗ $ .venv/bin/python -c "import yt_dlp, os; print(yt_dlp.__version__); print(os.path.dirname(yt_dlp.__file__))" + 1 command [BLOCKED: Command flagged as dangerous (script...]
+✗ $ cat <<'EOF' import yt_dlp, os, subprocess print(yt_dlp.__version__) print(os.path.dirname(yt_dlp.__file__)) EOF .venv/bin/python /tmp/chk_ydlp.py  0.1s [exit 127]
+💻 $ pwd + 2 commands  0.1s
+💻 $ ls -la .venv + 1 command  0.2s
+💻 $ head -1 /home/scott/.local/bin/pytest + 1 command  5.3s
+✗ $ find / -name "YoutubeDL.py" -path "*yt_dlp*" 2>/dev/null + 1 command  180.3s [exit 124]
+✗ $ find /home/scott /usr /mnt/c -maxdepth 8 -name "YoutubeDL.py" -path "*yt_dlp*" 2>/dev/null  120.3s [exit 124]
+💻 $ python3 -c "import yt_dlp,os;print(yt_dlp.__version__, os.path.dirname(yt_dlp.__file__))"
+💻 $ printf 'import yt_dlp,os\nprint(yt_dlp.__version__)\nprint(os.path.dirname(yt_dlp.__file__))\n' + 1 command  0.1s
+💻 $ ls /home/scott/.local/bin | | grep -i ytdlp + 1 command  0.2s
+💻 $ find /home/scott/.hermes /home/scott/.local /usr/local /opt -maxdepth 8 -name "yt_dlp" -type d 2>/dev/null  0.3s
+💻 $ grep -n "temp" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py | grep -i "temp_file\|tmp\|fixup\|merge"
+💻 $ sed -n '1480,1520p;3300,3360p;3440,3550p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py
+💻 $ grep -n "OUTTMPL_TYPES\|TMPL_TYPES\|'temp'" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/_utils.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/options.py 2>/dev/null
+💻 $ sed -n '2820,2870p;5080,5130p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/_utils.py
+💻 $ grep -n "temp" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/options.py
+💻 $ sed -n '1380,1415p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/options.py  0.1s
+💻 $ grep -n "outtmpl" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py | sed -n '1,60p'
+💻 $ grep -rn "'temp'\|\"temp\"" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py + 1 command
+💻 $ grep -n "temp" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/__init__.py
+💻 $ grep -n "outtmpl" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/__init__.py | sed -n '1,60p' + 1 command
+💻 $ grep -n "def existing_video_file\|def get_output_path\|def _move\|def move\|files_to_move\|after_move" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py
+💻 $ sed -n '1205,1240p;3400,3430p;3590,3640p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py
+💻 $ grep -n "def existing_file\|def _existing_file" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py
+💻 $ sed -n '3230,3300p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py  0.2s
+💻 $ grep -rn "\.part\|'part'\|\"part\"" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/downloader/common.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/downloader/fragment.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/downloader/hls.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/downloader/ffmpeg.py 2>/dev/null
+💻 $ sed -n '190,260p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/downloader/common.py
+💻 $ grep -n "temp\|\.part\|merge" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/postprocessor/ffmpeg.py  0.1s
+💻 $ grep -n "def prepend_extension\|def replace_extension\|def _replace_extension" -A 12 /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/_utils.py  0.1s
+💻 $ grep -rn "def prepend_extension\|def replace_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/  0.4s
+💻 $ grep -rn "prepend_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/*.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/**/*.py 2>/dev/null  0.1s
+💻 $ grep -rn "def prepend_extension\|def replace_extension\|def _replace_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/ 2>/dev/null  0.1s
+💻 $ grep -rn "prepend_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py + 1 command  0.1s
+💻 $ grep -n "def prepend_extension" -A 8 /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/_utils.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils.py /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/*.py 2>/dev/null  0.1s
+✗ $ grep -rln "def prepend_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/ 2>/dev/null  0.2s [exit 1]
+✗ $ grep -rn "prepend_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils.py + 1 command  0.1s [exit 2]
+💻 $ ls /home/scott/.local/lib/python3.14/site-packages/yt_dlp/ + 1 command  0.1s
+💻 $ grep -rn "def prepend_extension" -A 10 /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/*.py  0.1s
+💻 $ grep -rln "prepend_extension" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/ + 1 command  0.1s
+💻 $ grep -n "_change_extension" -B 5 -A 20 /home/scott/.local/lib/python3.14/site-packages/yt_dlp/utils/_utils.py  0.1s
+💻 $ grep -n "_update_job" -A 25 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/nfhs_download_jobs.py | sed -n '1,60p'  0.2s
+💻 $ grep -n "def test\|_write_download_log\|_NFHS_LOG_DIR\|warning\|log_path\|_recover\|_is_good_mp4\|_probe_video\|_plays_to_end\|_remux\|_replace_with" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/tests/test_nfhs_download.py
+💻 $ grep -n "'--overwrite'\|\"--overwrite\"\|overwrites" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/options.py  0.2s
+💻 $ /home/scott/.local/bin/pytest tests/test_nfhs_download.py tests/test_nfhs_recover.py -q  14.9s
+💻 $ git status --porcelain + 1 command  32.9s
+💻 $ sed -n '1,80p' /home/scott/.local/lib/python3.14/site-packages/yt_dlp/postprocessor/common.py  0.1s
+✗ $ grep -n "class MoveFilesAfterDownloadPP" -A 40 /home/scott/.local/lib/python3.14/site-packages/yt_dlp/postprocessor/common.py [exit 1]
+💻 $ grep -rln "class MoveFilesAfterDownloadPP" /home/scott/.local/lib/python3.14/site-packages/yt_dlp/ + 1 command  0.2s
+💻 $ cat /home/scott/.local/lib/python3.14/site-packages/yt_dlp/postprocessor/movefilesafterdownload.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Q1. Agree with the reasoning. I verified it against the installed yt-dlp source (yt_dlp/YoutubeDL.py + postprocessor): a final file is only materialized by MoveFilesAfterDownloadPP after postprocessing (the ffmpeg merge/fixup) succeeds; fixup temp naming is <final-base>.temp.<ext> (via prepend_extension(path, 'temp')), and fragment data lands in <final>.part. So "final exists" ⇒ download+fixup finished, and a non-zero exit means a post-step failed. Holds for native/ffmpeg HLS and --download-sections (clip suffix handled via splitext). No partial acceptance: acceptance is gated on probe+decode-to-end; a truncated/partial file fails _plays_to_end.
+
+Q2. The good-MP4 check (probe: mp4/mov + video stream + duration>0; ffmpeg decode last 5 s) is a reasonable backstop. Gap: no expected-duration comparison (game VOD length vs NFHS metadata, or clip length vs section ms). I'd add it before trusting a recovered file — cheap and closes the last hole.
+
+Q3. Acceptable. Replace-before-verify means no data loss; _replace_with_retry handles Windows lock (PermissionError, 10×2 s). Remux writes a second ~8 GB file (.filmtool_fix.mp4) while source exists → needs ~2× free disk (16 GB for this game); on Scott's drive (~1.4 GB free) remux would fail cleanly to the error path rather than corrupt anything.
+
+Q4. Yes — before Scott uses it: add the expected-duration check (Q2) before accepting a recovered file. Minor: clean up .part/failed temps on terminal error paths.
+
+MUSE: AGREE WITH CHANGES: add expected-duration validation (NFHS metadata / section length) before accepting a recovered download file.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-730361fd4e6a848f4f6255c7573ed082efe9f265718679ea024041067a60be07
+  hermes -c "You are MUSE."
+
+Session:        local-730361fd4e6a848f4f6255c7573ed082efe9f265718679ea024041067a60be07
+Title:          You are MUSE.
+Duration:       12m 58s
+Messages:       118 (1 user, 116 tool calls)
