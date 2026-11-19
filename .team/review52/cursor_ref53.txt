@@ -1,0 +1,56 @@
+**CURSOR audit (read-only).** Hermes’s `.team/specs/53_referee_signals_spec.md` is on disk. Spec 52 untouched. Nothing built.
+
+### Proven (this session)
+
+**Exists today**
+- BODD `referee` class saved in `frames.json` key `"r"` via `_compact_frame` / `_referees_from_frames` / `detect_span` in `.team/shot_detectors/rim_first_finder.py`. `assign_shot_calls` accepts `referee_boxes` and **does not read them** (spec 37).
+- `is_referee_player` is for **shooter drop**, not hand signals.
+- Ultralytics **8.4.189** present under `/mnt/c/Users/scott/.venvs/liberty-gpu` (`ultralytics-8.4.189.dist-info`). No pose model on disk yet.
+- `.team/mm_clip/extract_clips.py` crops **rim-only** (2.6×3.0 hoop widths → 96×112). Refs are invisible to the clip model by design.
+- Scott examples map 1:1 to labelled `t_ms` and finder moments; **wide** spot clips already exist under `.team/review52/spot_media/` for all six cases.
+
+**Referee box quality (frames.json)**
+
+| Film | Frames with ≥1 ref | Median ref h×w (px) |
+|---|---|---|
+| rimrock | 75.3% | ~202×81 |
+| gvg | 82.7% | ~124×47 |
+| hsb | 51.8% | ~148×56 |
+| adrian | 53.8% | ~232×93 |
+| notus | 77.4% | ~142×55 |
+
+Near Scott examples (±2 s): refs present on **40–101** frames of the window (all six cases have boxes). Finder still has `shot_call=shot` on travel/foul/waved-off rows (rimrock:77/253/325, gvg:149, hsb:91).
+
+**Compute**
+- Full BODD+v6: rimrock GPU ~6971 s / 162k frames; GV ~12514 s / 197k; HSB ~6630 s / 112k.
+- Spec 53 must **not** pose the whole film. Moment windows only (±~2 s × ~1–2 refs) is seconds–minutes per film, not hours.
+
+**Why spec 36 failed (correct cause)**  
+Drift log: ball-in-ref-box / ref-holding proxies **fired on real game shots** and hid them. Pose was never used. Hermes §3 wrongly blames `is_referee_player` (that was a **spec 39 shooter** bug). Spec 53 avoids repeat only if cues require **pose arm events**, gate on **labelled true shots** (not just warm-ups), and **no-ref → no change**.
+
+### Inferred
+- Pose can support raised arm / both arms / lateral wave / chop from shoulder–elbow–wrist.
+- Open hand vs fist, “3 fingers,” thumbs-up, T-signal are **not** honest COCO-pose outputs at 720p / ~50–90 px ref width.
+
+### Unknown
+- Whether YOLO pose holds on the smaller GV/Notus refs without a pad/upscale crop test.
+- Exact false-positive rate on labelled true shots until a measured pass.
+
+### Exact build surface (after team agree; not now)
+| Piece | Where |
+|---|---|
+| New | `.team/shot_detectors/ref_signals.py` (crop `"r"` → pose → events JSON) |
+| New | `.team/shot_detectors/test_ref_signals.py` |
+| Optional thin hook | `postproc.py` / `ensemble_predict.py` **or** finder measure — override to `not_a_shot` only when event fires |
+| Reuse | `_referees_from_frames`, existing `frames.json`, spot wide clips |
+| Do not touch | core pipeline, `models/ball_detector.pt`, spec 52 training |
+
+### Smallest prototype (3 seen clips first)
+1. `rimrock:77` (travel), `gvg:149` (hand up foul), `rimrock:253` (wave-off).  
+2. Load saved `"r"` ±2 s; pad-crop each ref from the **full** frame (not rim clip); run YOLO pose; write keypoint overlay + event dump.  
+3. Pass only if those three show the expected arm event and a small fixed set of labelled true shots do **not**. No shot_call rewrite until that.
+
+---
+
+**CURSOR: AGREE WITH CHANGES:** Fix Hermes §3 (spec 36 = weak ball-in-ref proxies, not `is_referee_player`). Defer fist / 3-finger / thumbs / timeout to a later gate; v1 = arm-raised / both-arms / wave / chop only. Plug in as moment-window pose on BODD `"r"` boxes (wide frame), not rim crops and not a full-film pose pass. Pass bar = Scott-fixed counts on the six examples **plus** false fires on labelled true shots (warm-ups alone are not enough). Keep no-ref → no change; keep spec 52 untouched; no build until Muse + Scott agree.The frames.json scan finished and fed the Cursor audit: refs appear on most frames (about 52–83% depending on film), and all six of Scott’s example windows have referee boxes. That audit verdict still stands — **AGREE WITH CHANGES** on Hermes’s draft; nothing to build until Muse and Scott agree.That lookup also finished earlier: rimrock/gvg/hsb `frames.json` are under `Liberty_Shot_Outputs/rim_first/`, and the GPU env is at `/mnt/c/Users/scott/.venvs/liberty-gpu` with ultralytics 8.4.189. Already folded into the Cursor audit.
+[cursor_wsl] exit 0 at 13:49:42

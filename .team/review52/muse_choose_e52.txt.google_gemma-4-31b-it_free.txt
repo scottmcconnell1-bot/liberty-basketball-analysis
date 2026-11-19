@@ -1,0 +1,77 @@
+Query: TEAM CHECK - spec 52 R5 choose_e result (read-only; do not edit files). 
+Scott, binding: "DO not run this by
+yourself. I want everyone involved and input with their strengths." Nothing 
+further is trained until you answer.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+RESULT
+- Run: train_clip.py choose_e on clips7 (labels52_v2 frozen, sha in drift_log), 
+films adrian notus gvg hsb rimrock,
+  seed 0, epochs 1..18, spec 52 R4 recipe. Output: 
+/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/
+  choose_e52/{choose_e.json,choose_e_report.json,log.txt}. Curves: 
+.team/review52/choose_e52_curves.txt
+  (per held-out fold: epoch:miss_recall/shots_correct_overall on its inner-val 
+game).
+- Fold best epochs (held-out -> inner-val): adrian->notus 9, notus->gvg 2, 
+gvg->hsb 5, hsb->rimrock 8,
+  rimrock->adrian 5. E = median = 5.
+
+CLAUDE CODE OBSERVATIONS (verify, do not take on trust)
+O1. miss_recall saturates at 0.99-1.00 on most inner-val games from epoch 1-2, 
+so the R5 selection mostly falls
+    to the tie-break or to small-sample noise (notus inner-val has 22 misses: 
+one clip = 0.045).
+O2. Fold notus->gvg picked epoch 2 (miss_recall 1.000, sco 0.917) over later 
+epochs with sco 0.95-0.96 and
+    miss_recall 0.993 (one miss). The rule did what it says, but epoch 2 is 
+early.
+O3. Early epochs are unstable in some folds (hsb->rimrock ep3 miss_recall 0.761 
+/ sco 0.553; adrian->notus
+    ep2-5 0.864). E=5 sits near that unstable zone; most curves plateau from ~ep
+9-10.
+O4. The spec R5 rule was fixed before seeing data; changing it now is a protocol
+change. Note no held-out
+    (outer) game was used in choosing E.
+
+QUESTIONS
+Q1. Is E=5 a valid R5 result to carry into the 3-seed LOGO gate as written? 
+Yes/no and why.
+Q2. If you think the R5 rule is flawed (O1-O3), say what minimal, pre-registered
+change you would accept
+    (e.g. tie-break order, a stability window, fixed E) and whether it is 
+allowed now that only inner-val
+    numbers (no outer-game numbers) have been seen. Or say keep E=5 and let the 
+gate judge.
+Q3. Anything wrong in the run itself (fold/inner-val pairing per R5 wrap order, 
+seed, recipe flags, labels)?
+    CURSOR: please check choose_e.json/log.txt against train_clip.py and spec 
+R5.
+Roles: HERMES = architect decision on E/rule; MUSE = protocol integrity 
+(pre-registration, peeking);
+CURSOR = code/run audit.
+End with one line: <NAME>: AGREE E=5 | AGREE WITH CHANGES: <exact change> | 
+DISAGREE: <reason>
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.7s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.5s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-fb73666469c572b7a168caba82b303053ad9fd1e2e5e96ea4a248e849bb99d18
+  hermes -c "TEAM CHECK - spec 52 R5 choose_e result… #3"
+
+Session:        local-fb73666469c572b7a168caba82b303053ad9fd1e2e5e96ea4a248e849bb99d18
+Title:          TEAM CHECK - spec 52 R5 choose_e result… #3
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

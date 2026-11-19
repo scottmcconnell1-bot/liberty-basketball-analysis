@@ -1,0 +1,294 @@
+Query: You are HERMES, the architect. Two small edits; edit ONLY 
+.team/specs/52a_class0_restore_prereg.md (-> v3) and
+.team/specs/53_referee_signals_spec.md (-> v9). Repo: 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Reviews: review52/cursor_round_v2v8.txt (52a DISAGREE on counts; 53 AGREE), 
+review52/muse_round_v2v8.txt
+(52a AGREE WITH CHANGES; 53 AGREE WITH CHANGES).
+52a v3:
+1. Counts (Claude Code verified independently, scratchpad overlap52a.py): every 
+adrian out-of-session y=-1 row is
+   ALSO >= 8 s from any coach tag (oos is a subset of far). Unique adrian 
+class-0 = 26 (not 32); notus 6; hsb 4;
+   gvg 145; rimrock 241; hold-out-gvg train class-0 = 277 (not 283). Adrian y=-1
+n=45 (39 in-session + 6 oos by
+   48b in_session(is_ft=True) - pin THAT definition); remaining -1: adrian 19, 
+notus 3. Fix every count.
+2. Build order (pin): Cursor implements session_filter in 
+ensemble_predict.shot_list + gate52 path (per-film session
+   json mapping, omit scoring) + tests and writes labels52a + 
+.team/pre52a_sha256.txt; Claude Code verifies;
+   Muse + Cursor confirm; only then training. State explicitly that this amends 
+spec 52 R7 (postproc52
+   session_filter false -> true for logo52a only; R7 lock re-frozen with new 
+sha).
+3. Honesty: record that Scott chose the same-5 re-gate as binding (2026-11-14, 
+'A'); Muse and Cursor's dissent
+   (same-5 = diagnostic, blind R10 binding) is recorded, and R10 blind on 
+NOTUS_A / IDAHO_CITY / RIVERSTONE stays
+   available after a pass.
+53 v9:
+4. Pass bar applies only when the referee step is enabled (after the Step 0 80% 
+keypoint gate passes); if Step 0
+   fails, the step stays OFF and no pass bar is read. Fix the stale 
+violation-row wording (v8 has violation_travel).
+Status lines v3 / v9. End with "HERMES: SPEC WRITTEN".
+📖 Read 52a_class0_restore_prereg.md  0.6s
+📖 Read 53_referee_signals_spec.md  0.6s
+✗ Read cursor_round_v2v8.txt  0.6s [File not found: cursor_round_v2v8.txt]
+✗ Read muse_round_v2v8.txt  0.6s [File not found: muse_round_v2v8.txt]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/  1.7s
+📖 Read cursor_round_v2v8.txt
+📖 Read muse_round_v2v8.txt
+
+────────────────────────────────────────
+☤ Hermes
+The review files live under .team/review52/. Let me read the supporting context before editing.
+────────────────────────────────────────
+
+📖 Read hermes_round_v3v9.txt  0.2s
+📖 Read prompt_hermes_round_v3v9.txt  0.2s
+✗ Read pre52a_sha256.txt  0.2s [File not found: pre52a_sha256.txt]
+📖 Read spec52a_v2_sha.txt  0.2s
+📖 Read spec53_v8_sha.txt  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ | grep -i -E "pre52|sha|labels52a" + 1 command  1.3s
+📖 Read 52_label_audit_stable_ensemble_spec.md
+📖 Read pre52_sha256.txt
+📖 Read postproc52.json
+📖 Read test_mm52.py
+📖 Read ensemble_predict.py
+📖 Read cursor_prereg52a.txt  0.1s
+📖 Read muse_prereg52a.txt  0.1s
+📖 Read gate52.py  0.1s
+💻 $ grep -n -i -E "same-5|R7|re-freeze|re-freeze|re gate|regate|session_filter" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+💻 $ sed -n '380,420p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.2s
+📖 Read game_session.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Context is clear now. Let me verify exact strings before patching.
+────────────────────────────────────────
+
+💻 $ echo "=== 52a: target strings ===" + 1 command  0.1s
+💻 $ echo "=== 53: target strings ===" + 1 command  0.1s
+💻 $ echo "A:" + 17 commands  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+All target strings are unique. Now applying the v3 edits to spec 52A.
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.1s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -1,4 +1,4 @@
+│ -# Spec 52A - Class-0 Restore + Predict-Time Game-Session Filter (PRE-REGISTERED) v2
+│ +# Spec 52A - Class-0 Restore + Predict-Time Game-Session Filter (PRE-REGISTERED) v3
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-14
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.2s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -7,7 +7,7 @@
+│
+│  ## Status
+│
+│ -PRE-REGISTERED (v2). The change set below is frozen BEFORE any training. This is the binding
+│ +PRE-REGISTERED (v3). The change set below is frozen BEFORE any training. This is the binding
+│  pre-registration for proposal (a).
+│
+│  ## Binding decision (Scott, 2026-11-14)
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.2s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -12,7 +12,7 @@
+│
+│  ## Binding decision (Scott, 2026-11-14)
+│
+│ -- Scott decided (binding): approve proposal (a) from the gate review.
+│ +- Scott decided (binding, 'A', 2026-11-14): approve proposal (a) from the gate review.
+│  - The re-gate on the SAME 5 LOGO games (adrian, notus, gvg, hsb, rimrock) - spec 52 R6 unchanged - is the
+│    binding pass/fail.
+│
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.1s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -79,6 +79,29 @@
+│  class-0.
+│
+│  v2 applies: GAP pinned NOW at 8000 ms (see Item 1).
+│ +
+│ +## v3 - fixes applied from the v2 reviews (round cursor/muse v2v8; Claude Code re-verified counts; Cursor DISAGREE on counts; Muse AGREE WITH CHANGES)
+│ +
+│ +### Counts corrected (Claude Code verified independently, scratchpad overlap52a.py; Cursor right, Muse corrected)
+│ +
+│ +- Every adrian out-of-session y=-1 row is ALSO >= 8 s from any coach tag (oos is a subset of far; oos dists
+│ +  47.8-176 s). Unique adrian class-0 = 26 (NOT 32; the v2 text double-counted the 6 out-of-session + the 26
+│ +  far-from-tag as disjoint). Notus 6; hsb 4; gvg 145; rimrock 241. Hold-out-gvg train class-0 = 277 (NOT 283;
+│ +  = 241 rimrock + 4 hsb + 26 adrian + 6 notus).
+│ +- adrian y=-1 n=45 (39 in-session + 6 oos by 48b in_session(is_ft=True), pinned THAT definition); remaining
+│ +  -1: adrian 19, notus 3. Fix every count.
+│ +
+│ +### Build order pinned (v3; amends spec 52 R7)
+│ +
+│ +- Cursor implements session_filter in ensemble_predict.shot_list + gate52 path (per-film session json
+│ +  mapping, omit scoring) + tests and writes labels52a + .team/pre52a_sha256.txt; Claude Code verifies; Muse +
+│ +  Cursor confirm; only then training. State explicitly that this amends spec 52 R7 (postproc52
+│ +  session_filter false -> true for logo52a only; R7 lock re-frozen with new sha).
+│ +
+│ +### Honesty (v3; same-5 re-gate)
+│ +
+│ +- Scott chose the same-5 re-gate as binding (2026-11-14, 'A'); Muse and Cursor's dissent (same-5 = diagnostic,
+│ +  blind R10 binding) is recorded, and R10 blind on NOTUS_A / IDAHO_CITY / RIVERSTONE stays available after a pass.
+│
+│  ## Item 1 - Class-0 restore (PINNED FIX, v2)
+│
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.1s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -119,7 +119,8 @@
+│  GAP pinned NOW: 8000 ms (>= 8 s). Cursor computed: >=8 s -> adrian ~26, notus ~6; >=15 s -> adrian ~18, notus
+│  ~4; >=30 s -> adrian 7, notus 1.
+│
+│ -- adrian: in-session untagged n=45; dist>=8 s -> 26 -> class 0; dist<8 s -> stay -1.
+│ +- adrian: y=-1 n=45 (39 in-session + 6 out-of-session, pinned 48b in_session(is_ft=True)); dist>=8 s -> 26
+│ +  -> class 0; dist<8 s -> stay -1.
+│  - notus: in-session untagged n=9; dist>=8 s -> 6 -> class 0; dist<8 s -> stay -1.
+│
+│  Gap choice (architect, stated): pinned at 8000 ms, because it is the fixed threshold at which the
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.2s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -137,8 +137,8 @@
+│
+│  Under the full pinned v2 rule ((i) AND (ii), GAP=8000 ms; gvg/rimrock frozen unchanged; hsb unchanged):
+│
+│ -- adrian: class-0 AFTER restore = 6 (from 48b out-of-session) + 26 (from in-session far-from-tag,
+│ -  dist>=8 s) = 32. Real shots 121 (y1=79, y2=42). In-session untagged staying -1 = 45 - 26 = 19.
+│ +- adrian: class-0 AFTER restore = 26 (unique; oos ⊂ far, so the v2 "6 + 26 = 32" double-counted; NOT 32).
+│ +Real shots 121 (y1=79, y2=42). In-session untagged staying -1 = 19 (39 in-session - 20 far-in-session, dist>=8 s).
+│  - notus: class-0 AFTER restore = 0 (from 48b out-of-session) + 6 (from in-session far-from-tag,
+│    dist>=8 s) = 6. Real shots 30 (y1=22, y2=8). In-session untagged staying -1 = 9 - 6 = 3.
+│  - hsb: class-0 AFTER restore = 4 (labels52_v2 unchanged; no new restores; in-session untagged 2 stay -1).
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.2s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -146,7 +146,7 @@
+│  - gvg: class-0 AFTER restore = 145 (labels52_v2 unchanged, frozen). Unchanged.
+│  - rimrock: class-0 AFTER restore = 241 (labels52_v2 unchanged, frozen). Unchanged.
+│
+│ -Hold-out-gvg training class-0 after the full restore: rimrock 241 + hsb 4 + adrian 32 + notus 6 = 283
+│ +Hold-out-gvg training class-0 after the full restore: rimrock 241 + hsb 4 + adrian 26 + notus 6 = 277
+│  (vs 245 before the restore; the not-a-shot signal is no longer rimrock-only).
+│
+│  ### 1.3 New frozen labels file + sha
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+⚠ Compression summary failed: Network connection lost.. Inserted a fallback context marker.
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.1s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -229,4 +229,4 @@
+│
+│  - NOTUS_A, IDAHO_CITY, RIVERSTONE (all Liberty home gym). Riverstone: no readable board.
+│
+│ -HERMES: PREREG WRITTEN
+│ +HERMES: SPEC WRITTEN
+
+────────────────────────────────────────
+☤ Hermes
+Now the v9 edits to spec 53.
+────────────────────────────────────────
+
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.2s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -2,7 +2,7 @@
+│
+│  Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│  File: .team/specs/53_referee_signals_spec.md (this file only; nothing else edited by this spec)
+│ -Status: v8 for team agreement (Hermes owns the rewrite; v7 applied as written (pass-bar vs rules conflict resolved; ft_next added to the fouled_miss predicate); Scott's binding numbers (.team/review52/scott_numbers53.txt, 2026-11-14) binding). v8 applies, exactly: (1) DETECTABLE event rotate_hands (NFHS #22 travel) ADDED: both wrists near chest height (between shoulder and hip keypoints), close together (< ~1 shoulder width apart), moving in opposite-phase circular paths for >= 1 full cycle within ~2 s; wrist-trajectory pattern (not a finger/fist cue) -> claimable from pose; (2) violation_travel predicate = arm_raised (stop clock) followed within ~2 s by rotate_hands, near the shot/putback time window, + play_stopped; output category "violation" -> that shot (and the putback it covers) is not a shot (Scott rule: waved-off/violation attempts do not count); (3) pass bar: rimrock:77 must output "violation" (no longer "unknown is OK" for 77); rimrock:253 rule from v7 stays; (4) fist (#4), thumbs, fingers remain not claimable from pose. Nothing is built until Hermes/Muse/Cursor agree.
+│ +Status: v9 for team agreement (Hermes owns the rewrite; v7 applied as written (pass-bar vs rules conflict resolved; ft_next added to the fouled_miss predicate); Scott's binding numbers (.team/review52/scott_numbers53.txt, 2026-11-14) binding). v8 applies, exactly: (1) DETECTABLE event rotate_hands (NFHS #22 travel) ADDED: both wrists near chest height (between shoulder and hip keypoints), close together (< ~1 shoulder width apart), moving in opposite-phase circular paths for >= 1 full cycle within ~2 s; wrist-trajectory pattern (not a finger/fist cue) -> claimable from pose; (2) violation_travel predicate = arm_raised (stop clock) followed within ~2 s by rotate_hands, near the shot/putback time window, + play_stopped; output category "violation" -> that shot (and the putback it covers) is not a shot (Scott rule: waved-off/violation attempts do not count); (3) pass bar: rimrock:77 must output "violation" (no longer "unknown is OK" for 77); rimrock:253 rule from v7 stays; (4) fist (#4), thumbs, fingers remain not claimable from pose. v8 applied as written; v9 changes: the pass bar applies ONLY when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0 fails, the step stays OFF and no pass bar is read; stale violation-row wording fixed (v8 has violation_travel). Nothing is built until Hermes/Muse/Cursor agree.
+│
+│  FACTS:
+│  - Goal (Scott, binding, 2026-11-14, team request): referee calls during a shot attempt are detected from the referee's hands; find all referee calls/hand signals and include them in shot decisions based on hand motions. Nothing is built until the team agrees.
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -67,7 +67,7 @@
+│  |---|---|
+│  | fouled_miss | (`arm_raised` AND `timing_vs_rim_release` within `foul_ref_window_ms` of release/rim AND `play_stopped` AND `ft_next`) AND shot missed -> fouled_miss; made -> and_one (make stays make, foul tagged) |
+│  | waved_off | (`wave_scissor` AND `timing_vs_rim_release` (wave start within 1000 ms after rim/release; last <= 1500 ms) AND `score_changed` == False) -> waved_off; score cue omitted (no readable score track, e.g. Rimrock) -> waved_off no-score rule: predicate that would cancel a real shot without the score cue -> "unknown" (coach flag, <=20 cap) under Scott's 0-false-fire rule (2026-11-14, .team/review52/scott_numbers53.txt); no stricter no-score rule stated in v6 -> binding rule stands |
+│ -| violation | stop clock (#2) then #22 travel: violation predicates that exist (v8, DETECTABLE-only boolean fusions): stop_clock_in_shot = (`arm_raised` stop-clock cue timed vs release/rim within shot window AND `play_stopped`); violation_travel = `arm_raised` (stop clock) followed within ~2 s by `rotate_hands` (NFHS #22 travel: both wrists near chest height, close together, opposite-phase circular motion >= 1 full cycle within ~2 s) near the shot/putback time window AND `play_stopped` -> category "violation" -> that shot (and the putback it covers) is not a shot; no other violation predicate in v1. |
+│ +| violation | stop clock (#2) then #22 travel: violation predicates that exist (v8, DETECTABLE-only boolean fusions): stop_clock_in_shot = (`arm_raised` stop-clock cue timed vs release/rim within shot window AND `play_stopped`); violation_travel = `arm_raised` (stop clock) followed within ~2 s by `rotate_hands` (NFHS #22 travel: both wrists near chest height, close together, opposite-phase circular motion >= 1 full cycle within ~2 s) near the shot/putback time window AND `play_stopped` -> category "violation" -> that shot (and the putback it covers) is not a shot; no other violation predicate in v8. |
+│  | and_one | (`arm_raised` AND `timing_vs_rim_release` within `foul_ref_window_ms` AND `play_stopped` AND `ft_next`) AND shot made AND `score_changed` -> and_one; make stays make, foul tagged |
+│  | none | cues present (e.g. `arm_raised` / `chop` / `wave_scissor` / `both_arms_up`) but no category boolean fires -> no foul/wave on the shot |
+│  | unknown | predicate unresolved (unreadable input) -> coach-review flag, never guess |
+🔧 Patch .team/specs/53_referee_signals_spec.md  0.2s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -99,7 +99,7 @@
+│
+│  5. MEASUREMENT ON SEEN FILMS ONLY (labelled shots + Scott's examples) BEFORE ANY BLIND USE; fixed pass numbers; no new human review loops (Scott refused more clip reviews; any human role is one-time and bounded):
+│  - SEEN films: Rimrock, GVG, HSB, GV, Idaho, Adrian, Notus A1 (labelled sets .team/specs/36_extras_truth_labels.json, 44_gv_labels.json, 49_hsb_labels.json, 50_*_cand_labels.json, 51_hsb1_cand_labels.json, labels52_v2.json; Scott's examples rimrock:77, rimrock:253, gvg:149, hsb:91, gvg:349, rimrock:325).
+│ -- Pass bar (MUSE C2 / CURSOR, decided; v5; v7; v8): pass = Scott's 6 examples detected as the expected category (rimrock:77 travel -> violation, no shot; rimrock:253 waved off -> no shot; gvg:149 shooting foul -> fouled miss, no shot; hsb:91 fouled shot -> no shot; gvg:349 jump ball -> held-ball context, deduce or unknown; rimrock:325 fouled before clip -> no referee in clip -> no change), AND false fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now, marked SCOTT'S RULE (0 allowed; any labelled real shot cancelled or changed = referee step OFF, from .team/review52/scott_numbers53.txt, 2026-11-14). Warm-ups/breaks alone are not enough. v8 pass-bar change: rimrock:77 must output 'violation' (no longer 'unknown is OK' for 77); rimrock:253 (waved off) rule from v7 stays. Scott's 0-false-fire rule wins over coverage.
+│ +- Pass bar (MUSE C2 / CURSOR, decided; v5; v7; v8): pass = Scott's 6 examples detected as the expected category (rimrock:77 travel -> violation, no shot; rimrock:253 waved off -> no shot; gvg:149 shooting foul -> fouled miss, no shot; hsb:91 fouled shot -> no shot; gvg:349 jump ball -> held-ball context, deduce or unknown; rimrock:325 fouled before clip -> no referee in clip -> no change), AND false fires on labelled true shots (labels52_v2 class 1/2 rows on seen films) at or below a fixed number written now, marked SCOTT'S RULE (0 allowed; any labelled real shot cancelled or changed = referee step OFF, from .team/review52/scott_numbers53.txt, 2026-11-14). Warm-ups/breaks alone are not enough. v8 pass-bar change: rimrock:77 must output 'violation' (no longer 'unknown is OK' for 77); rimrock:253 (waved off) rule from v7 stays. Scott's 0-false-fire rule wins over coverage. v9 pass-bar change: the pass bar applies ONLY when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0 fails, the step stays OFF and no pass bar is read.
+│  - Pass protocol: run the referee cue chain on SEEN films only; check cue events against labelled not_a_shot / shot moments; Scott's binding numbers from .team/review52/scott_numbers53.txt are fixed before the run (pattern: spec 36 K8, spec 38 S8, spec 41 L7).
+│  - No blind use: unseen films (Adrian Q4, HSB1 remaining, new films) only after Scott approves.
+│
+
+────────────────────────────────────────
+☤ Hermes
+All edits applied. Now verifying the final state of both files.
+────────────────────────────────────────
+
+📖 Read 52a_class0_restore_prereg.md  0.1s
+📖 Read 53_referee_signals_spec.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Both files verify well, but I spotted one more stale count in Item 6 of spec 52A. Let me check for all remaining stale count references.
+────────────────────────────────────────
+
+💻 $ echo "=== 52a: occurrences of 32 / 283 / adrian 32 / not 32 / in-session n=45 ===" + 3 commands  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+One stale count remains — in Item 6. Fixing it now.
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52a_class0_restore_prereg.md  0.1s
+│ .team/specs/52a_class0_restore_prereg.md
+│ @@ -218,8 +218,8 @@
+│  ## Item 6 - Honest read + stop for Scott
+│
+│  - Whether the training change is expected to fix D1: YES in mechanism, NOT in certainty. The class-0
+│ -  restore adds multi-gym not-a-shot examples (gvg-held-out train pool: rimrock 241 + hsb 4 + adrian 32 +
+│ -  notus 6 = 283), addressing the D1 cause (not-a-shot learned almost only from rimrock; adrian/notus had
+│ +  restore adds multi-gym not-a-shot examples (gvg-held-out train pool: rimrock 241 + hsb 4 + adrian 26 +
+│ +  notus 6 = 277), addressing the D1 cause (not-a-shot learned almost only from rimrock; adrian/notus had
+│    ZERO class-0 rows). The re-gate is the test.
+│  - Item 2 (predict-time session filter) is the main lever on the gvg checks (gvg 200 checks > hard cap 20;
+│    ~175 droppable non-shot/-1 candidates; 0 real shots out of session on gvg).
+💻 $ echo "=== FINAL CHECK 52a ===" + 7 commands  92.6s
+💻 $ echo "=== SPECS TOUCHED (52a/53) ===" + 5 commands  49.7s
+
+────────────────────────────────────────
+☤ Hermes
+Both spec edits are complete and verified.
+
+52a_class0_restore_prereg.md → v3
+- Title/Status → PRE-REGISTERED (v3); Scott binding marked (binding, 'A', 2026-11-14).
+- Added ## v3 - fixes applied from the v2 reviews (round cursor/muse v2v8; ...) with:
+  - Counts corrected: oos ⊂ far (all adrian oos also ≥8s from any coach tag; dists 47.8–176 s). Unique adrian class-0 = 26 (not 32; v2 double-counted 6 oos + 26 far). Notus 6; hsb 4; gvg 145; rimrock 241; hold-out-gvg train class-0 = 277 (not 283). adrian y=-1 n=45 = 39 in-session + 6 oos (pinned 48b in_session(is_ft=True)); remaining −1: adrian 19, notus 3.
+  - Build order pinned (v3; amends spec 52 R7): Cursor implements session_filter in ensemble_predict.shot_list + gate52 path (per-film session json mapping, omit scoring) + tests and writes labels52a + .team/pre52a_sha256.txt; Claude Code verifies; Muse + Cursor confirm; only then training. States it amends R7 (postproc52 session_filter false → true for logo52a only; R7 lock re-frozen with new sha).
+  - Honesty (v3; same-5 re-gate): Scott chose same-5 re-gate as binding (2026-11-14, 'A'); Muse + Cursor dissent (same-5 = diagnostic, blind R10 binding) recorded; R10 blind on NOTUS_A / IDAHO_CITY / RIVERSTONE stays available after a pass.
+
+- Fixed every stale count: Item 1.1 (adrian y=-1 n=45 → 39 in-session + 6 oos), Item 1.2 (adrian class-0 AFTER restore = 26 unique; train pool = 277), Item 6 (train pool = 277).
+
+53_referee_signals_spec.md → v9
+- Status → v9; v8 applied as written; v9 changes added: pass bar applies ONLY when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0 fails, the step stays OFF and no pass bar is read. Stale violation-row wording fixed (no other violation predicate in v8.; v8 has violation_travel). Pass bar line in Item 5 updated with the v9 change.
+
+Both files now end with HERMES: SPEC WRITTEN.
+
+HERMES: SPEC WRITTEN
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-1d07c3b29bb9823547bcf734fd41a6edcf6e9425546808b52035f5e270e354a9
+  hermes -c "You are HERMES, the architect. Two small edits…"
+
+Session:        local-1d07c3b29bb9823547bcf734fd41a6edcf6e9425546808b52035f5e270e354a9
+Title:          You are HERMES, the architect. Two small edits…
+Duration:       8m 34s
+Messages:       45 (1 user, 43 tool calls)
+[hermes] exit 0 at 17:19:59

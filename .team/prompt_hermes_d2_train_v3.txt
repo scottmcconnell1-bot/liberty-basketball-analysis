@@ -1,0 +1,19 @@
+Hermes, you are the Architect. EDIT ONE file: .team/specs/23_d2_train_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Change line 1 to "D2 TRAIN JOB SPEC v3 - trained, test not run" (remove the VETTED line; Claude Code re-stamps). Plain markdown, no line-number prefixes, no literal "\n". Create nothing else, run nothing. If your write tool refuses, say so plainly.
+
+What happened (Claude Code ran it, 2026-11-02; .team/drift_log.md last entry):
+- Step 0 OK (29 / 0). Val on 76 frames: v6 P 0.490 R 0.462 mAP50 0.320; d2v1 P 0.819 R 0.783 mAP50 0.780.
+- Test try 1 INVALID: single_cls=True saved the class as {0: 'item'}; keep_ball_detections.py line 23 keeps only 'basketball', so 0/3800.
+- Scott chose "Fix name, rerun test". Claude Code saved runs/d2v1/weights/best_basketball.pt = best.pt with names {0: 'basketball'} only; every weight tensor checked identical (torch.equal on all state_dict keys).
+- Extract with best_basketball.pt: agreement with v6 ball points notus_a1 907/968, adrian 2372/2832, overall 3279/3800 = 0.8629 < 0.90, so extract exits; candidates.json written (d2_train/test2/candidates.json).
+- arc-rule-report has its OWN gate (keep_ball_detections.py lines 1109-1118) reading candidates.json mapping_check.rate, so step 2 cannot run on it. Spec v2 section 4 missed this.
+- Scott: if it stops again, "Hermes plans a small fix first, Hermes and Muse check it."
+
+Read keep_ball_detections.py lines 20-45, 900-1125, 1340-1400 and its test file .team/shot_detectors/test_keep_ball_detections.py (if it exists).
+
+Write ONLY these changes:
+1. Section 3: record the class-name fact: single_cls true makes ultralytics name the class 'item'; the test model is best_basketball.pt (name only changed, tensors identical). Future runs: single_cls false (data is already one class).
+2. Section 4, new "Small fix" (the only code change; default behaviour unchanged): add an optional argument --mapping-proof-json to --step arc-rule-report in keep_ball_detections.py. When it is NOT given, behaviour is exactly today's. When given (D1's own C:/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/candidates.json): the gate reads the rate from THAT file and must be >= 0.90 (it is 3798/3800); the proof file and the new candidates.json must have identical "constants" and identical n_shots and the same set of (film, t) shots, else stop; the new file's rate is printed and written to the results JSON as "agreement_with_v6" (not a gate). Nothing else in the file changes: no cutoff, zone, confidence, cap, arc or rule number.
+3. Tests for the fix (in the keep_ball_detections test file): without the flag a 0.86 file still stops; with a good proof file a 0.86 file goes on and agreement_with_v6 is written; a proof file with a rate below 0.90 stops; different constants or shot set stops.
+4. Test commands: step 1 is NOT rerun (test2/candidates.json from best_basketball.pt is used as is). Step 2: repo venv arc-rule-report --candidates-json d2_train/test2/candidates.json --mapping-proof-json <D1 candidates.json> --tracks-dir C:/Users/scott/AppData/Local/Temp --out-json d2_train/test2/d2_results.json --out-md d2_train/test2/d2_test_report.md. Also rerun step 0 with the flag (D1 candidates as both files) and it must still give 29 / 0. Pass unchanged: makes_right > 29 AND misses_called_makes == 0. This is the one valid try; then Scott (gate 3).
+5. Files: add keep_ball_detections.py (the flag only) and its test file. Claude Code writes the code; Hermes and Muse check the diff before it runs.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - Claude Code to check".

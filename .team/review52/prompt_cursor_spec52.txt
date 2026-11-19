@@ -1,0 +1,6 @@
+You are Cursor, the builder/code reviewer on the Liberty basketball film project. REVIEW ONLY - edit no file.
+Hermes (architect) wrote spec 52: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md
+Background: .team/review52/muse_review52.txt (from '☤ Hermes'), .team/review52/cursor_review52.txt, .team/review52/evidence.txt, last 30 lines of .team/drift_log.md. Code: .team/mm_clip/train_clip.py, ensemble_predict.py, extract_clips.py.
+Claude Code's vet of the draft: .team/review52/vet52.txt (V1-V4 with proposed fixes).
+Review the spec WITH the V1-V4 fixes applied. Is it complete, buildable, and will it give a trustworthy blind result toward the goal (>= 90% of all shots found and called right, minimal coach work)? List any further problems with concrete fixes.
+End with one line starting exactly "CURSOR: AGREE" or "CURSOR: DISAGREE:" + what must change.

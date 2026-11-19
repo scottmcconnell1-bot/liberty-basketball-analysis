@@ -1,0 +1,60 @@
+[muse] model recursive/flint-v1.0:free 12:44:05
+Query: You are MUSE, the REVIEWER. READ-ONLY, no file edits. Output = review 
+text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Final check: does .team/specs/52c_first_shot_sequence_prereg.md v2 (sha 
+f5b4d5df..., review52/spec52c_v2_sha.txt) apply every change from your v1 review
+(review52/muse_spec52c.txt, review52/cursor_spec52c.txt): postproc52b 
+extras_require_seed_disagreement + shot_list wiring + 52b tests; per-film seq 
+over full T, (t,t+6000] inclusive with matching test; dropout on pool then 
+concat, Linear(513,3); softened 6000 ms; F2 confound disclosed with 
+in-session-only NO + reason; sha filename? Anything new broken? Short answer.
+End with ONE line starting exactly: MUSE: AGREE | MUSE: AGREE WITH CHANGES: ... 
+| MUSE: DISAGREE: ...
+✗ $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/review52/  0.4s [exit 2]
+💻 $ git -C /mnt/c/Users/scott/Documents/liberty-basketball-analysis status + 1 command  34.4s
+📖 Read 52c_first_shot_sequence_prereg.md  0.1s
+📖 Read spec52c_v2_sha.txt  0.1s
+📖 Read muse_spec52c.txt  0.1s
+📖 Read cursor_spec52c.txt  0.1s
+💻 $ sha256sum /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md + 2 commands  0.5s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/  0.1s
+📖 Read cursor_spec52c_v2.txt  0.1s
+📖 Read hermes_spec52c_v2.txt  0.1s
+📖 Read postproc52.json  0.2s
+📖 Read postproc52a.json  0.2s
+📖 Read test_mm52.py  0.1s
+📖 Read ensemble_predict.py  0.1s
+💻 $ git status --porcelain | grep -iE 'mm_clip|52b|52c|postproc|shot|seq|silence' + 1 command  31.1s
+📖 Read 52b_check_rule_prereg.md
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i 'postproc\|spec52\|silent\|truth52\|clips7a' + 1 command  0.5s
+📖 Read train_clip.py
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i 'postproc52b' + 1 command  0.5s
+📖 Read muse_spec52c_v2.txt
+📖 Read prompt_muse_spec52c_v2.txt
+
+────────────────────────────────────────
+☤ Hermes
+FINAL CHECK — SPEC 52C V2 (sha f5b4d5df1cc3538990ea762a5cd9c57352fa3da31ab5a798260714becbc96817 frozen in .team/review52/spec52c_v2_sha.txt, filename aligned, content OK).
+
+Every v1 change applied? YES.
+- F1: applied — postproc52b.json pins extras_require_seed_disagreement:true (postproc52/postproc52a keep flat band); shot_list extras gate + 52b tests now in build steps; "shot_list UNCHANGED" deleted.
+- F3: applied — seq_follower PER FILM over full candidate T (incl -1/0), no cross-film concat; window (t, t+6000] inclusive; test pins flag at t+6000, none at t+6001.
+- F4: applied — Dropout(0.5) on pool only then concat; seq float32 0/1 no scale; Linear(513,3); old Linear(512,3) ckpts incompatible; seq=None -> zeros for new models.
+- F5: applied (softened) — round possession bound; 6000 covers gaps 1160/2600/5233; 4000 misses rimrock 5233; not from silent P/gate. Residual wording nit retained; Cursor called it soft leftover, not build miss; MUSE had marked F5 non-blocking.
+- F2: applied — confound disclosed (~13-47% candidates/film fire flag; gvg/rimrock mostly -1/0 scramble); in-session-only gating: NO; reason (session.json not a frozen input, rimrock None, would film-depend/add unfrozen dep).
+
+Anything new broken? NO — v2 coherent with 52b v2 (postproc52b session_filter true re-gate wiring); no new conflicts; absent postproc52b.json / spec52c_postproc52b_sha.txt on disk is expected pre-build freeze state, not a break.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d3b35c5aed1a56062ab83024c82a6f5f7a94d9f2d285863eead46cde3bee373d
+  hermes -c "You are MUSE, the REVIEWER. READ-ONLY, no file…"
+
+Session:        local-d3b35c5aed1a56062ab83024c82a6f5f7a94d9f2d285863eead46cde3bee373d
+Title:          You are MUSE, the REVIEWER. READ-ONLY, no file…
+Duration:       6m 7s
+Messages:       31 (1 user, 29 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE

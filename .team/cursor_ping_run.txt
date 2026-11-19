@@ -1,0 +1,2 @@
+CURSOR: READY
+[cursor_wsl] exit 0 at 11:07:07

@@ -1,0 +1,140 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY.
+TEAM CONFIRM before training (spec 52a v3 build order). READ-ONLY: do not edit 
+or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Cursor BUILT (review52/cursor_build52a.txt). CLAUDE CODE VERIFIED (check, do not
+take on trust):
+V1 Windows .venv: pytest .team/mm_clip .team/shot_detectors -> 314 passed, 1 
+skipped.
+V2 labels52_v2.json sha 56f18cf0... unchanged; postproc52.json 150ff7e6... 
+unchanged; labels52a d8d2acd4... = pre52a_sha256.txt.
+V3 labels52a vs labels52_v2: only -1 -> 0 changes: adrian 26, notus 6; 
+gvg/hsb/rimrock 0. Counts adrian -1 19/0 26/1 79/2 42;
+   notus -1 3/0 6/1 22/2 8; hsb 0=4; gvg 0=145; rimrock 0=241 (= prereg).
+V4 gate52.py on logo52 preds with default postproc (filter OFF): identical to 
+gate52_report (adrian 94.5 PASS, notus 90.3
+   FAIL, gvg 95.9 checks 200 FAIL, hsb 98.6 PASS, rimrock 95.1 FAIL). Filter ON 
+was NOT run on logo52 preds (no peeking).
+V5 Training clips: 
+/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/clips7a/ = clips7 
+arrays identical
+   (clips, t_ms, hoop_w, film) with y replaced from labels52a; sha256 list 
+review52/clips7a_sha.txt.
+PLANNED RUN (exactly per prereg, nothing else): GPU env train_clip.py logo 
+clips7a runs/logo52a --films adrian notus gvg
+hsb rimrock --epochs 5 --seeds 0 1 2; then gate52.py --postproc 
+.team/mm_clip/postproc52a.json with the same truth args
+as logo52. Fail -> stop for Scott.
+Answer: is it OK to start training? End with one line: MUSE:/CURSOR: GO | NO-GO:
+<reason>
+
+────────────────────────────────────────
+☤ Hermes
+MUSE here (reviewer, read-only). Before rendering a verdict I'll pull the actual artifacts and check the verification chain rather than trusting the handoff text.
+────────────────────────────────────────
+
+✗ $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/review52/  0.2s [exit 2]
+✗ Read cursor_build52a.txt  0.2s [File not found: cursor_build52a.txt]
+
+────────────────────────────────────────
+☤ Hermes
+The review52/ folder isn't at the repo root as described. Let me locate it and read the key verification artifacts.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents -maxdepth 4 \( -name '*review*' -o -name '*52*' \) -not -path '*/Liberty_Shot_Outputs/*' 2>/dev/null + 1 command  1.9s
+📖 Read postproc52a.json  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+review52/ isn't at the root. Let me find the actual location of the build file and related artifacts.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents -name 'cursor_build52a*' -not -path '*/Liberty_Shot_Outputs/*' 2>/dev/null + 1 command  34.8s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ + 1 command  1.6s
+
+────────────────────────────────────────
+☤ Hermes
+The build file lives at .team/review52/cursor_build52a.txt. Reading it plus the surrounding review directory and the gate script.
+────────────────────────────────────────
+
+📖 Read cursor_build52a.txt
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/  0.5s
+📖 Read gate52.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read the prereg, the confirm prompts, and the gate run record.
+────────────────────────────────────────
+
+📖 Read cursor_prereg52a.txt  0.4s
+📖 Read cursor_confirm52a.txt  0.4s
+📖 Read cursor_final_v3v9.txt  0.4s
+✗ Read prompt_team_confirm52a.txt  0.4s [File not found: prompt_team_confirm52a.txt]
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the team-confirm prompt, the MUSE confirm, and related final-v3v9 records.
+────────────────────────────────────────
+
+📖 Read prompt_team_confirm52a.txt
+📖 Read muse_confirm52a.txt
+📖 Read muse_final_v3v9.txt
+📖 Read vet52.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me pull the current task state and the full MUSE final-v3v9 verdict plus the gate run record.
+────────────────────────────────────────
+
+📖 Read NEXT_TASK.md
+📖 Read STATUS.md
+📖 Read cursor_gate52.txt
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the actual spec 52a v3 prereg and the hash/checksum artifacts.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ + 2 commands  0.4s
+📖 Read 52a_class0_restore_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+Let me check repo state, the clips/runs directories, and the drift-log tail.
+────────────────────────────────────────
+
+💻 $ git status --porcelain=v1 -uno + 4 commands  35.8s
+💻 $ tail -n 70 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md
+
+────────────────────────────────────────
+☤ Hermes
+Let me verify the exact gate invocation used at logo52 and the train_clip CLI surface.
+────────────────────────────────────────
+
+💻 $ grep -rn "gate52.py" --include='*.txt' --include='*.md' --include='*.json' .team/ 2>/dev/null | grep -v 'gate52_report'  2.7s
+💻 $ grep -n "add_argument\|def main\|clips_dir\|out_dir\|--films\|--epochs\|--seeds\|args\." .team/mm_clip/train_clip.py  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE here — read-only verdict on the spec 52a v3 team-confirm-before-training state.
+
+Assessment: YES — it is OK to start training. The chain is closed out on the technical side.
+
+- Spec 52a v3 pre-registration is fully resolved and frozen: counts fix landed (adrian unique class-0 = 26, oos⊂far so not 32; notus 6; hold-out-gvg train pool 277; oos def pinned to 48b in_session(is_ft=True); remaining -1 = adrian 19 / notus 3); build order pinned; R7 amendment landed (postproc52 session_filter false→true for logo52a only, R7 lock re-frozen via postproc52a.json); dissent record landed (same-5 re-gate = diagnostic, R10 blind binding; Scott chose 'A'). Final check rendered: MUSE 52a AGREE (no changes), spec 53 v9 AGREE (no changes) — no outstanding changes.
+- Cursor build artifacts all sha-match the frozen set in .team/pre52a_sha256.txt (ensemble_predict d9fcd508, gate52 4abdd186, postproc52a ec70b330, test_mm52 d5492bf1, labels52a d8d2acd4); labels52_v2 56f18cf0 and postproc52 150ff7e6 unchanged; clips7 untouched; clips7a built per review52/clips7a_sha.txt.
+- Claude Code verify V1–V5 consistent (Windows .venv 314 passed/1 skipped; WSL fallback 312 passed/3 deselected — deselection only, no failures). V3: only -1→0 changes (adrian 26, notus 6). V4: filter-OFF re-run byte-identical to gate52_report; filter-ON deliberately NOT run on logo52 preds (no peeking). V5: clips7a ok.
+- Planned run is exactly prereg Item 5 and nothing else: GPU env train_clip.py logo clips7a runs/logo52a --films adrian notus gvg hsb rimrock --epochs 5 --seeds 0 1 2; then gate52.py --postproc .team/mm_clip/postproc52a.json on runs/logo52a/logo_preds.npz with the same truth args as logo52; fail → stop for Scott. No thr/floor/checks/seed/epoch drift from the pre-reg.
+
+Caveats, procedural not technical: the Cursor confirm slot (cursor_confirm52a.txt) is currently empty — close that confirm before pressing start; WSL pytest fallback deselected 3 Windows-path tests vs Claude Code's 314/1 — non-blocking.
+
+MUSE:/CURSOR: GO | NO-GO: GO — spec 52a v3 frozen+agreed, build+verified, planned run exact per prereg; fail-fast stop for Scott honored.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-e1d1496f4123747bdbf5542bfb8e8f78ddc819f82dd7d50fcf4632cfab377654
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #14"
+
+Session:        local-e1d1496f4123747bdbf5542bfb8e8f78ddc819f82dd7d50fcf4632cfab377654
+Title:          You are MUSE, the REVIEWER (not Hermes)… #14
+Duration:       4m 26s
+Messages:       38 (1 user, 36 tool calls)

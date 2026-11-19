@@ -1,0 +1,15 @@
+Cursor, you WRITE CODE for .team/specs/26_clip_moment_fix_spec.md v2 (VETTED by Claude Code with conditions a-e on line 2; Muse AGREE). Repo branch team/auto. Edit ONLY the files named here. Do not run anything on video. Do not commit. Small, readable code, no dead code. If you hit a plan/usage limit, stop and say so plainly.
+
+Read first: the spec (all of it, especially line 2 conditions); .team/shot_detectors/make_review_queue_page.py (Claude Code copied it here UNCHANGED from the scratchpad - condition d done); .team/shot_detectors/double_count_fix.py (style reference).
+
+FILES:
+1. NEW .team/shot_detectors/clip_moment_fix.py
+   - CONFLICT_FRAMES = 23  # page clip 8 before + 14 after + 1 (spec 26 section 1)
+   - resolve_clip_centres(shots, conflict_frames=CONFLICT_FRAMES) -> (clip_centres: dict[t_ms, int], flags: dict[t_ms, str]). shots = one film's list of dicts with t (ms), anchor_frame, fps; sort by t inside (do not mutate input). For each shot i with a next shot i+1 (next by t): if abs(anchor_i - anchor_{i+1}) <= conflict_frames -> flags[t_i] = "clip_moment_conflict", clip_centres[t_i] = round(t_i/1000*fps_i); else "ok" and anchor_i. Last shot: "ok", anchor. The later shot is never changed by this pair. NO adjusted_anchors output (condition a).
+2. EDIT .team/shot_detectors/make_review_queue_page.py, additive:
+   - argparse: --clip-moment-fix (store_true, default off) and --out-dir (default = today's OUT path). Refuse if out-dir exists (as today).
+   - Flag OFF: output identical to today (same shots, same frames, same page).
+   - Flag ON: run resolve_clip_centres per film over ALL tagged shots in the results files (v6 results; anchor_frame is the same in d2 results - the script already asserts it for shown shots), fps 25.0 unless the results/candidates give one. A flagged shot is shown even if both models said miss; its group becomes "review" (orange), clip centred on clip_centres[t], and the card shows the note "program's moment belonged to the next shot - clip shown at the tag time". Unflagged shots unchanged. Results JSON files are only read, never written.
+   - Print at the end every flagged shot (film, t, anchor, clip centre) and the gray/orange counts.
+3. NEW .team/shot_detectors/test_clip_moment_fix.py: the spec section 3 cases (shared moment, far apart, last shot, equal anchors, negative gap, input not mutated) plus: flagged shot's clip centre equals round(t/1000*fps). Test the pure function only; no video.
+Report: files changed with a short summary; the test command (repo venv: .venv/Scripts/python.exe -m pytest .team/shot_detectors -q). Claude Code runs tests and the one run.

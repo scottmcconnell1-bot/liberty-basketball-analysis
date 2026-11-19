@@ -1,0 +1,6 @@
+T=32 bs8 train peak 3938 MiB, 0.461 s/step
+T=87 bs8 train peak 9621 MiB, 21.148 s/step
+total 8150.5625
+T=44 bs8 train peak 5176 MiB, 0.534 s/step
+T=87 bs4 train peak 5239 MiB, 0.547 s/step
+NOTE: T=87 bs8 peak 9621 MiB exceeds 8150 MiB card; ran via Windows shared-memory spill at 21 s/step (~46x slower than T=32) = not feasible. Random input, no project data, no training.

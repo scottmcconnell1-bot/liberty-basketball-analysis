@@ -37,6 +37,8 @@ def _public_job(job: dict) -> dict:
         "last_segment": job.get("last_segment"),
         "nfhs_game_id": job.get("nfhs_game_id"),
         "error": job.get("error"),
+        "warning": job.get("warning"),
+        "log_path": job.get("log_path"),
     }
     if job.get("status") == "cancelled":
         payload["status"] = "cancelled"
@@ -177,7 +179,8 @@ def _run_download_job(
                 _update_job(job_id, status="cancelled", message="Download cancelled", percent=0)
                 return
             if not result["success"]:
-                _update_job(job_id, status="error", error=result["error"], message=result["error"])
+                _update_job(job_id, status="error", error=result["error"], message=result["error"],
+                            log_path=result.get("log_path"))
                 return
 
             lookup = lookup_game(game_id, email, password)
@@ -199,7 +202,9 @@ def _run_download_job(
                 job_id,
                 status="complete",
                 percent=100,
-                message="Download complete",
+                message="Download complete" + (" (checked and repaired by the Film Tool)" if result.get("warning") else ""),
+                warning=result.get("warning"),
+                log_path=result.get("log_path"),
                 file_size=result["file_size"],
                 stored_filename=saved["stored_filename"],
                 game_id=saved["game_id"],

@@ -1,0 +1,74 @@
+[muse] model recursive/flint-v1.0:free 18:15:46
+Query: You are advising the Liberty basketball team on ONE decision. Read-only: 
+do not change files.
+Scott said: "I may be wrong as well" -- give your honest view, disagree if you 
+think Claude Code is wrong.
+
+Facts (see the last 2 entries of .team/drift_log.md and 
+.team/specs/44_gv_handcheck.md):
+- Spec 44 Garden Valley BLIND: make/miss (D1 v6 + d2v1 vote, unchanged) on 
+rim-first moments found 10/64 real makes;
+  51 real makes called miss silently (incl. 6 clear made FTs). FT rule: 19/28 
+found, 1 false.
+- Claude Code diagnosis: the make rule (ai_bridge.py run_saved_v6_rule ~line 
+908-1290, small_fixes_v6_copy.py)
+  uses FIXED PIXEL distances (80/180 px below rim, 50 px "starts below", 60 px 
+box jump, 200 px, 12 px/frame)
+  tuned on Adrian = 1920x1080, grouped hoop ~98 px wide (docstring: "Grouped 
+hoop is 90-110px wide").
+  The rule already multiplies these by track keys _court_scale_x/_court_scale_y,
+but they are never set (=1.0).
+- GV is 1280x720, grouped hoop median 64 px. Notus is 720p, hoop 64 px. 
+Idaho/Riverstone/HSB are 720p.
+- Evidence on SEEN tagged build shots, coach tag times (no rim-first): v6 makes 
+found Adrian 27/38, Notus 2/9 (d2v1 same).
+- Ruled out: hoop pick (track hoop == finder hoop on makes); window timing 
+(crossing sample median 33 GV vs 34 tags).
+
+Scott earlier said makes/misses "exhausted all possibilities" -> no new 
+make/miss logic or tuning. Now Scott says the scale idea
+"seems worth a chance to test".
+
+Claude Code proposal (spec 45, one setting, no new logic): in the wrapper only, 
+set _court_scale_x = _court_scale_y = hoop_w / 98
+per track (98 = Adrian build hoop median, fixed now). No edit to the rule files.
+Checks: Adrian unchanged (scale ~1; must
+reproduce existing results); Notus seen-report (not a test); GV re-scored as 
+seen (not a test, already looked at).
+Then ONE blind test on an unseen 720p film (Riverstone), labels + score frozen 
+first, hand-check before score, then stop for Scott.
+
+Questions: (1) Is the diagnosis right, or is something else the bigger cause? 
+(2) Is the scale fix worth one test? Any risk
+(e.g. hoop_w noise, constants that should not scale, d2v1 also scaled, 
+overwhelming the coach)? (3) Change anything in the plan?
+Answer in at most 10 short lines. End with one line: RECOMMEND: <one sentence>.
+
+Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.
+💻 $ tail -n 30 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.3s
+💻 $ tail -n 60 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/44_gv_handcheck.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Diagnosis is right in direction: Adrian-tuned fixed pixels (~98px hoop) vs ~64px GV/Notus hoops explains the silent makes.
+
+One test is worth running, but use the per-track hoop median and scale per axis, not a fixed 98.
+
+Adrian must re-run byte-exact to rule out regression before trusting the test.
+
+No plan change needed: frozen labels, hand-check before score, one Riverstone blind test, stop for Scott.
+
+RECOMMEND: Run the one Riverstone blind test with the wrapper-only per-track scale fix.
+
+MUSE: AGREE: diagnosis and one-test scope are sound, but the fixed 98px constant should be the per-track median with per-axis scaling.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-466ec292a19d476babd5c62025de1d25b35be9ad03b4537a67c82b3208a5bc5a
+  hermes -c "You are advising the Liberty basketball team on… #9"
+
+Session:        local-466ec292a19d476babd5c62025de1d25b35be9ad03b4537a67c82b3208a5bc5a
+Title:          You are advising the Liberty basketball team on… #9
+Duration:       35s
+Messages:       5 (1 user, 3 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE: diagnosis and one-test scope are sound, but the fixed 98px constant should be the per-track median with per-axis scaling.

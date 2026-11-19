@@ -1,0 +1,33 @@
+Hermes, you are the architect. Write a PLAN only (no code). Save it as a NEW file .team/specs/16_ball_in_net_plan.md
+(FIRST check it does not exist; plain markdown, no line-number prefixes, no literal "\n").
+
+Read first: AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md (Golden Rules), .team/specs/13_shot_work_order_plan.md,
+.team/specs/15_net_check_plan.md, .team/shot_detectors/pixel_miss/net_check.py, measure_net_moved.py, build_review_page.py,
+and how the existing ball detector is loaded and called in the repo (search for ball_detector.pt and ball_confidence; read only).
+
+RESULT OF PLAN 15 (Proven, Claude Code reran with the venv, 2026-10-29): colour-counting in the net box FAILED.
+At delta_ratio >= 0.08: 8/19 missed makes caught, 22/93 real misses fired (10 even at 0.12), only 7/28 correct makes seen.
+Scott (2026-10-29): "yes drop color-counting". Do not reuse the colour approach.
+
+SCOTT APPROVED THE NEXT IDEA: in the review photos the ball is clearly visible inside the net on missed makes
+(e.g. missed_make_08, Adrian t=342800, ball in the net, no tracker point). Plan Task 1 step 4: run the EXISTING ball detector
+(models/ball_detector.pt, as-is) only on the net box under the rim (net_detector._net_box region, or a crop around it)
+for the few frames after the ball reaches the rim, and ask "is a ball detected inside the net box".
+
+Requirements:
+1. Read-only measurement, new files only in .team/shot_detectors/pixel_miss/. No edit to ai_bridge.py, net_detector.py,
+   models/ball_detector.pt, ball_confidence, or any protected file. The detector's confidence setting is NOT changed
+   (Scott gate; no looser cutoffs). If the detector needs a crop upscaled to see the ball, say so and why; report detector
+   confidence values as measured, but the summary uses the existing confidence setting only.
+2. State the exact frames (offsets from the plan-15 peak frame; absolute frame = round(t/1000*fps) + offset), the exact
+   region in image pixels, and what "inside the net" means (ball box centre inside the net box, below hoop_y).
+3. Same 140 shots: 19 missed makes, 28 correct makes, 93 real misses. Report caught / seen / fired counts.
+   Bar to even consider it: fires on 0 real misses. Build-set numbers are not results until checked on unseen shots.
+4. Outputs to C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_in_net\ (outside the repo); crops for the 39 review shots
+   with the net box and any ball box drawn, so Scott can see what it saw.
+5. Coder is Cursor in its WSL sandbox (Linux python3 has cv2 and numpy; check whether torch/ultralytics are available there
+   and say what to do if not: the checker can run the final measurement with the Windows venv).
+6. No banned trials (linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter); no hard-coded
+   results; applied_to_core stays false; holdout answer keys never opened; live film_analysis.db not touched.
+7. List the only files the coder may create. Keep it short and concrete.
+At the top write: "PLAN - NOT BUILT OR MEASURED YET".

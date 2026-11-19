@@ -1,0 +1,90 @@
+Query: You are Muse, the reviewer on the Liberty basketball film project. REVIEW
+ONLY - edit no file.
+Hermes (architect) wrote spec 52: 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_au
+dit_stable_ensemble_spec.md
+Background: .team/review52/muse_review52.txt (from '☤ Hermes'), 
+.team/review52/cursor_review52.txt, .team/review52/evidence.txt, last 30 lines 
+of .team/drift_log.md. Code: .team/mm_clip/train_clip.py, ensemble_predict.py, 
+extract_clips.py.
+Claude Code's vet of the draft: .team/review52/vet52.txt (V1-V4 with proposed 
+fixes).
+Review the spec WITH the V1-V4 fixes applied. Is it complete, buildable, and 
+will it give a trustworthy blind result toward the goal (>= 90% of all shots 
+found and called right, minimal coach work)? List any further problems with 
+concrete fixes.
+End with one line starting exactly "MUSE: AGREE" or "MUSE: DISAGREE:" + what 
+must change.
+📖 Read 52_label_audit_stable_ensemble_spec.md  0.2s
+📖 Read vet52.txt  0.2s
+📖 Read muse_review52.txt  0.2s
+📖 Read cursor_review52.txt
+📖 Read evidence.txt
+💻 $ tail -n 30 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.2s
+📖 Read train_clip.py
+📖 Read ensemble_predict.py
+📖 Read extract_clips.py
+📖 Read postproc_locked51.json
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/  1.7s
+📖 Read prompt_hermes_review52.txt
+📖 Read prompt_muse_review52.txt
+📖 Read prompt_cursor_review52.txt
+📖 Read hermes_review52.txt
+📖 Read muse_spec52.txt
+📖 Read cursor_spec52.txt
+✗ Read muse_review52_run2.txt  0.2s [File not found: muse_review52_run2.txt]
+📖 Read muse_review52.txt.recursive_flint-v1.0_free.txt  0.2s
+📖 Read hermes_review52_run2.txt
+📖 Read postproc.py
+📖 Read eval_e2e.py
+📖 Read moving_ball.py
+📖 Read candidates.py
+📖 Read trigger2.py
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ + 1 command
+📖 Read eval_e2e.py
+📖 Read find_shots_measure.py
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/AGENT_OPERATIONAL_PROTOCOL.md + 4 commands
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ + 3 commands  32.4s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -maxdepth 2 -iname '*AUTHORITY*' -o -maxdepth 2 -iname '*OPERATIONAL*' -o -maxdepth 2 -iname 'AGENTS.md' -o -maxdepth 2 -iname 'CLAUDE.md' -o -maxdepth 2 -iname '.cursorrules' 2>/dev/null  0.3s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read AUTHORITY.md
+📖 Read MUSE.md
+📖 Read new_film.sh
+📖 Read q4_blind_test.py
+
+────────────────────────────────────────
+☤ Hermes
+Muse - spec 52 (label audit + stable ensemble) post-V1-V4 review.
+
+Short verdict: NO. As written, the spec is not complete, not cleanly buildable, and would not yet yield a trustworthy blind result toward the >=90% goal.
+
+V-fix audit - what actually landed in the spec text:
+- V1 (airball-inclusive attempt rule): NOT APPLIED. R1 still says "shot := legal basket/FT attempt, ball crosses rim cylinder within hoop window". Airballs are excluded, and the vet's fix (attempt judged from shooter motion + ball flight, incl. airballs) never made it in. Concrete fix: rewrite R1 with that wording.
+- V2 (best-epoch conflict): NOT APPLIED. R3(d) keeps "best-epoch ckpt on held-out game hsb" while R4 retrains final models on all 5 games including hsb, so there is no held-out game left to pick from. Vet fix not applied. Concrete fix: pick fixed epoch E from LOGO validation curves (median best epoch over folds, inner split of training games); final models train for E epochs.
+- V3 (balance): NOT APPLIED as the vet recommended. R3(b) adds the sampler, but the Disagreements section records the revised plan as requiring "sampler + inverse-freq" (double correction). Vet V3 said: sampler only, plain CE, keep label smoothing 0.05. Concrete fix: R3(b) must say sampler only + plain cross-entropy (drop inverse-freq loss weight) + label_smoothing 0.05 kept.
+- V4 (seed disagreement): NOT APPLIED. R7 still says "(>=2 seeds disagree -> flag)". Vet gave a concrete definition; not applied. Concrete fix: flag if among the 5 seeds at least one calls a candidate a shot (P(shot) >= 0.5) and at least one calls it not-a-shot, or seeds split on make vs miss.
+
+Further problems, with concrete fixes:
+1. Coach-review scoring is still an oracle with double-insert. Cursor confirmed ensemble_predict.score() injects the nearest true tag's gold make/miss within 2 s and can reuse a tag already covered by a non-check auto shot. The 95.7% review number and the R6 coach-checked >=90% gate rest on this. Fix: score coach answers on flagged candidates only, one-to-one, no gold injection, non-flagged auto calls stand.
+2. R1 vs code conflict: R1 says unmatched candidates -> -1, never auto 0, but extract_clips.labels_tagmatch auto-labels unmatched candidates more than 4 s from any tag as class 0. Fix: align labels_tagmatch to the written rule.
+3. Buildability: R5 LOGO wants 3 seeds per fold (0,1,2); train_clip.py logo mode has no --seed passthrough (hardcodes default 0). R4 wants ens52/seed{k}.pt from fresh seed-0 runs, not final51. Fix: require --seed plumbing and per-seed saves.
+4. Buildability: the seed-disagreement flag is not implementable in ensemble_predict.shot_list, so R7 cannot produce the flag. Fix: wire the V4 definition into shot_list/extra_checks.
+5. Buildability: postproc52.json does not exist; ensemble_predict reads postproc_locked51.json (floor 0.35). R9 names postproc52.json (thr 0.5, dedup 800, floor 0.2). Fix: lock postproc52.json and point the reader at it.
+6. Gate R6: "3-seed spread <= 5 pts" and "ensemble auto" are undefined. Fix: define the spread (max per-seed best-minus-worst over held-out games) and the aggregation, then require auto >=90% on every held-out game and honest coach-checked >=90%.
+7. Coach check cap R8: lowering the below-thr floor 0.35 -> 0.2 adds flags; last round worst game was 25 checks vs the <=20 target. Fix: re-run the design sweep with floor 0.2 and confirm the worst-game count before locking.
+8. Blind protocol gaps: second human reviewer for the random-20% label check, sampling procedure, disagreement handling, and stopping rule are not fixed in advance; blind films should come from an unseen gym (HSB1 was same gym as HSB). Fix: put all of this in the spec before the blind.
+9. Freeze list incomplete: finder parameters for the new_film.sh blind path are not frozen. Fix: add finder config hash to the freeze list.
+
+Will it give a trustworthy blind result? No, not yet. Even the 5-seed mean failed (78.5% auto / 86.9% with checks), so aggregation and the gate need to be airtight, and the honest-scoring fix must land before any number is quoted.
+
+MUSE: DISAGREE: Spec 52 must first be rewritten to apply V1, V2, V3 and V4 as the vet fixed them, add honest coach-review scoring, lock postproc52.json, wire LOGO seed plumbing and the seed-disagreement flag, and close the blind-protocol gaps before Claude Code implements or any blind test runs.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-aa8c9eadbf7d0670b5fd73d0bcf24b7edc72649f09fb5b9603a82db8762bad7e
+  hermes -c "You are Muse, the reviewer on the Liberty… #2"
+
+Session:        local-aa8c9eadbf7d0670b5fd73d0bcf24b7edc72649f09fb5b9603a82db8762bad7e
+Title:          You are Muse, the reviewer on the Liberty… #2
+Duration:       4m 45s
+Messages:       53 (1 user, 51 tool calls)

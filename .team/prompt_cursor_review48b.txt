@@ -1,0 +1,4 @@
+Cursor, REVIEW ONLY: do not edit, create or run anything that writes. Scott's route this round: Claude Code writes the spec, Muse and you review, then you build it.
+Read .team/specs/48b_game_session_v2_spec.md (whole file), .team/shot_detectors/game_session.py, .team/shot_detectors/test_game_session.py, and the design code in .team/design48b/ (session_v3.py, stopstart48.py, digits48.py, knn48.py, adrian48.py, adrian_read48.py, eval_v3.py, reference/*.py; reference/*.json are the expected outputs).
+Answer: (1) Is the spec clear enough to build without guessing? List every place you would have to guess. (2) Any conflict between the spec and the design code? (3) Is S9 level 1 (saved raw reads -> session JSON equal to reference, key for key) achievable as written? (4) Anything in the code plan that edits a file other than game_session.py, test_game_session.py and new files?
+At most 12 short lines. Last line exactly: CURSOR: AGREE or CURSOR: DISAGREE: <reason>.

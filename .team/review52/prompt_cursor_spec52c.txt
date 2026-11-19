@@ -1,0 +1,11 @@
+You are CURSOR, the BUILDER, reviewing for buildability. READ-ONLY: do not edit or create files. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/52c_first_shot_sequence_prereg.md v1 (Hermes; model fix for the first-shot-of-a-2-shot-sequence blind spot; Scott approved the team designing it). Check against code (.team/mm_clip/extract_clips.py, trigger2.py if present, train_clip.py, ensemble_predict.py, gate52.py) and specs 52a v3 / 52b v2.
+Coordinator (Claude Code) facts to verify, not trust:
+F1. Step 4 postproc52b.json as written in 52c has the same keys as postproc52a.json and does NOT encode the 52b v2 rule (extras flagged only if seed_disagreement corroborates). Is that a conflict with 52b, which says postproc52b.json carries the new check rule? What exact key/value should it have?
+F2. seq_follower is computed from ALL candidate t_ms (incl. label -1 and 0 rows). Share of candidates with another candidate within 6 s: adrian 0.25, gvg 0.47, hsb 0.18, notus 0.13, rimrock 0.45. In gvg/rimrock many followers are non-shots, so the flag may be weak or confounded (scramble candidates cluster too). Is that a design flaw, and is a cleaner pinned definition possible without labels at predict time?
+F3. Are train (clips npz t_ms) and predict (logo_preds T) candidate sets identical, so the flag is computed the same way?
+F4. Is one binary scalar concatenated to a 512-d pooled feature likely to be used at all after 5 epochs (head lr / init)? Any pinned detail needed (e.g. feature scaling) chosen without looking at the 3 silent P values?
+F5. Is the 6000 ms reason honest and not picked from the 1160/2600/5233 gaps?
+Also check: build order, sha freeze, tests, no retune, fail -> stop for Scott, disclosure.
+End with ONE line: CURSOR: AGREE | CURSOR: AGREE WITH CHANGES: <list> | CURSOR: DISAGREE: <why>

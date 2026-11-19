@@ -1,0 +1,10 @@
+You are HERMES, the architect. Write NEW file .team/specs/52e_two_stream_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-16) after the 52d FAIL (review52/*_gate52d.txt, drift_log end): TWO CLIPS TOGETHER - the short clip (clips7a, 32 frames, did well on make/miss and non-shot rejection) decides make vs miss; the long clip (clips8, 44 frames over -0.88..+6.0 s) only helps decide shot vs not-shot.
+Facts: logo52a/logo52c (short) and logo52d (long) preds exist for the same candidates (identical T/Y/F). Short: gvg class-0 well rejected (0.993), misses first-of-two (P 0.04-0.18). Long: catches gvg/notus first shots, but class-0 mean P(shot) on gvg 0.21->0.45, rimrock 9 losses. GPU probe (review52/gpu_probe52d.txt): 8 GB card; T=32 bs8 3938 MiB, T=44 bs8 5176 MiB -> a jointly trained two-backbone model at bs 8 likely does NOT fit (~9 GB); disclose and pin a buildable choice.
+Design questions you must answer and pin:
+1. Late fusion of separately trained models (combine existing or retrained short + long P at predict time) vs one jointly trained two-stream model. CONTAMINATION: the team has ALREADY SEEN logo52a/52c/52d same-5 preds; any fusion rule or weight chosen now and scored on those same preds is tuned on the test. Say how you avoid that (e.g. rule fixed from first principles with no free parameters; or fusion fit only on inner folds; or retrain fresh and treat same-5 as diagnostic with R10 blind binding - but Scott made same-5 binding ('A'); flag if you think that must change and leave it to Scott).
+2. How the long stream's shot/no-shot vote is limited so it cannot flood class-0 (gvg) - pinned rule, no thresholds picked from 52d numbers.
+3. Make/miss from the short stream only.
+4. Exact build/run order, sha freeze, tests, E=5 seeds 0 1 2, gate52 + postproc52b, fail -> stop for Scott. Disclosure section.
+End with "HERMES: PREREG WRITTEN".

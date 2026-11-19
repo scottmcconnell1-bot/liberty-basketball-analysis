@@ -1,0 +1,11 @@
+You are CURSOR, the BUILDER. READ-ONLY, no file edits. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/52e_two_stream_prereg.md v1 (Hermes; Scott chose "two clips together"). Check against code and the logo52a/52c/52d results.
+Coordinator facts / concerns to verify, not trust:
+H1 Outcome is largely foreseeable from preds already seen: the long-stream (logo52d) P(shot) on the 3 silents is notus 0.289, rimrock 0.111, gvg 0.789. Under the pinned re-open rule (long >= 0.5) only gvg re-opens; notus and rimrock stay silent -> silent_eq_0 FAILS on 2 games unless retrained models differ. Is it honest to run a binding gate whose likely result is already known? Should the spec say so up front?
+H2 The rule was designed knowing the failure is in the silent zone (contaminated even with no free parameter). Disclosure adequate?
+H3 Retrain vs reuse: retraining short (clips7a) and long (clips8) with the same recipe and seeds 0 1 2 is close to re-running logo52a/52d. What does retraining add vs fusing the existing logo52a (or 52c) + logo52d preds? If reuse, which short run (52a has no seq; 52c had seq flag)? Pin it.
+H4 For gate52 the fused output needs P and PM per seed. For a re-opened shot what P/PM is written (long seeds?), and how do silent_reject, checks (weak, mm, seed disagreement) and the 52b extras rule treat it? Pin exactly; otherwise silent can be cleared or checks inflated by the plumbing.
+H5 Short-only make/miss plus short-only not-shot means rimrock make/miss and gvg class-0 rejection return to short-stream level (logo52a/c), which already failed rimrock checks 21 > 20. Any reason to expect a same-5 PASS?
+Also: build order, sha, tests, fail -> stop for Scott, the flagged same-5 vs R10 binding question (Scott decides).
+End with ONE line: CURSOR: AGREE | CURSOR: AGREE WITH CHANGES: <list> | CURSOR: DISAGREE: <why>

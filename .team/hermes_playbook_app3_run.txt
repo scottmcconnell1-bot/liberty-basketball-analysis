@@ -1,0 +1,126 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-playbook (branch 
+team/playbook). You are the Architect. Your Jr High player app plan was 
+REJECTED: read the first line of 
+.team/specs/10_jrhigh_player_app_plan_v2_REJECTED.md for the seven reasons (v1 
+reasons are on the first line of 
+.team/specs/10_jrhigh_player_app_plan_v1_REJECTED.md; keep those fixed), and 
+read Scott's requirements in .team/specs/10_jrhigh_requirements_scott.md (every 
+numbered item must be met). Rewrite the WHOLE plan 
+.team/specs/10_jrhigh_player_app_plan.md so its body carries every fix (do not 
+copy any REJECTED line into it); keep the good parts (staged delivery, Stage 1 
+testable on Scott's PC, eye-check list per stage, no schema change, JSON file 
+for the visibility list). The player app must be a separate static site built 
+locally from ONLY the visible plays (outside the main app static/ tree, not 
+committed to the public repo), so it can run with no main program. Include a 
+heading exactly ## Files for Stage 1. STRICT: create or edit ONLY 
+.team/specs/10_jrhigh_player_app_plan.md. Do not create any other file and do 
+not run code that writes files.
+📖 Read 10_jrhigh_player_app_plan_v2_REJECTED.md  0.1s
+📖 Read 10_jrhigh_player_app_plan_v1_REJECTED.md  0.1s
+📖 Read 10_jrhigh_requirements_scott.md  0.1s
+✗ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md [Refusing to overwrite /mnt/c/Users/scott/Docu...]
+📖 Read 10_jrhigh_player_app_plan.md  0.1s
+✍️ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md  0.3s
+│ .team/specs/10_jrhigh_player_app_plan.md
+│ @@ -17,7 +17,7 @@
+│
+│  ## Stage 1 — Smallest Working Slice (Export ALL + Visibility Toggle + Phone Viewer)
+│
+│ -**What it does:** Scott sees ALL plays in the main program with a "Visible to players" toggle per play. Clicking "Publish to Player App" builds a static site in `dist/player/` containing ONLY visible plays. A tiny viewer page (`dist/player/player.html`) reads the bundle and animates using copied animation code. Testable on Scott's PC by opening `dist/player/player.html` directly in a browser (no server needed).
+│ +**What it does:** Scott sees ALL plays in the main program with a "Visible to players" toggle per play. Clicking "Publish to Player App" builds a static site in `dist/player/` containing ONLY visible plays. A tiny viewer page (`dist/player/player.html`) reads the bundle and animates using copied animation code. Testable on Scott's PC by serving `dist/player/` via `python -m http.server` on localhost:8080 (browsers block fetch() from file://; service workers need https or localhost). Phone install/offline (Stage 2) can only be tested on the PC (localhost) until Stage 4 hosting gives https.
+│
+│  ### Files for Stage 1
+│
+│ @@ -35,6 +35,7 @@
+│  | `dist/player/` | CREATE directory (gitignored) | Output folder for static player site (NOT under `static/`) |
+│
+│  ### New Route: Toggle Visibility (ALL plays, any team_key)
+│ +
+│  ```python
+│  @playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])
+│  @require_feature("ENABLE_PRACTICES")
+│ @@ -53,6 +54,7 @@
+│  ```
+│
+│  ### New Route: Publish to Player App (builds static site with ONLY visible plays)
+│ +
+│  ```python
+│  @playbook_bp.route("/playbook/publish-player", methods=["POST"])
+│  @require_feature("ENABLE_PRACTICES")
+│ @@ -66,26 +68,28 @@
+│      manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+│      visibility = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+│      visible_ids = [int(pid) for pid, vis in visibility.items() if vis]
+│ -    if not visible_ids:
+│ -        return {"ok": False, "error": "No plays marked visible"}
+│ -
+│ -    # Fetch ONLY visible plays
+│ -    placeholders = ",".join("?" * len(visible_ids))
+│ -    plays = db.execute(f"SELECT * FROM plays WHERE id IN ({placeholders})", visible_ids).fetchall()
+│ -
+│ -    # Build output directory OUTSIDE static/ tree
+│ -    out_dir = Path(current_app.root_path).parent / "dist" / "player"
+│ +
+│ +    # Build output directory OUTSIDE static/ tree (root_path is repo root; dist/ is gitignored)
+│ +    out_dir = Path(current_app.root_path) / "dist" / "player"
+│      plays_dir = out_dir / "plays"
+│ +
+│ +    # REBUILD FROM SCRATCH: delete everything, then write only visible plays
+│ +    if out_dir.exists():
+│ +        shutil.rmtree(out_dir)
+│      out_dir.mkdir(parents=True, exist_ok=True)
+│      plays_dir.mkdir(parents=True, exist_ok=True)
+│
+│      # Copy static assets (JS, CSS, icons, manifest, SW)
+│ -    for asset in ["player-viewer.js", "player.css"]:
+│ -        src = Path(current_app.root_path) / "static" / "js" / asset if asset.endswith(".js") else Path(current_app.root_path) / "static" / "css" / asset
+│ +    for asset in ["player-viewer.js"]:
+│ +        src = Path(current_app.root_path) / "static" / "js" / asset
+│          dst = out_dir / asset
+│          if src.exists():
+│              shutil.copy2(src, dst)
+│ -    # Copy manifest.json, sw.js, icons/ from static/ to dist/player/
+│ +    for asset in ["player.css"]:
+│ +        src = Path(current_app.root_path) / "static" / "css" / asset
+│ +        dst = out_dir / asset
+│ +        if src.exists():
+│ +            shutil.copy2(src, dst)
+│      for asset in ["manifest.json", "sw.js"]:
+│          src = Path(current_app.root_path) / "static" / asset
+│          dst = out_dir / asset
+│ @@ -95,21 +99,30 @@
+│      if icons_src.exists():
+│          shutil.copytree(icons_src, out_dir / "icons", dirs_exist_ok=True)
+│
+│ -    # Write per-play bundles (PRIVACY: strip source_image and notes unless Scott allows)
+│ +    # Write per-play bundles (PRIVACY: whitelist fields; omit source_image, notes, court_frac)
+│      play_list = []
+│ -    for play in plays:
+│ -        pid = play["id"]
+│ +    for pid in visible_ids:
+│ +        play = db.execute("SELECT * FROM plays WHERE id = ?", (pid,)).fetchone()
+│ +        if not play:
+│ +            continue
+│ … omitted 304 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The plan at .team/specs/10_jrhigh_player_app_plan.md has been rewritten with all seven v2 rejection fixes applied, plus the v1 issues kept fixed:
+
+1. Hidden plays leak — _build_player_site now shutil.rmtree(out_dir) before writing (rebuild from scratch), handles zero-visible case cleanly2. Path bug — Uses Path(current_app.root_path) / "dist" / "player" (repo root, not outside)
+3. Privacy strip — Whitelists only positions, movements, ball in choreography; strips source_image, court_frac, notes
+4. Stage 1 test — Uses python -m http.server 8080 -d dist/player on localhost (not file://)
+5. Single template — templates/player.html rendered via render_template() (no PLAYER_HTML_TEMPLATE string constant)
+6. Animation sync check — Compares exactly 8 unchanged functions byte-for-byte; excludes adapted functions7. Windows paths — Run commands use C:\Users\scott\Documents\liberty-playbook with .\.venv\Scripts\python.exe
+
+Good parts preserved: staged delivery, Stage 1 testable on Scott's PC, eye-check lists per stage, no schema change, JSON visibility file, standalone static site outside static/ tree not committed.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-021f30f7d2413bd5fa93009b4fec3d55f319f87feb0cd8e92d2c3e449ee817c6
+  hermes -c "Rewrite JrHigh Player App Plan v2"
+
+Session:        local-021f30f7d2413bd5fa93009b4fec3d55f319f87feb0cd8e92d2c3e449ee817c6
+Title:          Rewrite JrHigh Player App Plan v2
+Duration:       12m 48s
+Messages:       14 (2 user, 10 tool calls)

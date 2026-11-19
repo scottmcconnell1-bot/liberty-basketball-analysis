@@ -1,0 +1,176 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/28_wide_view_combined_cards_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "WIDE VIEW + COMBINED CARDS SPEC v1 - not run". Plain markdown, no 
+line-number prefixes, no literal "\n". Edit nothing else, run nothing that 
+writes. If your write tool refuses, say so plainly. Keep it to about one page, 
+with your OWN arithmetic for every shot named below (Claude Code will check it).
+
+Scott 2026-11-03: wide view "sounds good"; asked "What is the solution to 
+multiple shot in a short time?" - Claude Code proposed combined cards (below); 
+plan both now.
+
+FACTS (Claude Code checked this session):
+- Page builder .team/shot_detectors/make_review_queue_page.py (flags 
+--clip-moment-fix, --out-dir); conflict logic 
+.team/shot_detectors/clip_moment_fix.py (resolve_clip_centres returns 
+clip_centres, flags, extents; CONFLICT_FRAMES = 23). Read both and specs 26 and 
+27.
+- Each card today is a rim close-up crop (HALF_W 170, ABOVE 150, BELOW 190 
+around track hoop, x2 upscale), frames anchor-8 .. anchor+14.
+- Spec 27 run (page_v3) FAILED Scott's purpose: Claude Code read the 39400 clip 
+(frames 977..1047): no ball near the rim 977..1022; from ~1027 a ball comes down
+and goes through at ~1047 = Dayley's make (41900, anchor 1048). Ending a clip 
+just before the next shot's anchor still shows the next shot in the air.
+- Scott's notes on page_v3: 19:26.8 (adrian t=1166800, orange, not flagged): 
+"without seeing players I cannot tell if this is a game shot or not." 45:53.1 
+(2753100): "Not enough footage to tell".
+- Pairs whose anchor_frames are within 23 (all 158 shots, 25 fps): (39400 tag 
+frame 985, anchor 1045) + (41900 anchor 1048, tag frame 1048); (2417100 tag 
+frame 60428, anchor 60501) + (2419200 anchor 60483); (2753100 tag frame 68828, 
+anchor 68836) + (2753200 anchor 68836). Tag time for these misses marks the 
+release (Claude Code looked at the frames). Video frame size: NOT FOUND - Claude
+Code to check (read it with cv2 in the code, do not assume).
+- Rules: no core file edits; models and ball_confidence unchanged; 
+applied_to_core false; no banned trials; no tuning after results; Adrian Q4 
+never used to design; no new number unless from existing code (name it) or 
+"Scott decides before the run". Make/miss result files are only read. Pages stay
+local (minors in film).
+
+PLAN BOTH (display only - nothing changes any program call):
+A. Wide view: every card also shows the whole camera frame (downscaled, no crop)
+for the same frames as its close-up, side by side or stacked, in step (one 
+slider/play controls both). Say the downscale (from existing code or "Scott 
+decides") and the file-size cost (frames x cards).
+B. Combined cards (replaces spec 27's clip end for flagged pairs): when shots i 
+and i+1 are flagged by resolve_clip_centres (chain: if i+1 is also flagged with 
+i+2, all join one card), the page shows ONE card for the group. Clip = (first 
+shot's tag frame - BEFORE) .. (last shot's anchor_frame + AFTER) - uses only 
+existing BEFORE/AFTER. The card lists one row per shot (clock, Make / Miss 
+buttons) plus a group button "Same shot, tagged twice" (meaning: count only the 
+last shot of the group). Export gives each shot its own row (coach_call make / 
+miss / duplicate). Summary table counts each shot once; a duplicate counts as 
+nothing. Card colour orange. Gray/orange counting rule per shot unchanged 
+otherwise. Give the arithmetic (first/last frame, length) for the three groups.
+C. Where: new code in make_review_queue_page.py and/or clip_moment_fix.py (a 
+pure function that groups flagged chains - testable without video); new flag 
+--wide-combined (default off; off = page_v3 behaviour unchanged except nothing).
+Name every function.
+D. Tests: grouping (pair, chain of 3, no flag), clip extent of a group, export 
+rows per shot incl. duplicate, summary counting with a duplicate.
+E. One run to a NEW out dir: pass = 3 combined cards with the arithmetic 
+lengths; all other cards keep their close-up frames identical to page_v3 and 
+gain a wide view; gray 31; orange cards = 7 unflagged-orange-or-flagged groups 
+(state the exact expected count of cards and of shots).
+F. Roles: Claude Code vets, Muse checks, Cursor codes.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read make_review_queue_page.py  0.4s
+📖 Read clip_moment_fix.py  0.4s
+🔎 Find 26_.*spec|27_.*spec  0.4s
+🔎 Find 26|27  0.2s
+🔎 Find *  0.5s
+📖 Read 26_clip_moment_fix_spec.md
+📖 Read 27_flagged_clip_length_spec.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/28_wide_view_combined_cards_spec.md  0.1s
+│ .team/specs/28_wide_view_combined_cards_spec.md
+│ @@ -0,0 +1,107 @@
+│ +WIDE VIEW + COMBINED CARDS SPEC v1 - not run
+│ +
+│ +# Wide View + Combined Cards Spec v1
+│ +
+│ +## Facts (from Specs 26, 27 and code read this session)
+│ +
+│ +- Page builder `.team/shot_detectors/make_review_queue_page.py` (flags `--clip-moment-fix`, `--out-dir`); conflict logic `.team/shot_detectors/clip_moment_fix.py` (`resolve_clip_centres` returns `clip_centres`, `flags`, `extents`; `CONFLICT_FRAMES = 23`).
+│ +- Each card today is a rim close-up crop (HALF_W 170, ABOVE 150, BELOW 190 around track hoop, x2 upscale), frames `anchor-8 .. anchor+14` (23 frames).
+│ +- Spec 27 run (page_v3) FAILED Scott's purpose: clip 977..1047 (39400) shows no ball near rim 977..1022; from ~1027 a ball comes down and goes through at ~1047 = Dayley's make (41900, anchor 1048). Ending a clip just before the next shot's anchor still shows the next shot in the air.
+│ +- Scott's notes on page_v3: 19:26.8 (adrian t=1166800, orange, not flagged): "without seeing players I cannot tell if this is a game shot or not." 45:53.1 (2753100): "Not enough footage to tell".
+│ +- Pairs whose anchor_frames are within 23 (all 158 shots, 25 fps):
+│ +  1) (39400 tag frame 985, anchor 1045) + (41900 anchor 1048, tag frame 1048)
+│ +  2) (2417100 tag frame 60428, anchor 60501) + (2419200 anchor 60483)
+│ +  3) (2753100 tag frame 68828, anchor 68836) + (2753200 anchor 68836)
+│ +- Tag time for these misses marks the RELEASE (Claude Code verified: shooter releasing/still holding ball at tag frame).
+│ +- Video frame size: NOT FOUND - Claude Code to check (read it with cv2 in the code, do not assume).
+│ +- Rules: no core file edits; models and `ball_confidence` unchanged; `applied_to_core` false; no banned trials; no tuning after results; Adrian Q4 never used to design; no new number unless from existing code (name it) or "Scott decides before the run". Make/miss result files only read. Pages stay local (minors in film).
+│ +
+│ +---
+│ +
+│ +## A. Wide View (display only — nothing changes any program call)
+│ +
+│ +Every card also shows the **whole camera frame** (downscaled, no crop) for the **same frames** as its close-up, side by side or stacked, in step (one slider/play controls both).
+│ +
+│ +- Downscale factor: NOT FOUND in existing code — **Scott decides before the run** (recommend 0.25x or 0.3x so a 1920x1080 frame fits ~480x270 beside the 680px close-up).
+│ +- File-size cost: each card writes `2 × n_frames` JPEGs (close-up + wide). For the three combined groups below: Group 1 (86 frames) = 172 files, Group 2 (78 frames) = 156 files, Group 3 (31 frames) = 62 files. Other cards: 23 frames × 2 = 46 files each. Total extra JPEGs ≈ (158 − 6) × 23 × 2 + 172 + 156 + 62 = **~7,200 additional JPEGs** vs page_v3.
+│ +
+│ +---
+│ +
+│ +## B. Combined Cards (replaces Spec 27's clip end for flagged pairs)
+│ +
+│ +When shots `i` and `i+1` are flagged by `resolve_clip_centres` (chain: if `i+1` is also flagged with `i+2`, all join one card), the page shows **ONE card for the group**.
+│ +
+│ +- **Clip** = `(first shot's tag_frame - BEFORE) .. (last shot's anchor_frame + AFTER)` — uses only existing `BEFORE=8`, `AFTER=14` from `make_review_queue_page.py`.
+│ +- The card lists **one row per shot** (clock, Make / Miss buttons) plus a **group button "Same shot, tagged twice"** (meaning: count only the last shot of the group).
+│ +- **Export** gives each shot its own row (`coach_call` = make / miss / duplicate).
+│ +- **Summary table** counts each shot once; a duplicate counts as nothing.
+│ +- Card colour: **orange**.
+│ +
+│ +### Arithmetic for the three groups (all 25 fps)
+│ +
+│ +| Group | Shots | First tag_frame | Last anchor_frame | Clip start (first tag - 8) | Clip end (last anchor + 14) | Frames |
+│ +|-------|-------|-----------------|-------------------|----------------------------|------------------------------|--------|
+│ +| 1 | 39400 + 41900 | 985 | 1048 | 977 | 1062 | **86** |
+│ +| 2 | 2417100 + 2419200 | 60428 | 60483 | 60420 | 60497 | **78** |
+│ +| 3 | 2753100 + 2753200 | 68828 | 68836 | 68820 | 68850 | **31** |
+│ +
+│ +Gray/orange counting rule per shot unchanged otherwise.
+│ +
+│ +---
+│ +
+│ +## C. Where (new code — pure functions, testable without video)
+│ +
+│ +### In `clip_moment_fix.py`
+│ +
+│ +```python
+│ +def group_flagged_chains(
+│ +    shots: List[Dict[str, Any]],          # one film, sorted by t
+│ +    conflict_frames: int = CONFLICT_FRAMES,
+│ +) -> List[List[Dict[str, Any]]]:
+│ +    """
+│ +    Returns list of groups; each group is a list of consecutive shots where
+│ +    each adjacent pair has |anchor_i - anchor_{i+1}| <= conflict_frames.
+│ +    A shot not in any conflict is a group of length 1.
+│ +    """
+│ +    ...
+│ +```
+│ +
+│ +### In `make_review_queue_page.py`
+│ +
+│ +- New flag `--wide-combined` (default off; off = page_v3 behaviour unchanged except nothing).
+│ +- When on:
+│ +  - Call `group_flagged_chains` per film after `resolve_clip_centres`.
+│ +  - For each group: compute clip start/end as above, extract frames once, write both close-up and wide-view JPEGs.
+│ +  - Build one card per group with per-shot rows + "Same shot, tagged twice" button.
+│ +  - Export JSON includes `coach_call` per shot; summary counts duplicates as zero.
+│ +
+│ +---
+│ … omitted 29 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Created. First line is exactly "WIDE VIEW + COMBINED CARDS SPEC v1 - not run". The spec includes:
+
+- A. Wide View: downscaled whole frame alongside close-up (downscale factor = "Scott decides"; file-size arithmetic shown)
+- B. Combined Cards: groups flagged chains, clip = first tag_frame - 8 .. last anchor_frame + 14, per-shot rows + "Same shot, tagged twice" button, export/summary rules, exact arithmetic for all 3 groups (86, 78, 31 frames)
+- C. Where: group_flagged_chains in clip_moment_fix.py, wiring in make_review_queue_page.py under --wide-combined flag- D. Tests: grouping, clip extent, export rows, summary counting
+- E. One run pass: 3 combined cards with those lengths; other cards identical to page_v3 + wide view; gray 31, orange 10 (7 unflagged + 3 combined), 41 cards shown, 158 shots
+- F. Roles: Claude Code vets, Muse checks, Cursor codesAll facts from specs 26/27 and the two source files read this session; video frame size marked "NOT FOUND - Claude Code to check" as required.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-0c992f33c3188b497de62c18aee0d48ec82a287be3c4a8acf7b0fcc5f0fc08ce
+  hermes -c "Create wide view combined cards spec v1"
+
+Session:        local-0c992f33c3188b497de62c18aee0d48ec82a287be3c4a8acf7b0fcc5f0fc08ce
+Title:          Create wide view combined cards spec v1
+Duration:       2m 16s
+Messages:       15 (1 user, 13 tool calls)

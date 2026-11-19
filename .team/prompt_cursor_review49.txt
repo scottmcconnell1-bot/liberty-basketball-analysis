@@ -1,0 +1,4 @@
+Cursor, REVIEW ONLY: do not edit, create or run anything that writes. Same route as 48b: Claude Code wrote the spec, Muse and you review, then you build.
+Read .team/specs/49_hybrid_pull_spec.md (whole), .team/design49/design48.py, .team/shot_detectors/mm_learned.py (build_features_doc, FILMS, frozen files), .team/shot_detectors/rim_first_make_miss.py (tracks/d1/vote CLI), .team/shot_detectors/game_session.py (in_session), and Liberty_Shot_Outputs/mm_learned/frozen/ formats (read only).
+Answer: (1) Buildable without guessing? List every guess. (2) Conflicts with the existing code or design48.py? (3) Can H8 be reproduced exactly from saved files (which files)? (4) Does H1 work on a film with no earlier track file (no --reuse-hoops-from)? (5) Any edit needed to an existing file?
+At most 12 short lines. Last line exactly: CURSOR: AGREE or CURSOR: DISAGREE: <reason>.

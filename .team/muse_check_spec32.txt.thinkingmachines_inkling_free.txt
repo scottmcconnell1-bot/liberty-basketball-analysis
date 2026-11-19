@@ -1,0 +1,26 @@
+Query: Muse, check Claude Code's VETTED stamp (line 2, conditions 1-5) on 
+.team/specs/32_find_shots_measure_spec.md. Goal (Scott): measure the program's 
+EXISTING shot finders against his tags before building anything. Check: 
+measuring stored DB detector rows (read-only) instead of rerunning core code is 
+right; the Notus Q1-only span and Adrian Q4 separation are right; the 8000 ms 
+window comes from existing code and is fixed before the run; nothing breaks the 
+Golden Rules (no core edit, no DB write, no tuning, Q4 never used to design). 
+Reasons, then exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE".
+🌐 Browser cat -n .team/specs/32_find_shots_measure_spec.md  2.0s
+💻 $ cat -n .team/specs/32_find_shots_measure_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Reasons: (1) Read-only DB measurement is correct — existing events rows (source_type='ai', details with generator) are the target; no event_generator rerun. (2) Notus Q1-only span and Adrian Q4 separate reporting are correct — Q4 never used to design, reported separately as blind test. (3) 8000 ms from manual_tag_teach.py MATCH_TOLERANCE_MS is fixed from existing code before run; wide window acknowledged with median/max + <=1000/3000 ms counts (reporting only, no tuning). (4) No core edit (import only), no DB write (sqlite uri=ro), no detector tuning; scoreboard rise measured only if file exists; results.json/summary.md output with refusal if dir exists.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-fd9a1bc3193f0a71dad355d77cad9d277f3a196085f9993288fb45f5542f96f5
+  hermes -c "Verify Muse stamp on shot finder spec"
+
+Session:        local-fd9a1bc3193f0a71dad355d77cad9d277f3a196085f9993288fb45f5542f96f5
+Title:          Verify Muse stamp on shot finder spec
+Duration:       32s
+Messages:       6 (1 user, 4 tool calls)

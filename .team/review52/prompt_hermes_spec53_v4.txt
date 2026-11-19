@@ -1,0 +1,18 @@
+You are HERMES, the architect. Revise .team/specs/53_referee_signals_spec.md to v4 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Reviews of v3: Cursor AGREE (.team/review52/cursor_spec53_v3.txt). Muse DISAGREE (.team/review52/muse_spec53_v3.txt):
+"Scott addendum per-shot cue fusion was not fully carried through" - v2's explicit fusion block was compressed away;
+the POSE LIMIT reference to "cue fusion (section 2)" now dangles.
+Required change (Scott binding, .team/review52/addendum_ref53_scott.txt: "Go with the book, but some wiggle room.
+Some things may have to be deduced with several factors because referees do not always follow the book, or
+clearly indicate their intent."): restore a full section "Per-shot cue fusion" that defines, per candidate shot:
+ - cues: arm-event type and its time relative to release/rim time; which referee (nearest / lead, distance to
+   play); play stopping (players stop / ball handed to ref / clock overlay stops where readable); next restart
+   (free-throw lineup in lane vs throw-in vs play on); score overlay change or not (where readable);
+ - how cues combine into one category per shot: fouled_miss, waved_off, violation, and_one, none, unknown
+   (written rules or a simple scoring table - no learned model in v1), with the evidence list stored per shot;
+ - unknown -> coach-review flag within the <=20 cap; never guess; no referee visible -> no change;
+ - how the category feeds spec 52 scoring (fouled/waved-off/warm-up excluded from the auto e2e denominator, team
+   decision) and later shot calls (measured on seen films first).
+Fix the dangling section reference. Keep everything Cursor and Muse already accepted. Keep SCOTT DECIDES numbers.
+End with "HERMES: SPEC WRITTEN".

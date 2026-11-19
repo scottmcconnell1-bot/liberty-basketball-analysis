@@ -1,0 +1,69 @@
+diff --git a/.team/shot_detectors/keep_ball_detections.py b/.team/shot_detectors/keep_ball_detections.py
+index 3991063..9eb4338 100644
+--- a/.team/shot_detectors/keep_ball_detections.py
++++ b/.team/shot_detectors/keep_ball_detections.py
+@@ -1101,6 +1101,7 @@ def step_arc_rule_report(
+     tracks_dir: Optional[Path],
+     out_json: Path,
+     out_md: Path,
++    mapping_proof_json: Optional[Path] = None,
+ ) -> int:
+     cand_path = resolve_path(str(candidates_json))
+     if not cand_path.exists():
+@@ -1109,6 +1110,31 @@ def step_arc_rule_report(
+     payload = json.loads(cand_path.read_text(encoding="utf-8"))
+     mapping = payload.get("mapping_check") or {}
+     rate = float(mapping.get("rate") or 0.0)
++    agreement_with_v6: Optional[float] = None
++    if mapping_proof_json is not None:
++        # Spec 23 v3: frame mapping proven by v6's own candidates.json on this unchanged code;
++        # this file's rate is then agreement with the saved v6 ball points, not a gate.
++        proof_path = resolve_path(str(mapping_proof_json))
++        if not proof_path.exists():
++            raise SystemExit(f"ERROR: mapping proof json not found: {proof_path}")
++        proof = json.loads(proof_path.read_text(encoding="utf-8"))
++        same = (
++            proof.get("constants") == payload.get("constants")
++            and proof.get("n_shots") == payload.get("n_shots")
++            and {(s["film"], int(s["t"])) for s in proof.get("shots") or []}
++            == {(s["film"], int(s["t"])) for s in payload.get("shots") or []}
++        )
++        if not same:
++            msg = (
++                "MAPPING PROOF MISMATCH: proof file and candidates.json differ in constants, "
++                "n_shots or shot set. Stopping for Scott."
++            )
++            print(msg)
++            raise SystemExit(msg)
++        agreement_with_v6 = rate
++        rate = float((proof.get("mapping_check") or {}).get("rate") or 0.0)
++        print(f"mapping proven by {proof_path}: rate {rate:.4f}")
++        print(f"agreement_with_v6 (not a gate): {agreement_with_v6:.4f}")
+     if rate < MAPPING_MIN_MATCH_RATE:
+         msg = (
+             f"MAPPING CHECK GATE FAILED (from candidates.json): rate {rate:.4f} "
+@@ -1206,6 +1232,8 @@ def step_arc_rule_report(
+         },
+         "applied_to_core": False,
+     }
++    if agreement_with_v6 is not None:
++        out_payload["agreement_with_v6"] = agreement_with_v6
+     out_json = Path(out_json)
+     out_md = Path(out_md)
+     out_json.parent.mkdir(parents=True, exist_ok=True)
+@@ -1351,6 +1379,7 @@ def main(argv: Optional[List[str]] = None) -> int:
+     parser.add_argument("--out-md", type=Path, default=None)
+     parser.add_argument("--candidates-json", type=Path, default=None)
+     parser.add_argument("--results-json", type=Path, default=None)
++    parser.add_argument("--mapping-proof-json", type=Path, default=None)
+     parser.add_argument("--overlay-dir", type=Path, default=None)
+     args = parser.parse_args(argv)
+ 
+@@ -1379,6 +1408,7 @@ def main(argv: Optional[List[str]] = None) -> int:
+             tracks_dir=tracks_dir,
+             out_json=out_json,
+             out_md=out_md,
++            mapping_proof_json=args.mapping_proof_json,
+         )
+ 
+     if args.step == "overlays":

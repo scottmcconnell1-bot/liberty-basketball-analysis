@@ -1,0 +1,296 @@
+{
+ "frozen_by": "Claude Code",
+ "frozen_at": "2026-11-05, before any spec 36 run",
+ "source": "hand look at still frames (scratchpad extras_*.jpg, strip_*.jpg) + Scott tags within 6 s; Inferred",
+ "scott_rules": "fouled miss = not a shot; fouled make = shot; block = not a shot; put-back/tip = own shot; same shot twice = bug; unclear = orange; referee holding = not a shot",
+ "C_note": "#4 and #5 are fouled put-backs; fouled -> not a shot only if they missed (tags show no make)",
+ "extras": [
+  {
+   "n": 1,
+   "run": "adrian",
+   "t_ms": 52400,
+   "frame": 1310,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 2,
+   "run": "adrian",
+   "t_ms": 100960,
+   "frame": 2524,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 3,
+   "run": "adrian",
+   "t_ms": 135800,
+   "frame": 3395,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 4,
+   "run": "adrian",
+   "t_ms": 219840,
+   "frame": 5496,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 5,
+   "run": "adrian",
+   "t_ms": 538880,
+   "frame": 13472,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 6,
+   "run": "adrian",
+   "t_ms": 1147040,
+   "frame": 28676,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 7,
+   "run": "adrian",
+   "t_ms": 1533520,
+   "frame": 38338,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 8,
+   "run": "adrian",
+   "t_ms": 1791800,
+   "frame": 44795,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 9,
+   "run": "adrian",
+   "t_ms": 1874120,
+   "frame": 46853,
+   "label": "G_unclear_orange"
+  },
+  {
+   "n": 10,
+   "run": "adrian",
+   "t_ms": 1950000,
+   "frame": 48750,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 11,
+   "run": "adrian",
+   "t_ms": 1954680,
+   "frame": 48867,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 12,
+   "run": "adrian",
+   "t_ms": 1958840,
+   "frame": 48971,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 13,
+   "run": "adrian",
+   "t_ms": 1978080,
+   "frame": 49452,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 14,
+   "run": "adrian",
+   "t_ms": 1981200,
+   "frame": 49530,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 15,
+   "run": "adrian",
+   "t_ms": 1983360,
+   "frame": 49584,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 16,
+   "run": "adrian",
+   "t_ms": 2223600,
+   "frame": 55590,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 17,
+   "run": "adrian",
+   "t_ms": 2280360,
+   "frame": 57009,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 18,
+   "run": "adrian",
+   "t_ms": 2318840,
+   "frame": 57971,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 19,
+   "run": "adrian",
+   "t_ms": 2322600,
+   "frame": 58065,
+   "label": "B_not_game_time"
+  },
+  {
+   "n": 20,
+   "run": "adrian",
+   "t_ms": 2568080,
+   "frame": 64202,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 21,
+   "run": "adrian",
+   "t_ms": 2636840,
+   "frame": 65921,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 22,
+   "run": "adrian",
+   "t_ms": 2703360,
+   "frame": 67584,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 23,
+   "run": "adrian",
+   "t_ms": 2860560,
+   "frame": 71514,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 24,
+   "run": "adrian",
+   "t_ms": 2911920,
+   "frame": 72798,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 25,
+   "run": "adrian",
+   "t_ms": 3021480,
+   "frame": 75537,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 26,
+   "run": "adrian",
+   "t_ms": 3093480,
+   "frame": 77337,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 27,
+   "run": "notus",
+   "t_ms": 121640,
+   "frame": 3041,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 28,
+   "run": "notus",
+   "t_ms": 145200,
+   "frame": 3630,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 29,
+   "run": "notus",
+   "t_ms": 194760,
+   "frame": 4869,
+   "label": "F_same_shot_twice"
+  },
+  {
+   "n": 30,
+   "run": "notus",
+   "t_ms": 284560,
+   "frame": 7114,
+   "label": "E_putback_real_shot"
+  },
+  {
+   "n": 31,
+   "run": "notus",
+   "t_ms": 286560,
+   "frame": 7164,
+   "label": "G_unclear_orange"
+  },
+  {
+   "n": 32,
+   "run": "notus",
+   "t_ms": 340800,
+   "frame": 8520,
+   "label": "C_fouled_shot"
+  },
+  {
+   "n": 33,
+   "run": "notus",
+   "t_ms": 414600,
+   "frame": 10365,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 34,
+   "run": "notus",
+   "t_ms": 447120,
+   "frame": 11178,
+   "label": "A_not_a_hoop"
+  },
+  {
+   "n": 35,
+   "run": "notus",
+   "t_ms": 449360,
+   "frame": 11234,
+   "label": "D_blocked"
+  },
+  {
+   "n": 36,
+   "run": "notus",
+   "t_ms": 628440,
+   "frame": 15711,
+   "label": "G_unclear_orange"
+  },
+  {
+   "n": 37,
+   "run": "notus",
+   "t_ms": 635360,
+   "frame": 15884,
+   "label": "G_unclear_orange"
+  },
+  {
+   "n": 38,
+   "run": "notus",
+   "t_ms": 853400,
+   "frame": 21335,
+   "label": "H_referee_holding"
+  },
+  {
+   "n": 39,
+   "run": "adrian_q4_blind",
+   "t_ms": 3780080,
+   "frame": 94502,
+   "label": "Q4_not_examined"
+  },
+  {
+   "n": 40,
+   "run": "adrian_q4_blind",
+   "t_ms": 3837800,
+   "frame": 95945,
+   "label": "Q4_not_examined"
+  },
+  {
+   "n": 41,
+   "run": "adrian_q4_blind",
+   "t_ms": 3894760,
+   "frame": 97369,
+   "label": "B_not_game_time"
+  }
+ ]
+}

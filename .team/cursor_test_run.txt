@@ -1,0 +1,24 @@
+**1)**
+```
+frames 100950.0 read True
+```
+
+**2)**
+```
+5.0.0
+```
+
+**3)**
+```
+test
+```
+
+**4)**
+```
+(no stdout; exit code 0)
+```
+
+**Failures:** None. All four exited 0.
+
+Command 4 did not fail — the write to `/mnt/c/Users/scott/Documents/sandbox_should_block.txt` was allowed in this shell (empty stdout, success). So that path was not sandbox-blocked here.
+[cursor_wsl] exit 0 at 19:41:34

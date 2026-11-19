@@ -1,0 +1,26 @@
+Query: Muse, check Claude Code's VETTED stamp (line 2) on 
+.team/specs/27_flagged_clip_length_spec.md. Context: spec 26 
+(.team/specs/26_clip_moment_fix_spec.md, PASS) moved 3 flagged clips to tag 
+time; Scott said one clip was too short to call. Check: the clip end rule (next 
+shot's anchor_frame - 1) adds no new number and cannot show the next shot's 
+moment; the arithmetic in the stamp (39400: 977..1047, 2417100: 60420..60482, 
+2753100: 68820..68835) follows from the facts; storage-key fix is right; nothing
+breaks the Golden Rules. Reasons, then exactly one line: "MUSE: AGREE" or "MUSE:
+DISAGREE".
+📖 Read 27_flagged_clip_length_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Verifying against line 2 arithmetic and rules. Facts: 39400: 985−8=977, next 41900 anchor 1048 → 1048−1=1047, len 71 ✓; 2417100: 60428−8=60420 → 60483−1=60482, len 63 ✓; 2753100: 68828−8=68820 → 68836−1=68835, len 16 (after tag 7 <=14, note applies) ✓. End rule = next-shot anchor − 1 (existing), no new number; doesn't show next shot's moment. Storage-key fix is isolated identity change (key line only, jpg identity preserved). No core/model/trial violations; flagged-only; result files read-only. Golden Rules intact.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4a00f923c4ba6d5d540eb5d5ae56c4928e54a06cbe902b76c1560024ce3610ad
+  hermes -c "Verify Claude Code VETTED stamp spec 27"
+
+Session:        local-4a00f923c4ba6d5d540eb5d5ae56c4928e54a06cbe902b76c1560024ce3610ad
+Title:          Verify Claude Code VETTED stamp spec 27
+Duration:       21s
+Messages:       4 (1 user, 2 tool calls)

@@ -1,0 +1,124 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-playbook (branch 
+team/playbook). You are the Architect. Your Jr High player app plan was 
+REJECTED: read the first line of 
+.team/specs/10_jrhigh_player_app_plan_v1_REJECTED.md for the eight reasons, and 
+read Scott's requirements in .team/specs/10_jrhigh_requirements_scott.md (every 
+numbered item must be met). Rewrite the WHOLE plan 
+.team/specs/10_jrhigh_player_app_plan.md so its body carries every fix; keep the
+good parts (staged delivery, Stage 1 testable on Scott's PC, eye-check list per 
+stage, no schema change, JSON file for the visibility list). The player app must
+be a separate static site built locally from ONLY the visible plays (outside the
+main app static/ tree, not committed to the public repo), so it can run with no 
+main program. Include a heading exactly ## Files for Stage 1. STRICT: create or 
+edit ONLY .team/specs/10_jrhigh_player_app_plan.md. Do not create any other file
+and do not run code that writes files.
+📖 Read 10_jrhigh_player_app_plan_v1_REJECTED.md  0.2s
+📖 Read 10_jrhigh_requirements_scott.md  0.2s
+✗ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md [Refusing to overwrite /mnt/c/Users/scott/Docu...]
+📖 Read 10_jrhigh_player_app_plan.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-playbook/.team/specs/10_jrhigh_player_app_plan.md  0.3s
+│ .team/specs/10_jrhigh_player_app_plan.md
+│ @@ -1,6 +1,8 @@
+│ +REJECTED by Claude Code, 2026-10-27: Good staged shape and eye-checks, but: (1) Misses Scott requirement 6 (.team/specs/10_jrhigh_requirements_scott.md): export ALL plays to Scott side, a "Visible to players" on/off switch per play, Publish ships ONLY visible plays, turning one off and republishing removes it. The plan has per-play export, an append-only manifest (never removes), and limits export to team_key jh_boys/jh_girls. (2) Hidden plays leak: Stage 1 writes bundles under static/jrhigh_player/ and adds public /player routes to the main app, which serves all of static/; an exported-then-hidden play stays downloadable. Bundles for the phone app must contain only visible plays and live outside the main app static/ tree. (3) The GitHub repo is PUBLIC (gh repo view: visibility PUBLIC): Stage 4 gh-pages / committed bundles would publish plays to the world. Say so; keep generated bundles out of the repo; offer hosting where only the built site is uploaded. (4) Stage 4 Cloudflare/GitHub build "reads DB": film_analysis.db is gitignored, so a cloud build cannot read it. Build locally on Scott PC, upload only the built folder. (5) Stage 5 team code via Flask cookie cannot work on a static host; on static hosting a code is only a soft lock (anyone with the files can read them). State that honestly and pick a design consistent with the chosen hosting. (6) Minors/privacy: bundle carries source_image (scout PDF page, may show opponent and notes) and notes; strip both unless Scott allows. The viewer must be a standalone page, not extend base.html (it carries the main app nav and Sign In). (7) Run command "python -m app # or whatever": the entry is .\\.venv\\Scripts\\python.exe app.py (app.py line 288). (8) Copying ~1900 lines of animation from playbook.html means fixes in the main program never reach the app; state the trade-off and how the copy is kept in step (e.g. one shared JS file, only if playbook.html behaviour is proven unchanged; otherwise a copy plus a check that both ...
+│ +
+│  # Jr High Player App — Staged Plan
+│
+│ -**Goal:** A separate PLAYER app for Jr High team. Shows ONLY animated plays Scott picks. Players/parents use on phones. Scott draws/edits in main program; playbook unchanged. Sync ONE-WAY: main → player. Delivery: installable web app (PWA: Add to Home Screen, own icon, full screen, works offline after first load, iPhone/Android, no app store). Publishing: Scott marks plays as Jr High and clicks Publish; app updates next open. Privacy: minors — no logins, no names, no analytics, no data collected; plays only; optional team code to open.
+│ +**Goal:** A separate PLAYER app for Jr High team. Shows ONLY animated plays Scott picks. Players/parents use on phones. Scott draws/edits in main program; playbook unchanged. Sync ONE-WAY: main → player. Delivery: installable web app (PWA: Add to Home Screen, own icon, full screen, works offline after first load, iPhone/Android, no app store). Publishing: Scott marks plays as "Visible to players" and clicks Publish; app updates next open. Hidden plays are NOT shipped at all (not merely hidden in UI). Privacy: minors — no logins, no names, no analytics, no data collected; plays only; optional team code (soft lock on static host). Target ready: Jan 4, 2027.
+│
+│  **Key existing pieces to reuse:**
+│  - `blueprints/playbook.py`: share routes `/play/share/<token>` and `/play/share/<token>/choreography` are public, no auth
+│ @@ -9,171 +11,219 @@
+│  - Plays table has `team_key` (jh_boys, jh_girls, hs_boys, hs_girls) — already in DB via additive ALTER
+│  - Export: `/playbook/export/<id>` returns play + steps JSON
+│
+│ -**Schema decision:** NO schema.sql change. Jr High list kept in a JSON file (`data/playbook/jrhigh_player_plays.json`). If Scott later wants multi-team or metadata, that becomes a gate.
+│ -
+│ ----
+│ -
+│ -## Stage 1 — Smallest Working Slice (Export + Phone Viewer)
+│ -
+│ -**What it does:** Scott clicks "Export for Player App" on a play. A static JSON bundle is written to `static/jrhigh_player/`. A tiny viewer page (`/player`) reads the bundle and animates using existing animation code. Testable on Scott's PC at `http://localhost:5000/player`.
+│ +**Schema decision:** NO schema.sql change. Visibility list kept in a JSON file (`data/playbook/jrhigh_player_visibility.json`). If Scott later wants multi-team or metadata, that becomes a gate.
+│ +
+│ +**Animation code trade-off:** The animation engine (~1900 lines in `playbook.html` inline script) is copied into `static/js/player-viewer.js` for Stage 1 so the player app is a standalone static site with no Flask dependency. This means fixes in the main program do NOT automatically reach the player app. Mitigation: a shared-source check script (`scripts/check_animation_sync.py`) compares the copied functions against the source in `playbook.html` and flags drift. If Scott confirms `playbook.html` animation behavior is stable, we can later extract a single shared JS module loaded by both; until then, copy + check is the contract.
+│ +
+│ +---
+│ +
+│ +## Stage 1 — Smallest Working Slice (Export ALL + Visibility Toggle + Phone Viewer)
+│ +
+│ +**What it does:** Scott sees ALL plays in the main program with a "Visible to players" toggle per play. Clicking "Publish to Player App" builds a static site in `dist/player/` containing ONLY visible plays. A tiny viewer page (`dist/player/player.html`) reads the bundle and animates using copied animation code. Testable on Scott's PC by opening `dist/player/player.html` directly in a browser (no server needed).
+│
+│  ### Files for Stage 1
+│
+│  | File | Action | Purpose |
+│  |------|--------|---------|
+│ -| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/play/<int:play_id>/export-player", methods=["POST"])` | Export one play to player bundle |
+│ -| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/player")` (public, no auth, no feature flag) | Player viewer page |
+│ -| `blueprints/playbook.py` | ADD helper `_build_player_bundle(play_id, db)` | Build JSON bundle: play meta + steps + choreography |
+│ -| `templates/player.html` | CREATE new template | Minimal viewer: court SVG + play selector + Play All button |
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])` | Toggle "Visible to players" for any play (ALL team_keys) |
+│ +| `blueprints/playbook.py` | ADD route `@playbook_bp.route("/playbook/publish-player", methods=["POST"])` | Build static player site to `dist/player/` with ONLY visible plays |
+│ +| `blueprints/playbook.py` | ADD helper `_build_player_site(db)` | Generate `dist/player/player.html`, `dist/player/plays/*.json`, copy assets |
+│ +| `templates/playbook.html` | EDIT — Add "Visible to players" toggle switch on every play row; add "Publish to Player App" button | Scott controls visibility per play; one-click publish |
+│ +| `data/playbook/jrhigh_player_visibility.json` | CREATE (empty object `{}`) | Persisted map: `play_id` → `true/false` (visible to players) |
+│ +| `templates/player.html` | CREATE new STANDALONE template (does NOT extend base.html) | Minimal viewer: court SVG + play selector + Play All button |
+│  | `static/js/player-viewer.js` | CREATE new file | Animation logic copied/adapted from `playbook.html` inline script |
+│ -| `data/playbook/jrhigh_player_plays.json` | CREATE (empty list `[]`) | Manifest of play_ids Scott publishes |
+│ -| `static/jrhigh_player/` | CREATE directory | Output folder for static bundles (gitignored) |
+│ -
+│ -### New Route: Export for Player App
+│ +| `static/css/player.css` | CREATE new file | Court styles extracted from `playbook.css` (no main app nav/styles) |
+│ +| `scripts/check_animation_sync.py` | CREATE | Compares `player-viewer.js` functions against `playbook.html` source; flags drift |
+│ +| `dist/player/` | CREATE directory (gitignored) | Output folder for static player site (NOT under `static/`) |
+│ +
+│ +### New Route: Toggle Visibility (ALL plays, any team_key)
+│  ```python
+│ -@playbook_bp.route("/playbook/play/<int:play_id>/export-player", methods=["POST"])
+│ +@playbook_bp.route("/playbook/play/<int:play_id>/visibility", methods=["POST"])
+│  @require_feature("ENABLE_PRACTICES")
+│ -def playbook_export_player(play_id):
+│ +def playbook_toggle_visibility(play_id):
+│      db = get_db()
+│ -    play = db.execute("SELECT * FROM plays WHERE id = ?", (play_id,)).fetchone()
+│ +    play = db.execute("SELECT id FROM plays WHERE id = ?", (play_id,)).fetchone()
+│      if not play:
+│          return jsonify({"error": "Play not found"}), 404
+│ -    # Only Jr High team plays can be exported
+│ -    if play["team_key"] not in ("jh_boys", "jh_girls"):
+│ -        return jsonify({"error": "Only Jr High plays can be exported to Player App"}), 400
+│ -    bundle = _build_player_bundle(play_id, db)
+│ -    # Write to static/jrhigh_player/{play_id}.json
+│ -    out_dir = Path(current_app.root_path) / "static" / "jrhigh_player"
+│ +    data = request.get_json() or {}
+│ +    visible = bool(data.get("visible", False))
+│ +    manifest_path = Path(current_app.root_path) / "data" / "playbook" / "jrhigh_player_visibility.json"
+│ +    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+│ +    manifest[str(play_id)] = visible
+│ +    manifest_path.write_text(json.dumps(manifest, indent=2))
+│ +    return jsonify({"ok": True, "play_id": play_id, "visible": visible})
+│ … omitted 471 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten plan at .team/specs/10_jrhigh_player_app_plan.md now addresses all eight rejection reasons and meets every numbered requirement from Scott's spec:
+
+1. Requirement 6 met — ALL plays exported to Scott's side; per-play "Visible to players" toggle; Publish ships ONLY visible plays; turning one off and republishing removes it from dist/player/plays/
+2. No hidden-play leak — Bundles live in dist/player/ (outside static/ tree, not served by main app); hidden plays' JSON files are deleted on publish
+3. Public repo acknowledged — dist/player/ and visibility JSONs are gitignored; generated bundles never committed
+4. Local build only — scripts/build_player_site.py reads local DB; Cloudflare/GitHub cloud builds explicitly called out as unable to read gitignored DB5. Team code = soft lock — Stated honestly: on static host it's a deterrent via localStorage, not enforcement; anyone with file access can read bundles
+6. Privacy — Bundles strip source_image and notes; viewer is standalone HTML (does not extend base.html)
+7. Correct run command — .\\.venv\\Scripts\\python.exe app.py used throughout
+8. Animation trade-off documented — Copy + scripts/check_animation_sync.py drift check; shared module only if behavior proven stable
+
+Also includes the exact heading ## Files for Stage 1 and keeps staged delivery, eye-check lists, no schema change, JSON visibility file.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b7e01a9dd44197ad76ae639acf93da2daebc75fd2c2f3863efdd577bf7ccb49f
+  hermes -c "Rewrite Jr High player app plan"
+
+Session:        local-b7e01a9dd44197ad76ae639acf93da2daebc75fd2c2f3863efdd577bf7ccb49f
+Title:          Rewrite Jr High player app plan
+Duration:       14m 52s
+Messages:       13 (2 user, 9 tool calls)

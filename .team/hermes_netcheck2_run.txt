@@ -1,0 +1,117 @@
+﻿Query: ﻿Hermes, your plan .team/specs/15_net_check_plan.md was REJECTED by Claude
+Code. The reasons are at the top of
+.team/specs/15_net_check_plan_v1_REJECTED.md (read it FIRST). Revise 
+.team/specs/15_net_check_plan.md (read it FIRST
+before overwriting) to fix all 5 points and nothing else. Keep "PLAN - NOT BUILT
+OR MEASURED YET" at the top.
+Plain markdown, no line-number prefixes, no literal "\n".
+📖 Read 15_net_check_plan_v1_REJECTED.md
+📖 Read 15_net_check_plan.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now I understand the 5 rejection points. Let me fix the plan:
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/15_net_check_plan.md
+│ .team/specs/15_net_check_plan.md
+│ @@ -25,7 +25,7 @@
+│
+│  - **Read-only measurement only.** No edits to `ai_bridge.py`, `net_detector.py`, `models/ball_detector.pt`, `ball_confidence`, `schema.sql`, or any protected core file.
+│  - **No cutoff changes.** The v6 rule thresholds stay exactly as they are (0 false makes must remain 0).
+│ -- **New code only** in `.team/shot_detectors/pixel_miss/` (one new file).
+│ +- **New code only** in `.team/shot_detectors/pixel_miss/` (one new file: `net_check.py` and `README.md`).
+│  - **Measured on the same 140 tagged shots** (Notus A1 Q1: 31, Adrian Q1–Q3: 109).
+│  - **Output** written to `C:\Users\scott\Documents\Liberty_Shot_Outputs\net_check/` (outside repo).
+│  - **Sandbox test run** writes to `.team/shot_outputs_test/net_check/` (never committed).
+│ @@ -53,14 +53,23 @@
+│
+│  Sample **5 frames after the peak frame**: `peak_frame + 1, +2, +3, +4, +5`.
+│
+│ -**Rationale:** The ball passes through the rim and enters the net in ~1–3 frames at 25 fps. Sampling 5 frames after peak captures the ball in the net before the tracker loses it or jumps away.
+│ +**Also sample 1 BEFORE frame:** `peak_frame - 3` (same as `net_moved_after_shot` uses). This gives a baseline before the ball arrives, to subtract rim/hands/jersey orange that exists on misses too.
+│ +
+│ +**Rationale:** The ball passes through the rim and enters the net in ~1–3 frames at 25 fps. Sampling 5 frames after peak captures the ball in the net before the tracker loses it or jumps away. The before frame gives a per-shot baseline to compute the **change** in orange pixels (delta = after - before).
+│
+│  ### 3.3 What to Measure Per Frame
+│
+│ -For each of the 5 frames, within the net ROI:
+│ -1. **Orange pixel count** — HSV range for the ball (red/orange: hue 0–14 or 165–180, sat > 70, val > 70). Count pixels in the ROI matching this.
+│ +For each of the 5 after-frames, within the net ROI:
+│ +1. **Orange pixel count** — HSV range matching `net_detector.py:74-76`:
+│ +   - red1: hue 0–14, sat >= 90, val >= 90
+│ +   - red2: hue 165–180, sat >= 90, val >= 90
+│ +   - orange: hue 8–22, sat >= 90, val >= 90
+│ +   Count pixels in the ROI matching any of these three ranges.
+│  2. **White/gray pixel count** — HSV range for the net (white: sat < 60, val > 155; gray: sat < 55, val 70–190). Count pixels in the ROI matching this.
+│ -3. **Orange/white ratio** — `orange_px / max(1, white_px + gray_px)`.
+│ +3. **Largest single orange blob area** — connected-component area (in pixels) of the largest contiguous orange region in the ROI. The ball is one round blob; the rim is a wide band.
+│ +4. **Orange/white ratio** — `orange_px / max(1, white_px + gray_px)`.
+│ +
+│ +**Also measure the BEFORE frame** (`peak_frame - 3`) with the same four metrics to get `before_orange_px`, `before_white_px`, `before_max_blob`, `before_ratio`.
+│
+│  **Output per shot:** a JSON object with:
+│  ```json
+│ @@ -69,15 +78,18 @@
+│    "film": "adrian",
+│    "peak_frame": 8573,
+│    "has_crossing": true,
+│ +  "before": {"frame": 8570, "orange_px": 45, "white_px": 480, "gray_px": 350, "max_blob": 12, "orange_ratio": 0.05},
+│    "frames": [
+│ -    {"frame": 8574, "orange_px": 120, "white_px": 450, "gray_px": 320, "orange_ratio": 0.16},
+│ -    {"frame": 8575, "orange_px": 95,  "white_px": 480, "gray_px": 350, "orange_ratio": 0.12},
+│ -    {"frame": 8576, "orange_px": 60,  "white_px": 500, "gray_px": 380, "orange_ratio": 0.07},
+│ -    {"frame": 8577, "orange_px": 15,  "white_px": 520, "gray_px": 400, "orange_ratio": 0.02},
+│ -    {"frame": 8578, "orange_px": 5,   "white_px": 530, "gray_px": 410, "orange_ratio": 0.01}
+│ +    {"frame": 8574, "orange_px": 120, "white_px": 450, "gray_px": 320, "max_blob": 85, "orange_ratio": 0.16, "delta_orange": 75, "delta_ratio": 0.11},
+│ +    {"frame": 8575, "orange_px": 95,  "white_px": 480, "gray_px": 350, "max_blob": 70, "orange_ratio": 0.12, "delta_orange": 50, "delta_ratio": 0.07},
+│ +    {"frame": 8576, "orange_px": 60,  "white_px": 500, "gray_px": 380, "max_blob": 40, "orange_ratio": 0.07, "delta_orange": 15, "delta_ratio": 0.02},
+│ +    {"frame": 8577, "orange_px": 15,  "white_px": 520, "gray_px": 400, "max_blob": 8,  "orange_ratio": 0.02, "delta_orange": -30, "delta_ratio": -0.03},
+│ +    {"frame": 8578, "orange_px": 5,   "white_px": 530, "gray_px": 410, "max_blob": 3,  "orange_ratio": 0.01, "delta_orange": -40, "delta_ratio": -0.04}
+│    ],
+│    "max_orange_ratio": 0.16,
+│ -  "max_orange_frame": 8574
+│ +  "max_delta_ratio": 0.11,
+│ +  "max_orange_frame": 8574,
+│ +  "max_delta_frame": 8574
+│  }
+│  ```
+│
+│ @@ -86,9 +98,9 @@
+│  ## 4. Decision Rule (for measurement reporting only)
+│
+│  **A shot is flagged as "net check caught this missed make" if:**
+│ -- `max_orange_ratio` across the 5 frames ≥ **0.08** (tunable threshold for reporting; the measurement reports the raw numbers, this threshold is only for the summary table).
+│ -
+│ -**Why 0.08:** The net is mostly white/gray. An orange ball in the net should show a measurable orange pixel cluster. On misses, the net shows only white/gray. The exact threshold is reported but not baked into any detector yet — this step only measures.
+│ +- `max_delta_ratio` across the 5 frames ≥ **0.08** (tunable threshold for reporting; the measurement reports the raw numbers, this threshold is only for the summary table).
+│ +
+│ +**Why delta_ratio:** The rim is the same color as the ball (`net_detector.py:99` "The ball and this rim land in the same orange hue on this camera"). A raw orange count in the net box will also count rim, hands, skin and jerseys under the rim on rebounds, so it will fire on misses. The **change** from the before-frame (same box, before the ball arrives) removes the static rim/hands/jersey contribution. The largest single orange blob (the ball is one round blob; the rim is a wide band) is an additional discriminator.
+│
+│  ---
+│
+│ @@ -115,17 +127,21 @@
+│
+│  | Set | Shots | Purpose |
+│  |-----|-------|---------|
+│ … omitted 148 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The revised plan fixes all 5 rejection points:
+
+1. Count error — real misses now 93 (not 121), 28 correct makes reported separately as sanity check
+2. Rim color — added BEFORE frame (peak_frame - 3), delta measurements (after - before), largest orange blob area
+3. Color range — now matches net_detector.py:74-76 exactly (three HSV ranges: red1, red2, orange, all with sat≥90, val≥90)
+4. Unseen set — Adrian Q4 has no tracks; explicitly states no unseen set in this step
+5. No config.yaml — constants at top of net_check.py only; allowed files: net_check.py and README.md
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-50432723cf034023747b4ba6270b386c31ea5419aa3a9dc5319b0653b9002aea
+  hermes -c "Revise net check plan fix rejection points"
+
+Session:        local-50432723cf034023747b4ba6270b386c31ea5419aa3a9dc5319b0653b9002aea
+Title:          Revise net check plan fix rejection points
+Duration:       5m 53s
+Messages:       7 (1 user, 5 tool calls)

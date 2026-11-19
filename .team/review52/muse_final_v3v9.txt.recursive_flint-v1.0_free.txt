@@ -1,0 +1,68 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+FINAL check. (1) .team/specs/52a_class0_restore_prereg.md v3: counts fix (Claude
+Code verified: adrian out-of-session rows are all also far-from-tag, so unique =
+26, not 32) (adrian unique 26, pool 277, oos
+definition 48b in_session(is_ft=True)), build order (Cursor builds 
+session_filter + gate path + tests + labels52a + sha
+first; Claude Code verifies; Muse + Cursor confirm; then training), R7 
+amendment, dissent record. (2)
+.team/specs/53_referee_signals_spec.md v9: pass bar only when the step is 
+enabled; violation wording.
+End with two lines:
+MUSE 52a: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (spec 53 v9)
+📖 Read 52a_class0_restore_prereg.md  0.2s
+📖 Read 53_referee_signals_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE here — read-only review. Let me pull the referenced gate/review context before rendering verdicts.
+────────────────────────────────────────
+
+📖 Read muse_gate52.txt
+📖 Read hermes_gate52.txt
+📖 Read cursor_gate52.txt
+📖 Read scott_numbers53.txt  0.1s
+📖 Read addendum_ref53_scott.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Context loaded. Now let me check the remaining cited artifacts — the round-52/53 Muse and Cursor reviews, the drift log tail, and spec 52's R7 wording.
+────────────────────────────────────────
+
+📖 Read muse_round52_53.txt  0.1s
+📖 Read cursor_ref53.txt  0.1s
+💻 $ tail -n 60 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.2s
+🔎 Grep R7  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE final check. Read-only. No files edited or created. Output = this review text.
+
+Spec 52A v3 - .team/specs/52a_class0_restore_prereg.md - FINAL CHECKCounts fix: RESOLVED IN V3. Claude Code independently verified that every adrian out-of-session y=-1 row is also far-from-tag (oos subset of far; oos dists 47.8-176 s). Unique adrian class-0 = 26, not 32; hold-out-gvg train class-0 = 277 (241 rimrock + 4 hsb + 26 adrian + 6 notus). oos def pinned to 48b in_session(is_ft=True); adrian y=-1 n=45 (39 in-session + 6 oos); remaining -1: adrian 19, notus 3. The v2 double-count is closed.
+
+Build order: RESOLVED IN V3. Build order pinned (v3; amends spec 52 R7): Cursor implements session_filter in ensemble_predict.shot_list + gate52 path (per-film session json mapping, omit scoring) + tests and writes labels52a + .team/pre52a_sha256.txt; Claude Code verifies; Muse + Cursor confirm; only then training. R7 amendment stated (postproc52 session_filter false -> true for logo52a only; R7 lock re-frozen with new sha).
+
+R7 amendment: RESOLVED IN V3.
+
+Dissent record: RESOLVED IN V3 (Honesty; Scott chose same-5 re-gate as binding 'A'; Muse + Cursor dissent recorded; blind R10 on NOTUS_A / IDAHO_CITY / RIVERSTONE stays available after a pass).
+
+Spec 53 v9 - .team/specs/53_referee_signals_spec.md - FINAL CHECKPass bar only when the step is enabled: RESOLVED IN V9. v9 change: the pass bar applies only when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0 fails, the step stays OFF and no pass bar is read.
+
+Violation wording: RESOLVED IN V9. v9 change: stale violation-row wording fixed (v8 had violation_travel); v9 rows now use the violation_travel predicate.
+
+FINAL VERDICT:
+
+MUSE 52a: AGREE | AGREE WITH CHANGES: v3 final check resolved - corrected counts (unique 26, pool 277, oos def pinned), pinned build order, R7 amendment, and dissent record all landed; no outstanding changes | DISAGREE: noneMUSE: AGREE | AGREE WITH CHANGES: spec 53 v9 final check resolved - pass bar conditional on step-enabled plus violation wording fixed via violation_travel; no outstanding changes | DISAGREE: none   (spec 53 v9)
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c9c56591b8d740ee4123546b46f8b72daee06fe63ba1cdd1bd9e183c815296a9
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #10"
+
+Session:        local-c9c56591b8d740ee4123546b46f8b72daee06fe63ba1cdd1bd9e183c815296a9
+Title:          You are MUSE, the REVIEWER (not Hermes)… #10
+Duration:       3m 26s
+Messages:       16 (1 user, 14 tool calls)

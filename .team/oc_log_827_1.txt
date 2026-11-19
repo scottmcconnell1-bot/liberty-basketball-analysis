@@ -1,0 +1,956 @@
+timestamp=2026-10-27T03:48:06.848Z level=INFO run=fe0a3892 message="creating instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T03:48:06.850Z level=INFO run=fe0a3892 message=fromDirectory directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T03:48:06.990Z level=INFO run=fe0a3892 message=bootstrapping directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T03:48:06.994Z level=INFO run=fe0a3892 message=loading path="C:\\Users\\scott\\.config\\opencode\\config.json"
+timestamp=2026-10-27T03:48:06.995Z level=INFO run=fe0a3892 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.json"
+timestamp=2026-10-27T03:48:06.995Z level=INFO run=fe0a3892 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.jsonc"
+timestamp=2026-10-27T03:48:07.051Z level=INFO run=fe0a3892 message="all LSPs are disabled"
+timestamp=2026-10-27T03:48:07.052Z level=INFO run=fe0a3892 message="all formatters are disabled"
+timestamp=2026-10-27T03:48:07.052Z level=INFO run=fe0a3892 message=init
+timestamp=2026-10-27T03:48:07.165Z level=INFO run=fe0a3892 message=created id=ses_e84870a82ffezUQz6Wa9zhu5tR slug=stellar-eagle version=1.19.4 projectID=c30576cc07b2b528a2eede275372519a4312e3b4 directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" path="" workspaceID=undefined parentID=undefined title="New session - 2026-10-27T03:48:07.165Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1793072887165 time.updated=1793072887165
+timestamp=2026-10-27T03:48:07.173Z level=INFO run=fe0a3892 message="event connected"
+timestamp=2026-10-27T03:48:07.205Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=0
+timestamp=2026-10-27T03:48:07.527Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=gpt-5.4-nano session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=true agent=title mode=primary
+timestamp=2026-10-27T03:48:07.532Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=gpt-5.4-nano
+[0m
+> build · deepseek-v4.1-flash-free
+[0m
+timestamp=2026-10-27T03:48:07.777Z level=ERROR run=fe0a3892 message="stream error" providerID=opencode modelID=gpt-5.4-nano session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=true agent=title mode=primary error.error="AI_APICallError: Upstream request failed: Insufficient account funds"
+timestamp=2026-10-27T03:48:07.790Z level=INFO run=fe0a3892 message=tracking hash=f28284d1e74e7ac3151c9d73523f9518b8e928e8 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:07.794Z level=INFO run=fe0a3892 message="shell tool using shell" shell="C:\\Program Files\\Git\\usr\\bin\\bash.exe"
+timestamp=2026-10-27T03:48:07.799Z level=INFO run=fe0a3892 message=init count=1
+timestamp=2026-10-27T03:48:07.947Z level=INFO run=fe0a3892 message="watcher backend" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" platform=win32 backend=windows
+timestamp=2026-10-27T03:48:07.951Z level=INFO run=fe0a3892 message="project copy refresh started" projectID=c30576cc07b2b528a2eede275372519a4312e3b4
+timestamp=2026-10-27T03:48:08.322Z level=INFO run=fe0a3892 message="project copy refresh done" projectID=c30576cc07b2b528a2eede275372519a4312e3b4 updated=[] removed=[]
+timestamp=2026-10-27T03:48:08.375Z level=INFO run=fe0a3892 message="booting location services" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" workspaceID=undefined
+timestamp=2026-10-27T03:48:08.378Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b78f6e3001HchYUjok80SDyh
+timestamp=2026-10-27T03:48:08.379Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:08.381Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:10.915Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=AGENTS.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:48:10.915Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=TEAM_RECOVERY.md action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:48:10.916Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\specs\\06_stage1_keypoints_plan.md" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:48:10.928Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\AGENTS.md"
+[0m→ [0mRead AGENTS.md
+[0m→ [0mRead TEAM_RECOVERY.md
+timestamp=2026-10-27T03:48:10.931Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\TEAM_RECOVERY.md"
+timestamp=2026-10-27T03:48:10.938Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\specs\\06_stage1_keypoints_plan.md"
+[0m→ [0mRead .team/specs/06_stage1_keypoints_plan.md
+timestamp=2026-10-27T03:48:11.165Z level=INFO run=fe0a3892 message=tracking hash=2f923ddf263677937c28cc60eb4136321d38136d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:11.378Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=1
+timestamp=2026-10-27T03:48:11.622Z level=INFO run=fe0a3892 message=tracking hash=07405dcadfaa13ae4fd5f1fe3bed3d38856e7b5e cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:11.635Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7905f4001k9Tlh0B801AGzz
+timestamp=2026-10-27T03:48:11.636Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:11.637Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:14.169Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="dist\\scripts\\run_v8.py" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:48:14.190Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="git status --porcelain" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:14.190Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="git log --oneline -5" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:14.195Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="ls -la models/court_keypoint_detector.pt uploads/nfhs_gam0a66d85e12.mp4 uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4 .venv/Scripts/python.exe 2>&1" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:14.195Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="ls .team" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:14.215Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\dist\\scripts\\run_v8.py"
+[0m→ [0mRead dist/scripts/run_v8.py[90m [limit=120][0m
+[0m
+[0m$ [0mls -la models/court_keypoint_detector.pt uploads/nfhs_gam0a66d85e12.mp4 uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4 .venv/Scripts/python.exe 2>&1; ls .team
+-rwxr-xr-x 1 scott 197610     274424 Jul 18 13:41 .venv/Scripts/python.exe
+-rw-r--r-- 1 scott 197610  417722481 Jul 18 13:38 models/court_keypoint_detector.pt
+-rw-r--r-- 2 scott 197610 1488714965 Aug  9 21:44 uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4
+-rw-r--r-- 2 scott 197610 1379421266 Aug  9 21:36 uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4
+-rw-r--r-- 1 scott 197610 2613560681 Aug 11 23:14 uploads/nfhs_gam0a66d85e12.mp4
+STATUS.md
+baseline_score.json
+dry2.txt
+dry_runs
+hermes_arch_run.txt
+hermes_notus3_run.txt
+hermes_plan_run.txt
+hermes_plan_run2.txt
+hermes_reader_run.txt
+hermes_stage1_run.txt
+hermes_stage1b_run.txt
+last_claude_verdict.txt
+muse_diff.txt
+muse_diff_rev3.txt
+muse_run1.txt
+muse_run_arch.txt
+muse_run_notus3.txt
+muse_run_rev3.txt
+muse_run_stage1.txt
+oc.sh
+oc_log_1792_1.txt
+oc_log_380_1.txt
+oc_log_451_1.txt
+oc_log_521_1.txt
+oc_log_764_1.txt
+oc_log_79_1.txt
+oc_log_827_1.txt
+oc_log_97_1.txt
+opencode_notus_step0.txt
+opencode_rev31_run.txt
+opencode_rev3_run.txt
+opencode_review_run.txt
+opencode_stage1_run.txt
+previous_NEXT_TASK.md
+prompt_claude.txt
+prompt_hermes.txt
+prompt_hermes_arch.txt
+prompt_hermes_notus3.txt
+prompt_hermes_reader.txt
+prompt_hermes_stage1.txt
+prompt_hermes_stage1b.txt
+prompt_muse.txt
+prompt_muse_arch.txt
+prompt_muse_notus3.txt
+prompt_muse_rev3.txt
+prompt_muse_stage1.txt
+prompt_opencode.txt
+queued_review_page.md
+rev31_dryrun.txt
+round_start.json
+run_hermes.sh
+spec_backup.md
+specs
+[0m
+[0m$ [0mgit status --porcelain && git log --oneline -5
+M .gitignore
+ M data/hoopsalytics/full_film_panel_history.jsonl
+ M data/hoopsalytics/full_film_panel_latest.json
+?? .team/STATUS.md
+?? .team/baseline_score.json
+?? .team/dry2.txt
+?? .team/dry_runs/
+?? .team/hermes_arch_run.txt
+?? .team/hermes_notus3_run.txt
+?? .team/hermes_plan_run.txt
+?? .team/hermes_plan_run2.txt
+?? .team/hermes_reader_run.txt
+?? .team/hermes_stage1_run.txt
+?? .team/hermes_stage1b_run.txt
+?? .team/last_claude_verdict.txt
+?? .team/muse_diff.txt
+?? .team/muse_diff_rev3.txt
+?? .team/muse_run1.txt
+?? .team/muse_run_arch.txt
+?? .team/muse_run_notus3.txt
+?? .team/muse_run_rev3.txt
+?? .team/muse_run_stage1.txt
+?? .team/oc_log_1792_1.txt
+?? .team/oc_log_380_1.txt
+?? .team/oc_log_451_1.txt
+?? .team/oc_log_521_1.txt
+?? .team/oc_log_764_1.txt
+?? .team/oc_log_79_1.txt
+?? .team/oc_log_827_1.txt
+?? .team/oc_log_97_1.txt
+?? .team/opencode_notus_step0.txt
+?? .team/opencode_rev31_run.txt
+?? .team/opencode_rev3_run.txt
+?? .team/opencode_review_run.txt
+?? .team/opencode_stage1_run.txt
+?? .team/previous_NEXT_TASK.md
+?? .team/prompt_claude.txt
+?? .team/prompt_hermes.txt
+?? .team/prompt_hermes_arch.txt
+?? .team/prompt_hermes_notus3.txt
+?? .team/prompt_hermes_reader.txt
+?? .team/prompt_hermes_stage1.txt
+?? .team/prompt_hermes_stage1b.txt
+?? .team/prompt_muse.txt
+?? .team/prompt_muse_arch.txt
+?? .team/prompt_muse_notus3.txt
+?? .team/prompt_muse_rev3.txt
+?? .team/prompt_muse_stage1.txt
+?? .team/prompt_opencode.txt
+?? .team/queued_review_page.md
+?? .team/rev31_dryrun.txt
+?? .team/round_start.json
+?? .team/spec_backup.md
+?? .team/specs/
+?? "Liberty vs Notus Gym.png"
+?? audit_notus_failures.py`
+?? data/playbook/sheet_align_cache/09022b165c4436ce34b93aee9219517dbceafd0d.json
+?? data/playbook/sheet_align_cache/105a99a7dd2796959f544c9a286780f1c8e32a21.json
+?? data/playbook/sheet_align_cache/3d2e148d3554a7feb3d927e6ca3dbc9995aadb88.json
+?? data/playbook/sheet_align_cache/66066c12038ab74dae476c0abf9e55191326dae2.json
+?? data/playbook/sheet_align_cache/70e367354bf895154dfeb23b1dab08c936ef0db0.json
+?? data/playbook/sheet_align_cache/751e4359c10095b5f328cb54f612a59bd21dbc34.json
+?? data/playbook/sheet_align_cache/89ceda26acbc3f48a067154b352036d34488dc0e.json
+?? data/playbook/sheet_align_cache/92cb73f5a115605854a9adee88905cd502390ac0.json
+?? data/playbook/sheet_align_cache/93ebbc80c6d09b3dd92e46e35a95edaf4184b13e.json
+?? data/playbook/sheet_align_cache/9e36032a7ebde3fa8c28334639d60e16797b7f38.json
+?? data/playbook/sheet_align_cache/a5a3088491fdde4c480f8cfc31cc22e7b47e0fdf.json
+?? data/playbook/sheet_align_cache/a6e33a1cefc7d9195fb078dfb79cc5841872e28e.json
+?? data/playbook/sheet_align_cache/a885186ed02e5054e404395f847900df18a17e43.json
+?? data/playbook/sheet_align_cache/bc20cc36b4f367393e4428a143c569ff47fa4c98.json
+?? data/playbook/sheet_align_cache/e0b5fc992b4c62c9e0595ccdcfde2150ce6fa4c8.json
+?? data/roi/
+?? docs/agent_handoffs/TEAM_LOG.md
+?? gemini-upload/validate_integration.py
+?? manual_calibration.json
+?? notus_audit_list.html
+?? scoreboard_clock_720p.py
+?? scottmcconnell1-bot-liberty-basketball-analysis-8a5edab282632443.txt
+?? scripts/aider_guard.ps1
+?? scripts/aider_guard.py
+?? scripts/measure_notus_rois.py
+fe163c9 team: loop revision 3 — Muse, free gate, cheaper Claude, fallbacks
+74f7cd6 Merge branch 'main' into team/auto
+7c5e90f docs: Muse returns to check the vetter; fix broken arrows in the protocol
+0088e96 Merge branch 'main' into team/auto
+72f8512 docs: makes from the scoreboard alone match Adrian 43/43 and the book 51-26
+[0m
+timestamp=2026-10-27T03:48:14.537Z level=INFO run=fe0a3892 message=tracking hash=d31bd0cc92c6538d152da1e251dac8bfdf7bb8c7 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:14.815Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=2
+timestamp=2026-10-27T03:48:15.048Z level=INFO run=fe0a3892 message=tracking hash=63f712af7d24452cdb0895ef22cc0958097c6f88 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:15.059Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b791361001yzBQW48a19Usl2
+timestamp=2026-10-27T03:48:15.060Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:15.061Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:23.701Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe -c \"import ultralytics, cv2, numpy; print(ultralytics.__version__, cv2.__version__, numpy.__version__)\"" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:23.717Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="ls scripts" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:23.717Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="head -50" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:23.749Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".\\.venv\\Scripts\\python.exe -c \"from ultralytics import YOLO; m=YOLO('models/court_keypoint_detector.pt', verbose=False); print(m.task); print(m.model.kpt_shape if hasattr(m.model,'kpt_shape') else 'n/a'); print(m.names)\"" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.\.venv\Scripts\python.exe -c "import ultralytics, cv2, numpy; print(ultralytics.__version__, cv2.__version__, numpy.__version__)"
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+[0m$ [0m.\.venv\Scripts\python.exe -c "from ultralytics import YOLO; m=YOLO('models/court_keypoint_detector.pt', verbose=False); print(m.task); print(m.model.kpt_shape if hasattr(m.model,'kpt_shape') else 'n/a'); print(m.names)"
+/usr/bin/bash: line 1: ..venvScriptspython.exe: command not found
+[0m
+[0m$ [0mls scripts | head -50
+__pycache__
+_improve.py
+_precision_chunk.py
+_probe_hoop_frame.py
+accuracy_benchmark.py
+aider_guard.ps1
+aider_guard.py
+apply_adrian_jersey_lookaround.py
+archive_season.py
+audit_module_entitlements.py
+audit_secrets.py
+backfill_maxpreps_results.py
+backup.sh
+backup_db.py
+bench
+benchmark_classifier.py
+benchmark_classifier_eval.py
+benchmark_classifier_v2.py
+benchmark_contact.py
+benchmark_court_mask.py
+benchmark_feature_eval.py
+benchmark_feature_filters.py
+benchmark_gen_csvs.py
+benchmark_gtfree.py
+benchmark_person_detectors.py
+benchmark_precision.py
+benchmark_run.py
+benchmark_temporal.py
+build_hoop_track.py
+build_review_page.py
+build_scoreboard_track.py
+build_transfer_bundle.sh
+check_tunnel_url.sh
+compare_ai_to_hoops_pbp.py
+compare_ht_scorebook.py
+compare_q2_manual_vs_ai.py
+daily_git_save.ps1
+docker_production_smoke.sh
+docker_test.sh
+eval_q1_formation.py
+generate_learning_status.py
+git_save_select.py
+hoops_teach_loop.py
+import_hudl.py
+install_ai_deps.ps1
+install_daily_git_save.ps1
+install_liberty_watchdog.ps1
+install_teach_watchdog.ps1
+launch_liberty.py
+launch_liberty.sh
+[0m
+timestamp=2026-10-27T03:48:24.065Z level=INFO run=fe0a3892 message=tracking hash=c196582d9a41d6f431e5e29e5fe7da157b4ea5db cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:24.268Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=3
+timestamp=2026-10-27T03:48:24.503Z level=INFO run=fe0a3892 message=tracking hash=7c446e7b0ef63cc4ed81f62ff72c34b1a6609a84 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:24.526Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b79384e001gRJ4teG9R6livQ
+timestamp=2026-10-27T03:48:24.527Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:24.528Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:26.583Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"import ultralytics, cv2, numpy; print(ultralytics.__version__, cv2.__version__, numpy.__version__)\"" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:26.620Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"from ultralytics import YOLO; m=YOLO('models/court_keypoint_detector.pt', verbose=False); print(m.task); print(getattr(m.model,'kpt_shape','n/a')); print(m.names)\"" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe -c "import ultralytics, cv2, numpy; print(ultralytics.__version__, cv2.__version__, numpy.__version__)"
+8.4.189 5.0.0 2.5.4
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "from ultralytics import YOLO; m=YOLO('models/court_keypoint_detector.pt', verbose=False); print(m.task); print(getattr(m.model,'kpt_shape','n/a')); print(m.names)"
+pose
+[18, 3]
+{0: 'basketball'}
+[0m
+timestamp=2026-10-27T03:48:28.811Z level=INFO run=fe0a3892 message=tracking hash=0eeef1039d73979b0e04cd98ee54a2f0e01e8690 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:29.058Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=4
+timestamp=2026-10-27T03:48:29.294Z level=INFO run=fe0a3892 message=tracking hash=632597ec352a88783c13f8fc65395cb9c39c2f43 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:29.304Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b794b04001Lfkgy7R3AIVBCw
+timestamp=2026-10-27T03:48:29.305Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:29.306Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:55.083Z level=INFO run=fe0a3892 message=evaluated permission=edit pattern="scripts\\stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:48:55.123Z level=INFO run=fe0a3892 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+timestamp=2026-10-27T03:48:55.123Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+[0m← [0mWrite scripts/stage1_measure_keypoints.py
+Wrote file successfully.
+[0m
+timestamp=2026-10-27T03:48:55.377Z level=INFO run=fe0a3892 message=tracking hash=444e3acc1a86bbc99da6ffe7b2f3a0e56bede62b cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:55.620Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=5
+timestamp=2026-10-27T03:48:55.855Z level=INFO run=fe0a3892 message=tracking hash=e710ed5a19a94b7d3cf41fe280d77f9744f703a1 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:48:55.864Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b79b2c7001v24FeRhU0PrM2m
+timestamp=2026-10-27T03:48:55.865Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:48:55.866Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:48:57.884Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:49:08.671Z level=INFO run=fe0a3892 message=cleanup prune=7.days
+[0m$ [0m.venv/Scripts/python.exe scripts/stage1_measure_keypoints.py
+[adrian] total_frames=97475 fps=25.000 stride=4873 frames=[0, 4873, 9746, 14619, 19492, 24365, 29238, 34111, 38984, 43857, 48730, 53603, 58476, 63349, 68222, 73095, 77968, 82841, 87714, 92587]
+[adrian] frame 0: 6/18 keypoints >= 0.3
+[adrian] frame 4873: 7/18 keypoints >= 0.3
+[adrian] frame 9746: 6/18 keypoints >= 0.3
+[adrian] frame 14619: 0/18 keypoints >= 0.3
+[adrian] frame 19492: 9/18 keypoints >= 0.3
+[adrian] frame 24365: 6/18 keypoints >= 0.3
+[adrian] frame 29238: 0/18 keypoints >= 0.3
+[adrian] frame 34111: 8/18 keypoints >= 0.3
+[adrian] frame 38984: 0/18 keypoints >= 0.3
+[adrian] frame 43857: 0/18 keypoints >= 0.3
+[adrian] frame 48730: 9/18 keypoints >= 0.3
+[adrian] frame 53603: 6/18 keypoints >= 0.3
+[adrian] frame 58476: 6/18 keypoints >= 0.3
+[adrian] frame 63349: 8/18 keypoints >= 0.3
+[adrian] frame 68222: 6/18 keypoints >= 0.3
+[adrian] frame 73095: 6/18 keypoints >= 0.3
+[adrian] frame 77968: 8/18 keypoints >= 0.3
+[adrian] frame 82841: 6/18 keypoints >= 0.3
+[adrian] frame 87714: 6/18 keypoints >= 0.3
+[adrian] frame 92587: 7/18 keypoints >= 0.3
+[notus_a1] total_frames=100950 fps=25.000 stride=5047 frames=[0, 5047, 10094, 15141, 20188, 25235, 30282, 35329, 40376, 45423, 50470, 55517, 60564, 65611, 70658, 75705, 80752, 85799, 90846, 95893]
+[notus_a1] frame 0: 6/18 keypoints >= 0.3
+[notus_a1] frame 5047: 0/18 keypoints >= 0.3
+[notus_a1] frame 10094: 0/18 keypoints >= 0.3
+[notus_a1] frame 15141: 0/18 keypoints >= 0.3
+[notus_a1] frame 20188: 7/18 keypoints >= 0.3
+[notus_a1] frame 25235: 0/18 keypoints >= 0.3
+[notus_a1] frame 30282: 5/18 keypoints >= 0.3
+[notus_a1] frame 35329: 0/18 keypoints >= 0.3
+[notus_a1] frame 40376: 0/18 keypoints >= 0.3
+[notus_a1] frame 45423: 6/18 keypoints >= 0.3
+[notus_a1] frame 50470: 7/18 keypoints >= 0.3
+[notus_a1] frame 55517: 0/18 keypoints >= 0.3
+[notus_a1] frame 60564: 0/18 keypoints >= 0.3
+[notus_a1] frame 65611: 6/18 keypoints >= 0.3
+[notus_a1] frame 70658: 0/18 keypoints >= 0.3
+[notus_a1] frame 75705: 6/18 keypoints >= 0.3
+[notus_a1] frame 80752: 0/18 keypoints >= 0.3
+[notus_a1] frame 85799: 0/18 keypoints >= 0.3
+[notus_a1] frame 90846: 0/18 keypoints >= 0.3
+[notus_a1] frame 95893: 6/18 keypoints >= 0.3
+[notus_a] total_frames=93650 fps=25.000 stride=4682 frames=[0, 4682, 9364, 14046, 18728, 23410, 28092, 32774, 37456, 42138, 46820, 51502, 56184, 60866, 65548, 70230, 74912, 79594, 84276, 88958]
+[notus_a] frame 0: 6/18 keypoints >= 0.3
+[notus_a] frame 4682: 8/18 keypoints >= 0.3
+[notus_a] frame 9364: 0/18 keypoints >= 0.3
+[notus_a] frame 14046: 6/18 keypoints >= 0.3
+[notus_a] frame 18728: 2/18 keypoints >= 0.3
+[notus_a] frame 23410: 6/18 keypoints >= 0.3
+[notus_a] frame 28092: 0/18 keypoints >= 0.3
+[notus_a] frame 32774: 0/18 keypoints >= 0.3
+[notus_a] frame 37456: 0/18 keypoints >= 0.3
+[notus_a] frame 42138: 6/18 keypoints >= 0.3
+[notus_a] frame 46820: 6/18 keypoints >= 0.3
+[notus_a] frame 51502: 2/18 keypoints >= 0.3
+[notus_a] frame 56184: 0/18 keypoints >= 0.3
+[notus_a] frame 60866: 7/18 keypoints >= 0.3
+[notus_a] frame 65548: 4/18 keypoints >= 0.3
+[notus_a] frame 70230: 6/18 keypoints >= 0.3
+[notus_a] frame 74912: 6/18 keypoints >= 0.3
+[notus_a] frame 79594: 0/18 keypoints >= 0.3
+[notus_a] frame 84276: 6/18 keypoints >= 0.3
+[notus_a] frame 88958: 0/18 keypoints >= 0.3
+Traceback (most recent call last):
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py", line 311, in <module>
+    main()
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py", line 305, in main
+    report = build_report(results)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py", line 286, in build_report
+    ev = evidence_for(result["per_frame"], kp_id)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py", line 242, in evidence_for
+    return [f"{item['frame_idx']} ({x:.0f},{y:.0f})" for _, item, x, y in rows[:limit]]
+               ~~~~^^^^^^^^^^^^^
+TypeError: 'int' object is not subscriptable
+[0m
+timestamp=2026-10-27T03:49:33.885Z level=INFO run=fe0a3892 message=tracking hash=fdf944cce70bb935573e0347c0daa4971a450e92 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:49:34.107Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=6
+timestamp=2026-10-27T03:49:34.341Z level=INFO run=fe0a3892 message=tracking hash=1d7265e41cd05fb678a0728375a9cc4ad63b65db cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:49:34.350Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7a491d00169GZn27BXGh0aG
+timestamp=2026-10-27T03:49:34.351Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:49:34.352Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:49:36.458Z level=INFO run=fe0a3892 message=evaluated permission=edit pattern="scripts\\stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:49:36.458Z level=INFO run=fe0a3892 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+timestamp=2026-10-27T03:49:36.460Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+[0m← [0mEdit scripts/stage1_measure_keypoints.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
+@@ -238,9 +238,10 @@
+         if np.isfinite(xy[kp_id, 0]) and conf[kp_id] >= CONF_THRESHOLD:
+             rows.append((float(conf[kp_id]), item["frame_idx"],
+                          float(xy[kp_id, 0]), float(xy[kp_id, 1])))
+     rows.sort(key=lambda r: r[0], reverse=True)
+-    return [f"{item['frame_idx']} ({x:.0f},{y:.0f})" for _, item, x, y in rows[:limit]]
++    return [f"{frame_idx} ({x:.0f},{y:.0f})"
++            for _, frame_idx, x, y in rows[:limit]]
+ 
+ 
+ def build_report(results: list[dict]) -> str:
+     lines = ["# Stage 1 Keypoint Measurement Report", ""]
+
+[0m
+timestamp=2026-10-27T03:49:36.693Z level=INFO run=fe0a3892 message=tracking hash=f10b9c6f4fafc71d83f34848dd8131e348f455d4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:49:36.940Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=7
+timestamp=2026-10-27T03:49:37.173Z level=INFO run=fe0a3892 message=tracking hash=6934cb83b96aad101b0c19c812c757a10dbf89d4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:49:37.182Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7a542e001lC98LsmYWN099q
+timestamp=2026-10-27T03:49:37.183Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:49:37.184Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:49:39.028Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe scripts/stage1_measure_keypoints.py
+[adrian] total_frames=97475 fps=25.000 stride=4873 frames=[0, 4873, 9746, 14619, 19492, 24365, 29238, 34111, 38984, 43857, 48730, 53603, 58476, 63349, 68222, 73095, 77968, 82841, 87714, 92587]
+[adrian] frame 0: 6/18 keypoints >= 0.3
+[adrian] frame 4873: 7/18 keypoints >= 0.3
+[adrian] frame 9746: 6/18 keypoints >= 0.3
+[adrian] frame 14619: 0/18 keypoints >= 0.3
+[adrian] frame 19492: 9/18 keypoints >= 0.3
+[adrian] frame 24365: 6/18 keypoints >= 0.3
+[adrian] frame 29238: 0/18 keypoints >= 0.3
+[adrian] frame 34111: 8/18 keypoints >= 0.3
+[adrian] frame 38984: 0/18 keypoints >= 0.3
+[adrian] frame 43857: 0/18 keypoints >= 0.3
+[adrian] frame 48730: 9/18 keypoints >= 0.3
+[adrian] frame 53603: 6/18 keypoints >= 0.3
+[adrian] frame 58476: 6/18 keypoints >= 0.3
+[adrian] frame 63349: 8/18 keypoints >= 0.3
+[adrian] frame 68222: 6/18 keypoints >= 0.3
+[adrian] frame 73095: 6/18 keypoints >= 0.3
+[adrian] frame 77968: 8/18 keypoints >= 0.3
+[adrian] frame 82841: 6/18 keypoints >= 0.3
+[adrian] frame 87714: 6/18 keypoints >= 0.3
+[adrian] frame 92587: 7/18 keypoints >= 0.3
+[notus_a1] total_frames=100950 fps=25.000 stride=5047 frames=[0, 5047, 10094, 15141, 20188, 25235, 30282, 35329, 40376, 45423, 50470, 55517, 60564, 65611, 70658, 75705, 80752, 85799, 90846, 95893]
+[notus_a1] frame 0: 6/18 keypoints >= 0.3
+[notus_a1] frame 5047: 0/18 keypoints >= 0.3
+[notus_a1] frame 10094: 0/18 keypoints >= 0.3
+[notus_a1] frame 15141: 0/18 keypoints >= 0.3
+[notus_a1] frame 20188: 7/18 keypoints >= 0.3
+[notus_a1] frame 25235: 0/18 keypoints >= 0.3
+[notus_a1] frame 30282: 5/18 keypoints >= 0.3
+[notus_a1] frame 35329: 0/18 keypoints >= 0.3
+[notus_a1] frame 40376: 0/18 keypoints >= 0.3
+[notus_a1] frame 45423: 6/18 keypoints >= 0.3
+[notus_a1] frame 50470: 7/18 keypoints >= 0.3
+[notus_a1] frame 55517: 0/18 keypoints >= 0.3
+[notus_a1] frame 60564: 0/18 keypoints >= 0.3
+[notus_a1] frame 65611: 6/18 keypoints >= 0.3
+[notus_a1] frame 70658: 0/18 keypoints >= 0.3
+[notus_a1] frame 75705: 6/18 keypoints >= 0.3
+[notus_a1] frame 80752: 0/18 keypoints >= 0.3
+[notus_a1] frame 85799: 0/18 keypoints >= 0.3
+[notus_a1] frame 90846: 0/18 keypoints >= 0.3
+[notus_a1] frame 95893: 6/18 keypoints >= 0.3
+[notus_a] total_frames=93650 fps=25.000 stride=4682 frames=[0, 4682, 9364, 14046, 18728, 23410, 28092, 32774, 37456, 42138, 46820, 51502, 56184, 60866, 65548, 70230, 74912, 79594, 84276, 88958]
+[notus_a] frame 0: 6/18 keypoints >= 0.3
+[notus_a] frame 4682: 8/18 keypoints >= 0.3
+[notus_a] frame 9364: 0/18 keypoints >= 0.3
+[notus_a] frame 14046: 6/18 keypoints >= 0.3
+[notus_a] frame 18728: 2/18 keypoints >= 0.3
+[notus_a] frame 23410: 6/18 keypoints >= 0.3
+[notus_a] frame 28092: 0/18 keypoints >= 0.3
+[notus_a] frame 32774: 0/18 keypoints >= 0.3
+[notus_a] frame 37456: 0/18 keypoints >= 0.3
+[notus_a] frame 42138: 6/18 keypoints >= 0.3
+[notus_a] frame 46820: 6/18 keypoints >= 0.3
+[notus_a] frame 51502: 2/18 keypoints >= 0.3
+[notus_a] frame 56184: 0/18 keypoints >= 0.3
+[notus_a] frame 60866: 7/18 keypoints >= 0.3
+[notus_a] frame 65548: 4/18 keypoints >= 0.3
+[notus_a] frame 70230: 6/18 keypoints >= 0.3
+[notus_a] frame 74912: 6/18 keypoints >= 0.3
+[notus_a] frame 79594: 0/18 keypoints >= 0.3
+[notus_a] frame 84276: 6/18 keypoints >= 0.3
+[notus_a] frame 88958: 0/18 keypoints >= 0.3
+Wrote C:\Users\scott\Documents\liberty-basketball-analysis\.team\stage1_keypoints\measurement_report.md
+[0m
+timestamp=2026-10-27T03:50:14.079Z level=INFO run=fe0a3892 message=tracking hash=eb21e575047fcea8c5846b83d53e98c678c16953 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:14.301Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=8
+timestamp=2026-10-27T03:50:14.529Z level=INFO run=fe0a3892 message=tracking hash=b45b3880e23534a18947aaf5e2f462a8bccc7162 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:14.539Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7ae620001MckMtGBJtdQFS7
+timestamp=2026-10-27T03:50:14.539Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:14.541Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:50:18.251Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\measurement_report.md" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:18.258Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\measurement_report.md"
+[0m→ [0mRead .team/stage1_keypoints/measurement_report.md
+timestamp=2026-10-27T03:50:18.482Z level=INFO run=fe0a3892 message=tracking hash=6c3c1271c51dded7bf721cf3571045cbd6276c08 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:18.724Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=9
+timestamp=2026-10-27T03:50:18.968Z level=INFO run=fe0a3892 message=tracking hash=7c2884f0960bf333cc272648b2b99cf963295b65 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:18.978Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7af768001U6QJqQnhjDSQSb
+timestamp=2026-10-27T03:50:18.979Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:18.981Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:50:23.204Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_19492_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:23.218Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_63349_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:23.352Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a1\\frame_20188_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:23.353Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a\\frame_4682_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_19492_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_63349_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/notus_a1/frame_20188_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/notus_a/frame_4682_overlay.jpg
+timestamp=2026-10-27T03:50:23.697Z level=INFO run=fe0a3892 message=tracking hash=8dd4f802f0914142bc289cae51333867e99af8d4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:23.949Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=10
+timestamp=2026-10-27T03:50:24.181Z level=INFO run=fe0a3892 message=tracking hash=4d44f8f28306a4e35a018073b9fcfbc8fef63507 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:24.192Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7b0bd3001MtbtJhVBOaO8d3
+timestamp=2026-10-27T03:50:24.192Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:24.193Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:50:36.568Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="grep -rn \"court_keypoint_detector\" --include=\"*.py\" --include=\"*.md\" --include=\"*.yaml\" --include=\"*.yml\" --include=\"*.json\" . --exclude-dir=.venv --exclude-dir=.git" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:50:36.568Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="head -40" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:50:36.608Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a\\frame_4682.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:36.608Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_19492.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:36.616Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\notus_a\\frame_4682.json"
+[0m→ [0mRead .team/stage1_keypoints/notus_a/frame_4682.json
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_19492.json
+timestamp=2026-10-27T03:50:36.619Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\adrian\\frame_19492.json"
+[0m
+[0m$ [0mgrep -rn "court_keypoint_detector" --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" --include="*.json" . --exclude-dir=.venv --exclude-dir=.git | head -40
+./.team/specs/05_reliable_detector_architecture.md:17:Use the YOLO pose model at `models/court_keypoint_detector.pt` (18 court keypoints per frame; run_v8.py lines 22, 71-73) to detect floor-plane keypoints on every frame. From the detected keypoints, select the floor-plane subset (lane corners, free-throw line corners, baseline corners, sideline intersections — all Z=0 per BIRDS_EYE_HOMOGRAPHY_DESIGN.md §3.1) and compute a homography H_img2court mapping image pixels → court feet (origin = basket center, +Y toward midcourt).
+./.team/specs/05_reliable_detector_architecture.md:29:1. Run `court_keypoint_detector.pt` on frame → 18 keypoints with confidences
+./.team/specs/05_reliable_detector_architecture.md:145:2. Run `court_keypoint_detector.pt` on each frame.
+./.team/specs/05_reliable_detector_architecture.md:265:- **Court keypoint model:** `models/court_keypoint_detector.pt`, 18 keypoints, conf ≥ 0.3 (run_v8.py)
+./.team/specs/05_VERDICT_claude.md:3:**Direction: approved.** Per-frame court geometry from models/court_keypoint_detector.pt, four independent make/miss signals, disagreements flagged and never guessed, Stage 1 measurement first, measured pass gates.
+./.team/specs/06_stage1_keypoints_plan.md:5:**Goal:** Quantify `models/court_keypoint_detector.pt` on ~20 evenly spaced frames per game (Adrian, Notus A1, Notus A). Produce overlay images and JSON per frame, plus a `measurement_report.md`. Measurement only — no changes to `ai_bridge.py` or any existing file, no interpolation, read-only use of the model.
+./.team/specs/06_stage1_keypoints_plan.md:33:court_model = YOLO("models/court_keypoint_detector.pt", verbose=False)
+./.team/specs/06_stage1_keypoints_plan.md:186:2. Load the model from `models/court_keypoint_detector.pt` (relative to repo root)
+./.team/specs/06_stage1_keypoints_plan_v1_REJECTED.md:5:**Goal:** Quantify `models/court_keypoint_detector.pt` on ~20 frames per game (Adrian, Notus A1, Notus A). Produce overlay images and JSON per frame, plus a `measurement_report.md`. Measurement only — no changes to `ai_bridge.py` or any existing file, no interpolation, read-only use of the model.
+./.team/specs/06_stage1_keypoints_plan_v1_REJECTED.md:43:court_model = YOLO("models/court_keypoint_detector.pt", verbose=False)
+./.team/specs/06_stage1_keypoints_plan_v1_REJECTED.md:208:2. Load the model from `models/court_keypoint_detector.pt` (relative to repo root)
+./dist/docs/BALL_DETECTION_AUDIT_2026-06-14.md:66:| `models/court_keypoint_detector.pt` | 398.4 MB | `1d05b062...` | May 24 15:04 | Court keypoint model |
+./dist/docs/BALL_DETECTION_AUDIT_2026-06-14.md:229:6. What the `court_keypoint_detector.pt` and `player_detector.pt` models contain (separate training)
+./dist/docs/BALL_DETECTION_BENCHMARK_2026-06-14.md:108:| `models/court_keypoint_detector.pt` | Court keypoint model |
+./dist/scripts/run_v8.py:22:COURT_MODEL_PATH = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+./docs/BALL_DETECTION_AUDIT_2026-06-14.md:66:| `models/court_keypoint_detector.pt` | 398.4 MB | `1d05b062...` | May 24 15:04 | Court keypoint model |
+./docs/BALL_DETECTION_AUDIT_2026-06-14.md:229:6. What the `court_keypoint_detector.pt` and `player_detector.pt` models contain (separate training)
+./docs/BALL_DETECTION_BENCHMARK_2026-06-14.md:108:| `models/court_keypoint_detector.pt` | Court keypoint model |
+./experiments/pipeline_q1.py:61:court_model = YOLO('models/court_keypoint_detector.pt')
+./experiments/run_shot_detector_v4.py:21:court_model = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/run_shot_minimal.py:14:COURT_MODEL_PATH = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+./experiments/run_shot_v4.py:13:court_model = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/run_shot_v5.py:25:COURT_MODEL = MODELS + '/court_keypoint_detector.pt'
+./experiments/run_shot_v6.py:19:court_m = YOLO(MODELS + '/court_keypoint_detector.pt')
+./experiments/run_shot_v7.py:13:COURT_MODEL = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+./experiments/run_v9.py:48:court_model = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/run_v9b.py:39:court_m = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/run_v9c.py:69:    court_m = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/run_v9f.py:43:    court_m = YOLO('/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt')
+./experiments/shot_v10.py:30:COURT_MODEL = 'models/court_keypoint_detector.pt'
+./experiments/shot_v8.py:12:COURT_MODEL = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+./experiments/test_pretrained_models.py:23:court_model = YOLO(f'{MODELS_DIR}/court_keypoint_detector.pt')
+./net_detector.py:20:COURT_POSE_PATH = ROOT / "models" / "court_keypoint_detector.pt"
+./scripts/run_v8.py:22:COURT_MODEL_PATH = '/home/monk-admin/PROJECTS/liberty-basketball-analysis/models/court_keypoint_detector.pt'
+./scripts/stage1_measure_keypoints.py:19:MODEL_PATH = ROOT / "models" / "court_keypoint_detector.pt"
+[0m
+timestamp=2026-10-27T03:50:37.126Z level=INFO run=fe0a3892 message=tracking hash=6657c5246dfa54f9c23b5146cbb595c2106b6c14 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:37.342Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=11
+timestamp=2026-10-27T03:50:37.590Z level=INFO run=fe0a3892 message=tracking hash=4d9c2154e613465dd9388645f9b4d027c785f4af cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:37.602Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7b4025001ESh8rYDVfLh7wv
+timestamp=2026-10-27T03:50:37.603Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:37.605Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:50:45.980Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a1\\frame_75705_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:46.020Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_0_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:46.021Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a\\frame_23410_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:46.022Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_68222_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+[0m✗ [0mRead .team/stage1_keypoints/adrian/frame_0_overlay.jpg failed
+[91m[1mError: [0mFile not found: C:\Users\scott\Documents\liberty-basketball-analysis\.team\stage1_keypoints\adrian\frame_0_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/notus_a1/frame_75705_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/notus_a/frame_23410_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_68222_overlay.jpg
+timestamp=2026-10-27T03:50:46.406Z level=INFO run=fe0a3892 message=tracking hash=d2bb3e0115c4415e209dbbf03a67408c54c1b012 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:46.659Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=12
+timestamp=2026-10-27T03:50:46.902Z level=INFO run=fe0a3892 message=tracking hash=82440ce05a14c95071b917b6651822eecd98663c cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:46.912Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7b648f001fTh6MLnAUT0k1t
+timestamp=2026-10-27T03:50:46.913Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:46.915Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:50:56.127Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a1\\frame_20188.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:56.132Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\notus_a1\\frame_20188.json"
+[0m→ [0mRead .team/stage1_keypoints/notus_a1/frame_20188.json
+timestamp=2026-10-27T03:50:56.148Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a1\\frame_75705.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:56.159Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_68222.json" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:50:56.160Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\notus_a1\\frame_75705.json"
+[0m→ [0mRead .team/stage1_keypoints/notus_a1/frame_75705.json
+timestamp=2026-10-27T03:50:56.165Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\adrian\\frame_68222.json"
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_68222.json
+timestamp=2026-10-27T03:50:56.402Z level=INFO run=fe0a3892 message=tracking hash=e4634dfac86d3a7eb6351a8884053a09ba3a5929 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:56.653Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=13
+timestamp=2026-10-27T03:50:56.900Z level=INFO run=fe0a3892 message=tracking hash=8b9d891ea2b3010405e38e80e4d9dc2254af0e5f cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:50:56.909Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7b8b97001ToTtqQVrNbWZNs
+timestamp=2026-10-27T03:50:56.909Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:50:56.910Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:51:31.553Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"\nimport cv2\nfrom pathlib import Path\nroot=Path('.team/stage1_keypoints')\nout=Path(r'C:\\Users\\scott\\AppData\\Local\\Temp\\opencode')\nout.mkdir(exist_ok=True)\njobs=[\n ('notus_a1/frame_20188_overlay.jpg',(540,50,1280,520),'n20188_right.jpg',1.5),\n ('notus_a/frame_23410_overlay.jpg',(540,100,1280,520),'na23410_right.jpg',1.5),\n ('notus_a1/frame_75705_overlay.jpg',(0,230,360,520),'n75705_left.jpg',3.0),\n ('notus_a1/frame_75705_overlay.jpg',(480,200,760,660),'n75705_center.jpg',2.5),\n ('adrian/frame_19492_overlay.jpg',(850,330,1300,760),'a19492_right.jpg',2.0),\n ('notus_a/frame_4682_overlay.jpg',(700,120,1200,500),'na4682_right.jpg',2.0),\n]\nfor rel,(x1,y1,x2,y2),name,scale in jobs:\n    img=cv2.imread(str(root/rel))\n    crop=img[y1:y2,x1:x2]\n    crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)\n    cv2.imwrite(str(out/name),crop)\n    print(name,crop.shape)\n\"" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "
+import cv2
+from pathlib import Path
+root=Path('.team/stage1_keypoints')
+out=Path(r'C:\Users\scott\AppData\Local\Temp\opencode')
+out.mkdir(exist_ok=True)
+jobs=[
+ ('notus_a1/frame_20188_overlay.jpg',(540,50,1280,520),'n20188_right.jpg',1.5),
+ ('notus_a/frame_23410_overlay.jpg',(540,100,1280,520),'na23410_right.jpg',1.5),
+ ('notus_a1/frame_75705_overlay.jpg',(0,230,360,520),'n75705_left.jpg',3.0),
+ ('notus_a1/frame_75705_overlay.jpg',(480,200,760,660),'n75705_center.jpg',2.5),
+ ('adrian/frame_19492_overlay.jpg',(850,330,1300,760),'a19492_right.jpg',2.0),
+ ('notus_a/frame_4682_overlay.jpg',(700,120,1200,500),'na4682_right.jpg',2.0),
+]
+for rel,(x1,y1,x2,y2),name,scale in jobs:
+    img=cv2.imread(str(root/rel))
+    crop=img[y1:y2,x1:x2]
+    crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite(str(out/name),crop)
+    print(name,crop.shape)
+"
+n20188_right.jpg (705, 1110, 3)
+na23410_right.jpg (630, 1110, 3)
+n75705_left.jpg (870, 1080, 3)
+n75705_center.jpg (1150, 700, 3)
+a19492_right.jpg (860, 900, 3)
+na4682_right.jpg (760, 1000, 3)
+[0m
+timestamp=2026-10-27T03:51:32.010Z level=INFO run=fe0a3892 message=tracking hash=4199e86cb5f44f04bf8f3ae73abd8b8542c2f982 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:51:32.226Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=14
+timestamp=2026-10-27T03:51:32.473Z level=INFO run=fe0a3892 message=tracking hash=ffb26aabb4069a87562347c0895313ccd20d7d9a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:51:32.487Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7c168c001vAG3Gh5Yms9ibS
+timestamp=2026-10-27T03:51:32.488Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:51:32.489Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:51:36.880Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:51:36.880Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\n20188_right.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:51:36.881Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:51:36.881Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\na23410_right.jpg" action.permission=read action.pattern=* action.action=allow
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/n20188_right.jpg
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/na23410_right.jpg
+timestamp=2026-10-27T03:51:36.992Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:51:36.992Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\n75705_left.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:51:37.030Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:51:37.030Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\a19492_right.jpg" action.permission=read action.pattern=* action.action=allow
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/n75705_left.jpg
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/a19492_right.jpg
+timestamp=2026-10-27T03:51:37.274Z level=INFO run=fe0a3892 message=tracking hash=9f953894aceec7a87cab865da6919dc49ba7c6c3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:51:37.532Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=15
+timestamp=2026-10-27T03:51:37.803Z level=INFO run=fe0a3892 message=tracking hash=d852d2f90c279f7825440316e0bf7df10975c7d3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:51:37.812Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7c2b48001UGOBV5aLxXhYjN
+timestamp=2026-10-27T03:51:37.812Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:51:37.814Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:52:26.598Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"\nimport cv2\nfrom pathlib import Path\nroot=Path('.team/stage1_keypoints')\nout=Path(r'C:\\Users\\scott\\AppData\\Local\\Temp\\opencode')\njobs=[\n ('notus_a1/frame_20188_overlay.jpg',(300,240,1050,500),'n20188_lane.jpg',2.0),\n ('notus_a/frame_23410_overlay.jpg',(340,220,1080,480),'na23410_lane.jpg',2.0),\n ('notus_a/frame_4682_overlay.jpg',(480,250,1200,480),'na4682_lane.jpg',2.0),\n ('notus_a1/frame_50470_overlay.jpg',(100,250,750,550),'n50470_left.jpg',2.5),\n]\nfor rel,(x1,y1,x2,y2),name,scale in jobs:\n    img=cv2.imread(str(root/rel))\n    crop=img[y1:y2,x1:x2]\n    crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)\n    cv2.imwrite(str(out/name),crop)\n    print(name,crop.shape)\n\"" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "
+import cv2
+from pathlib import Path
+root=Path('.team/stage1_keypoints')
+out=Path(r'C:\Users\scott\AppData\Local\Temp\opencode')
+jobs=[
+ ('notus_a1/frame_20188_overlay.jpg',(300,240,1050,500),'n20188_lane.jpg',2.0),
+ ('notus_a/frame_23410_overlay.jpg',(340,220,1080,480),'na23410_lane.jpg',2.0),
+ ('notus_a/frame_4682_overlay.jpg',(480,250,1200,480),'na4682_lane.jpg',2.0),
+ ('notus_a1/frame_50470_overlay.jpg',(100,250,750,550),'n50470_left.jpg',2.5),
+]
+for rel,(x1,y1,x2,y2),name,scale in jobs:
+    img=cv2.imread(str(root/rel))
+    crop=img[y1:y2,x1:x2]
+    crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite(str(out/name),crop)
+    print(name,crop.shape)
+"
+n20188_lane.jpg (520, 1500, 3)
+na23410_lane.jpg (520, 1480, 3)
+na4682_lane.jpg (460, 1440, 3)
+n50470_left.jpg (750, 1625, 3)
+[0m
+timestamp=2026-10-27T03:52:27.013Z level=INFO run=fe0a3892 message=tracking hash=dea679cb15831c8ca8693cc9db87a5e20e9db108 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:52:27.228Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=16
+timestamp=2026-10-27T03:52:27.474Z level=INFO run=fe0a3892 message=tracking hash=3d70b4b46e231185027e66c5ff4ccebc20842bfd cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:52:27.483Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7ced69001uOpHqs19mfkCqg
+timestamp=2026-10-27T03:52:27.483Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:52:27.484Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:52:33.133Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:52:33.134Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\n20188_lane.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:52:33.134Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:52:33.134Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\na23410_lane.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:52:33.135Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:52:33.135Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\na4682_lane.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:52:33.136Z level=INFO run=fe0a3892 message=evaluated permission=external_directory pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.permission=external_directory action.pattern="C:\\Users\\scott\\AppData\\Local\\Temp\\opencode\\*" action.action=allow
+timestamp=2026-10-27T03:52:33.136Z level=INFO run=fe0a3892 message=evaluated permission=read pattern="..\\..\\AppData\\Local\\Temp\\opencode\\n50470_left.jpg" action.permission=read action.pattern=* action.action=allow
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/n50470_left.jpg
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/n20188_lane.jpg
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/na4682_lane.jpg
+[0m→ [0mRead C:/Users/scott/AppData/Local/Temp/opencode/na23410_lane.jpg
+timestamp=2026-10-27T03:52:33.484Z level=INFO run=fe0a3892 message=tracking hash=1a2763f0e590a4088015688367c01d5e9d18f022 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:52:33.743Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=17
+timestamp=2026-10-27T03:52:34.014Z level=INFO run=fe0a3892 message=tracking hash=5cb5f58b2f44a5e1b35f519d937153d86c38c292 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:52:34.026Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7d06df001cRNJvdZp05MXRB
+timestamp=2026-10-27T03:52:34.026Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:52:34.028Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:53:25.096Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"\nfrom ultralytics import YOLO\nimport pprint\nm=YOLO('models/court_keypoint_detector.pt', verbose=False)\nprint('yaml:'); pprint.pp(m.model.yaml)\nprint('ckpt keys:', list(m.ckpt.keys()) if isinstance(m.ckpt,dict) else type(m.ckpt))\nfor k in ('train_args','kpt_names','names','keypoints','dataset'):\n    if isinstance(m.ckpt,dict) and k in m.ckpt:\n        print(k, m.ckpt[k])\n\"" action.permission=* action.action=allow action.pattern=*
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "
+from ultralytics import YOLO
+import pprint
+m=YOLO('models/court_keypoint_detector.pt', verbose=False)
+print('yaml:'); pprint.pp(m.model.yaml)
+print('ckpt keys:', list(m.ckpt.keys()) if isinstance(m.ckpt,dict) else type(m.ckpt))
+for k in ('train_args','kpt_names','names','keypoints','dataset'):
+    if isinstance(m.ckpt,dict) and k in m.ckpt:
+        print(k, m.ckpt[k])
+"
+yaml:
+{'nc': 1,
+ 'kpt_shape': [18, 3],
+ 'scales': {'n': [0.33, 0.25, 1024],
+            's': [0.33, 0.5, 1024],
+            'm': [0.67, 0.75, 768],
+            'l': [1.0, 1.0, 512],
+            'x': [1.0, 1.25, 512]},
+ 'backbone': [[-1, 1, 'Conv', [64, 3, 2]],
+              [-1, 1, 'Conv', [128, 3, 2]],
+              [-1, 3, 'C2f', [128, True]],
+              [-1, 1, 'Conv', [256, 3, 2]],
+              [-1, 6, 'C2f', [256, True]],
+              [-1, 1, 'Conv', [512, 3, 2]],
+              [-1, 6, 'C2f', [512, True]],
+              [-1, 1, 'Conv', [1024, 3, 2]],
+              [-1, 3, 'C2f', [1024, True]],
+              [-1, 1, 'SPPF', [1024, 5]]],
+ 'head': [[-1, 1, 'nn.Upsample', ['None', 2, 'nearest']],
+          [[-1, 6], 1, 'Concat', [1]],
+          [-1, 3, 'C2f', [512]],
+          [-1, 1, 'nn.Upsample', ['None', 2, 'nearest']],
+          [[-1, 4], 1, 'Concat', [1]],
+          [-1, 3, 'C2f', [256]],
+          [-1, 1, 'Conv', [256, 3, 2]],
+          [[-1, 12], 1, 'Concat', [1]],
+          [-1, 3, 'C2f', [512]],
+          [-1, 1, 'Conv', [512, 3, 2]],
+          [[-1, 9], 1, 'Concat', [1]],
+          [-1, 3, 'C2f', [1024]],
+          [[15, 18, 21], 1, 'Pose', ['nc', 'kpt_shape']]],
+ 'scale': 'x',
+ 'yaml_file': 'yolov8x-pose.yaml',
+ 'ch': 3}
+ckpt keys: ['epoch', 'best_fitness', 'model', 'ema', 'updates', 'optimizer', 'train_args', 'train_metrics', 'train_results', 'date', 'version', 'license', 'docs']
+train_args {'task': 'pose', 'mode': 'train', 'model': 'yolov8x-pose.pt', 'data': '/kaggle/working/reloc2-7/data.yaml', 'epochs': 500, 'time': None, 'patience': 100, 'batch': 16, 'imgsz': 640, 'save': True, 'save_period': -1, 'cache': False, 'device': None, 'workers': 8, 'project': None, 'name': 'train', 'exist_ok': False, 'pretrained': True, 'optimizer': 'auto', 'verbose': True, 'seed': 0, 'deterministic': True, 'single_cls': False, 'rect': False, 'cos_lr': False, 'close_mosaic': 10, 'resume': False, 'amp': True, 'fraction': 1.0, 'profile': False, 'freeze': None, 'multi_scale': False, 'overlap_mask': True, 'mask_ratio': 4, 'dropout': 0.0, 'val': True, 'split': 'val', 'save_json': False, 'save_hybrid': False, 'conf': None, 'iou': 0.7, 'max_det': 300, 'half': False, 'dnn': False, 'plots': True, 'source': None, 'vid_stride': 1, 'stream_buffer': False, 'visualize': False, 'augment': False, 'agnostic_nms': False, 'classes': None, 'retina_masks': False, 'embed': None, 'show': False, 'save_frames': False, 'save_txt': False, 'save_conf': False, 'save_crop': False, 'show_labels': True, 'show_conf': True, 'show_boxes': True, 'line_width': None, 'format': 'torchscript', 'keras': False, 'optimize': False, 'int8': False, 'dynamic': False, 'simplify': True, 'opset': None, 'workspace': None, 'nms': False, 'lr0': 0.01, 'lrf': 0.01, 'momentum': 0.937, 'weight_decay': 0.0005, 'warmup_epochs': 3.0, 'warmup_momentum': 0.8, 'warmup_bias_lr': 0.0, 'box': 7.5, 'cls': 0.5, 'dfl': 1.5, 'pose': 12.0, 'kobj': 1.0, 'nbs': 64, 'hsv_h': 0.015, 'hsv_s': 0.7, 'hsv_v': 0.4, 'degrees': 0.0, 'translate': 0.1, 'scale': 0.5, 'shear': 0.0, 'perspective': 0.0, 'flipud': 0.0, 'fliplr': 0.5, 'bgr': 0.0, 'mosaic': 0.0, 'mixup': 0.0, 'copy_paste': 0.0, 'copy_paste_mode': 'flip', 'auto_augment': 'randaugment', 'erasing': 0.4, 'crop_fraction': 1.0, 'cfg': None, 'tracker': 'botsort.yaml', 'save_dir': 'runs/pose/train'}
+[0m
+timestamp=2026-10-27T03:53:26.962Z level=INFO run=fe0a3892 message=tracking hash=7ef0b651262e73dc9ff29d5f0da7e4ddb5a2556b cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:27.217Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=18
+timestamp=2026-10-27T03:53:27.437Z level=INFO run=fe0a3892 message=tracking hash=53bbfd68106de7d7ecf8537bb596584a597c89d0 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:27.447Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7dd7c0001XQZYUhQ90qpOpt
+timestamp=2026-10-27T03:53:27.447Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:53:27.448Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:53:33.418Z level=INFO run=fe0a3892 message=evaluated permission=websearch pattern="reloc2-7 YOLO pose 18 court keypoints dataset names" action.permission=* action.action=allow action.pattern=*
+[0m◈ [0mExa Web Search "reloc2-7 YOLO pose 18 court keypoints dataset names"
+timestamp=2026-10-27T03:53:35.274Z level=INFO run=fe0a3892 message=tracking hash=317f0c4e99c1eeea2518c1f131b17e411d826c49 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:35.533Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=19
+timestamp=2026-10-27T03:53:35.786Z level=INFO run=fe0a3892 message=tracking hash=dd809ac559cc0ca68e81df34df47bf7e04a1b2c4 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:35.796Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7df83b00164YSVHsLgLHZ5D
+timestamp=2026-10-27T03:53:35.796Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:53:35.798Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:53:42.268Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a1\\frame_50470_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:53:42.268Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\notus_a\\frame_60866_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:53:42.268Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_53603_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:53:42.269Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\adrian\\frame_4873_overlay.jpg" action.permission=read action.pattern=* action.action=allow
+[0m→ [0mRead .team/stage1_keypoints/notus_a1/frame_50470_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_4873_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/notus_a/frame_60866_overlay.jpg
+[0m→ [0mRead .team/stage1_keypoints/adrian/frame_53603_overlay.jpg
+timestamp=2026-10-27T03:53:42.698Z level=INFO run=fe0a3892 message=tracking hash=885609db0f79fc64aaae0c4af8defd688562c7ef cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:42.951Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=20
+timestamp=2026-10-27T03:53:43.226Z level=INFO run=fe0a3892 message=tracking hash=9fef1ff6a93243faab5893b282e8899dde1807cf cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:53:43.235Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7e1538001eSTIqBluu3Z5G8
+timestamp=2026-10-27T03:53:43.236Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:53:43.237Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:54:34.270Z level=INFO run=fe0a3892 message=evaluated permission=edit pattern="scripts\\stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:54:34.271Z level=INFO run=fe0a3892 message=formatting file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+timestamp=2026-10-27T03:54:34.275Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\scripts\\stage1_measure_keypoints.py"
+[0m
+[0m← [0mEdit scripts/stage1_measure_keypoints.py
+Index: C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
+===================================================================
+--- C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
++++ C:\Users\scott\Documents\liberty-basketball-analysis\scripts\stage1_measure_keypoints.py
+@@ -52,20 +52,20 @@
+     2: "UNCLEAR",
+     3: "UNCLEAR",
+     4: "UNCLEAR",
+     5: "UNCLEAR",
+-    6: "UNCLEAR",
+-    7: "UNCLEAR",
+-    8: "UNCLEAR",
+-    9: "UNCLEAR",
++    6: "center line at one sideline",
++    7: "center line at the other sideline",
++    8: "3-pt line junction (same landmark as 16)",
++    9: "3-pt line junction, opposite side (same as 17)",
+     10: "UNCLEAR",
+     11: "UNCLEAR",
+-    12: "UNCLEAR",
+-    13: "UNCLEAR",
+-    14: "UNCLEAR",
+-    15: "UNCLEAR",
+-    16: "UNCLEAR",
+-    17: "UNCLEAR",
++    12: "lane corner at FT line (hypothesis)",
++    13: "lane corner at FT line (hypothesis)",
++    14: "baseline lane corner near basket (same as 15)",
++    15: "baseline lane corner near basket (same as 14)",
++    16: "3-pt line junction (same landmark as 8)",
++    17: "3-pt line junction, opposite side (same as 9)",
+ }
+ 
+ 
+ def choose_frames(total_frames: int) -> tuple[int, list[int]]:
+
+[0m
+timestamp=2026-10-27T03:54:34.513Z level=INFO run=fe0a3892 message=tracking hash=a00a71b859dc063570d52cd71cd30bdfd1d3fb11 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:54:34.764Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=21
+timestamp=2026-10-27T03:54:35.081Z level=INFO run=fe0a3892 message=tracking hash=28243e9d521387f59e74406e66a2cda3a97309d3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:54:35.094Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7edf9e001vLSporSnmAiGAq
+timestamp=2026-10-27T03:54:35.095Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:54:35.096Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:54:40.885Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe scripts/stage1_measure_keypoints.py" action.permission=* action.action=allow action.pattern=*
+[0m$ [0m.venv/Scripts/python.exe scripts/stage1_measure_keypoints.py
+[adrian] total_frames=97475 fps=25.000 stride=4873 frames=[0, 4873, 9746, 14619, 19492, 24365, 29238, 34111, 38984, 43857, 48730, 53603, 58476, 63349, 68222, 73095, 77968, 82841, 87714, 92587]
+[adrian] frame 0: 6/18 keypoints >= 0.3
+[adrian] frame 4873: 7/18 keypoints >= 0.3
+[adrian] frame 9746: 6/18 keypoints >= 0.3
+[adrian] frame 14619: 0/18 keypoints >= 0.3
+[adrian] frame 19492: 9/18 keypoints >= 0.3
+[adrian] frame 24365: 6/18 keypoints >= 0.3
+[adrian] frame 29238: 0/18 keypoints >= 0.3
+[adrian] frame 34111: 8/18 keypoints >= 0.3
+[adrian] frame 38984: 0/18 keypoints >= 0.3
+[adrian] frame 43857: 0/18 keypoints >= 0.3
+[adrian] frame 48730: 9/18 keypoints >= 0.3
+[adrian] frame 53603: 6/18 keypoints >= 0.3
+[adrian] frame 58476: 6/18 keypoints >= 0.3
+[adrian] frame 63349: 8/18 keypoints >= 0.3
+[adrian] frame 68222: 6/18 keypoints >= 0.3
+[adrian] frame 73095: 6/18 keypoints >= 0.3
+[adrian] frame 77968: 8/18 keypoints >= 0.3
+[adrian] frame 82841: 6/18 keypoints >= 0.3
+[adrian] frame 87714: 6/18 keypoints >= 0.3
+[adrian] frame 92587: 7/18 keypoints >= 0.3
+[notus_a1] total_frames=100950 fps=25.000 stride=5047 frames=[0, 5047, 10094, 15141, 20188, 25235, 30282, 35329, 40376, 45423, 50470, 55517, 60564, 65611, 70658, 75705, 80752, 85799, 90846, 95893]
+[notus_a1] frame 0: 6/18 keypoints >= 0.3
+[notus_a1] frame 5047: 0/18 keypoints >= 0.3
+[notus_a1] frame 10094: 0/18 keypoints >= 0.3
+[notus_a1] frame 15141: 0/18 keypoints >= 0.3
+[notus_a1] frame 20188: 7/18 keypoints >= 0.3
+[notus_a1] frame 25235: 0/18 keypoints >= 0.3
+[notus_a1] frame 30282: 5/18 keypoints >= 0.3
+[notus_a1] frame 35329: 0/18 keypoints >= 0.3
+[notus_a1] frame 40376: 0/18 keypoints >= 0.3
+[notus_a1] frame 45423: 6/18 keypoints >= 0.3
+[notus_a1] frame 50470: 7/18 keypoints >= 0.3
+[notus_a1] frame 55517: 0/18 keypoints >= 0.3
+[notus_a1] frame 60564: 0/18 keypoints >= 0.3
+[notus_a1] frame 65611: 6/18 keypoints >= 0.3
+[notus_a1] frame 70658: 0/18 keypoints >= 0.3
+[notus_a1] frame 75705: 6/18 keypoints >= 0.3
+[notus_a1] frame 80752: 0/18 keypoints >= 0.3
+[notus_a1] frame 85799: 0/18 keypoints >= 0.3
+[notus_a1] frame 90846: 0/18 keypoints >= 0.3
+[notus_a1] frame 95893: 6/18 keypoints >= 0.3
+[notus_a] total_frames=93650 fps=25.000 stride=4682 frames=[0, 4682, 9364, 14046, 18728, 23410, 28092, 32774, 37456, 42138, 46820, 51502, 56184, 60866, 65548, 70230, 74912, 79594, 84276, 88958]
+[notus_a] frame 0: 6/18 keypoints >= 0.3
+[notus_a] frame 4682: 8/18 keypoints >= 0.3
+[notus_a] frame 9364: 0/18 keypoints >= 0.3
+[notus_a] frame 14046: 6/18 keypoints >= 0.3
+[notus_a] frame 18728: 2/18 keypoints >= 0.3
+[notus_a] frame 23410: 6/18 keypoints >= 0.3
+[notus_a] frame 28092: 0/18 keypoints >= 0.3
+[notus_a] frame 32774: 0/18 keypoints >= 0.3
+[notus_a] frame 37456: 0/18 keypoints >= 0.3
+[notus_a] frame 42138: 6/18 keypoints >= 0.3
+[notus_a] frame 46820: 6/18 keypoints >= 0.3
+[notus_a] frame 51502: 2/18 keypoints >= 0.3
+[notus_a] frame 56184: 0/18 keypoints >= 0.3
+[notus_a] frame 60866: 7/18 keypoints >= 0.3
+[notus_a] frame 65548: 4/18 keypoints >= 0.3
+[notus_a] frame 70230: 6/18 keypoints >= 0.3
+[notus_a] frame 74912: 6/18 keypoints >= 0.3
+[notus_a] frame 79594: 0/18 keypoints >= 0.3
+[notus_a] frame 84276: 6/18 keypoints >= 0.3
+[notus_a] frame 88958: 0/18 keypoints >= 0.3
+Wrote C:\Users\scott\Documents\liberty-basketball-analysis\.team\stage1_keypoints\measurement_report.md
+[0m
+timestamp=2026-10-27T03:55:15.649Z level=INFO run=fe0a3892 message=tracking hash=ebeb094557111f1b5e21ce008a2cfa7f74aec49a cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:15.898Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=22
+timestamp=2026-10-27T03:55:16.171Z level=INFO run=fe0a3892 message=tracking hash=413c115c883a3774227b8b74cf4f715eca0508c3 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:16.184Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7f804e001Mr0n84FSmG24Aw
+timestamp=2026-10-27T03:55:16.185Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:55:16.186Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:55:24.579Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"\nimport json\nfrom pathlib import Path\nroot=Path('.team/stage1_keypoints')\nfor g in ('adrian','notus_a1','notus_a'):\n    d=root/g\n    ov=sorted(d.glob('*_overlay.jpg')); js=sorted(d.glob('frame_*.json')); su=sorted(d.glob('summary_*.json'))\n    print(g, 'overlays', len(ov), 'frame_jsons', len(js), 'summaries', len(su))\n    assert len(ov)==20 and len(js)==20 and len(su)==1\n    for p in js:\n        r=json.loads(p.read_text())\n        assert r['game']==g and len(r['keypoints'])==18\n        assert r['H_computed'] is False and r['H_inliers'] is None and r['reproj_error_px'] is None and r['half_court_y_ft'] is None\n        assert all(k['label']==f'UNKNOWN_{k[\\\"id\\\"]}' for k in r['keypoints'])\n        assert sum(1 for k in r['keypoints'] if k['conf']>=0.3)==r['keypoints_detected_conf_0_3']\n    s=json.loads(su[0].read_text())\n    assert set(s)=={'game','video_path','total_frames','frames_analyzed','frame_indices','keypoint_detection_freq'}\n    assert len(s['frame_indices'])==s['frames_analyzed']==20\n    assert set(s['keypoint_detection_freq'])=={str(i) for i in range(18)}\nprint('all schema checks passed; report exists:', (root/'measurement_report.md').exists())\n\"" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:55:24.598Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern="git status --porcelain -- scripts/stage1_measure_keypoints.py .team/stage1_keypoints .team/specs/06_stage1_keypoints_plan.md" action.permission=* action.action=allow action.pattern=*
+timestamp=2026-10-27T03:55:24.626Z level=INFO run=fe0a3892 message=evaluated permission=bash pattern=".venv/Scripts/python.exe -c \"\nfrom pathlib import Path\nroot=Path('.team/stage1_keypoints')\nprint('total files under stage1_keypoints:', sum(1 for p in root.rglob('*') if p.is_file()))\nprint('script bytes:', Path('scripts/stage1_measure_keypoints.py').stat().st_size)\n\"" action.permission=* action.action=allow action.pattern=*
+[0m$ [0mgit status --porcelain -- scripts/stage1_measure_keypoints.py .team/stage1_keypoints .team/specs/06_stage1_keypoints_plan.md
+?? .team/specs/06_stage1_keypoints_plan.md
+?? .team/stage1_keypoints/
+?? scripts/stage1_measure_keypoints.py
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "
+from pathlib import Path
+root=Path('.team/stage1_keypoints')
+print('total files under stage1_keypoints:', sum(1 for p in root.rglob('*') if p.is_file()))
+print('script bytes:', Path('scripts/stage1_measure_keypoints.py').stat().st_size)
+"
+total files under stage1_keypoints: 124
+script bytes: 11288
+[0m
+[0m$ [0m.venv/Scripts/python.exe -c "
+import json
+from pathlib import Path
+root=Path('.team/stage1_keypoints')
+for g in ('adrian','notus_a1','notus_a'):
+    d=root/g
+    ov=sorted(d.glob('*_overlay.jpg')); js=sorted(d.glob('frame_*.json')); su=sorted(d.glob('summary_*.json'))
+    print(g, 'overlays', len(ov), 'frame_jsons', len(js), 'summaries', len(su))
+    assert len(ov)==20 and len(js)==20 and len(su)==1
+    for p in js:
+        r=json.loads(p.read_text())
+        assert r['game']==g and len(r['keypoints'])==18
+        assert r['H_computed'] is False and r['H_inliers'] is None and r['reproj_error_px'] is None and r['half_court_y_ft'] is None
+        assert all(k['label']==f'UNKNOWN_{k[\"id\"]}' for k in r['keypoints'])
+        assert sum(1 for k in r['keypoints'] if k['conf']>=0.3)==r['keypoints_detected_conf_0_3']
+    s=json.loads(su[0].read_text())
+    assert set(s)=={'game','video_path','total_frames','frames_analyzed','frame_indices','keypoint_detection_freq'}
+    assert len(s['frame_indices'])==s['frames_analyzed']==20
+    assert set(s['keypoint_detection_freq'])=={str(i) for i in range(18)}
+print('all schema checks passed; report exists:', (root/'measurement_report.md').exists())
+"
+adrian overlays 20 frame_jsons 20 summaries 1
+notus_a1 overlays 20 frame_jsons 20 summaries 1
+notus_a overlays 20 frame_jsons 20 summaries 1
+all schema checks passed; report exists: True
+[0m
+timestamp=2026-10-27T03:55:24.995Z level=INFO run=fe0a3892 message=tracking hash=2e5ab8c4db0859cc9f15344ecbb5bcca8b3d867f cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:25.245Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=23
+timestamp=2026-10-27T03:55:25.469Z level=INFO run=fe0a3892 message=tracking hash=1a1d4d77010455ce4ed58f0d5ae3f2418054d053 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:25.480Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7fa4cf001Rvxo0sij4uOsD9
+timestamp=2026-10-27T03:55:25.481Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:55:25.482Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:55:31.104Z level=INFO run=fe0a3892 message=evaluated permission=read pattern=".team\\stage1_keypoints\\measurement_report.md" action.permission=read action.pattern=* action.action=allow
+timestamp=2026-10-27T03:55:31.112Z level=INFO run=fe0a3892 message="touching file" file="C:\\Users\\scott\\Documents\\liberty-basketball-analysis\\.team\\stage1_keypoints\\measurement_report.md"
+[0m→ [0mRead .team/stage1_keypoints/measurement_report.md
+timestamp=2026-10-27T03:55:31.372Z level=INFO run=fe0a3892 message=tracking hash=b52216617720fda2b194ffbfb564441226a8a90d cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:31.616Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=24
+timestamp=2026-10-27T03:55:31.880Z level=INFO run=fe0a3892 message=tracking hash=01e6309cc528bbe5240ffcb7ae2ac34eea736f39 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:31.891Z level=INFO run=fe0a3892 message=process session.id=ses_e84870a82ffezUQz6Wa9zhu5tR messageID=msg_17b7fbdb2001JgBA7mq1ZfUFJ4
+timestamp=2026-10-27T03:55:31.891Z level=INFO run=fe0a3892 message=stream providerID=opencode modelID=deepseek-v4.1-flash-free session.id=ses_e84870a82ffezUQz6Wa9zhu5tR small=false agent=build mode=primary
+timestamp=2026-10-27T03:55:31.893Z level=INFO run=fe0a3892 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=deepseek-v4.1-flash-free
+timestamp=2026-10-27T03:55:48.725Z level=INFO run=fe0a3892 message=tracking hash=3f8c68c4d08061a2cf1f75a44bd09fc7c3e156f6 cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T03:55:48.932Z level=INFO run=fe0a3892 message=loop session.id=ses_e84870a82ffezUQz6Wa9zhu5tR step=25
+timestamp=2026-10-27T03:55:48.950Z level=INFO run=fe0a3892 message="exiting loop" session.id=ses_e84870a82ffezUQz6Wa9zhu5tR
+timestamp=2026-10-27T03:55:48.971Z level=INFO run=fe0a3892 message="disposing instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"

@@ -1,0 +1,189 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/24_fall_through_guard_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "FALL-THROUGH GUARD SPEC v1 - not run". Plain markdown, no line-number 
+prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your 
+write tool refuses, say so plainly.
+
+Scott 2026-11-02: "Yes, go with that revised version of Option A." He wants the 
+make-calls of the new ball model d2v1 restricted so a make needs the ball SEEN 
+falling through the hoop. The net-movement branch is dropped: 
+net_moved_after_shot is True on 40 of 95 build misses and on 3 of the 5 false 
+makes 
+(C:/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json, 
+net_moved_summary.md).
+
+Facts (Claude Code checked this session):
+- d2v1 in D1 unchanged: makes_right 29, misses_called_makes 5, all Adrian t = 
+39400, 530600, 705200, 1166800, 2441900 
+(C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test2/d2_results.json). 
+v6 old reasons for those: short_track_left_net x2, ball_box_jump, 
+short_net_depth, short_make_bodd_fail. All 5 now have anchor_reason "crossing".
+- Make decision: .team/shot_detectors/small_fixes_v6_copy.py decide_shot (line 
+174), called by .team/shot_detectors/keep_ball_detections.py 
+step_arc_rule_report (line 1098). Read both. Also read small_fixes_v6_copy.py 
+short_track_stays_in_net (line 119).
+- Adrian Q4: 18 tagged shots in 
+data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json 
+(Scott tagged all 4 quarters). Its track file 
+C:/Users/scott/AppData/Local/Temp/v6_tracks_q4.json NO LONGER EXISTS. Old Q4 
+scripts at repo root: score_q4_v6_rule.py, collect_q4_bodd.py, 
+extend_q4_tracker.py, extract_robust_q4_hoops.py, evaluate_q4_tracks.py (read 
+them to find how Q4 tracks were built). v6 was scored on Q4 in Oct, but no 
+D1/D2/guard work has looked at Q4.
+
+THE RULE, locked in writing by Scott before any run (copy it exactly, then state
+each number):
+- The ball center must cross the rim's horizontal plane (hoop_y) moving DOWN.
+- During that descent the ball x must stay strictly within the rim's diameter: 
+|x - hoop_x| < 0.5 * hoop_w.
+- The track must continue below rim level while keeping that alignment, even if 
+the path is short.
+For "how far below rim" and "how many points", use ONLY a number that already 
+exists in small_fixes_v6_copy.py or keep_ball_detections.py (name the line), or 
+ask Scott. Do not invent a new number. Say where the guard applies (every make 
+d2v1 calls) and that it can only turn a make into a miss, never a miss into a 
+make. New code is a new default-OFF switch or wrapper in .team/shot_detectors/ 
+only; no core file, no models/ball_detector.pt, ball_confidence 0.28 unchanged, 
+applied_to_core false.
+
+Sections to write:
+1. Goal and Scott's words.
+2. The rule (above) with every number and its source line.
+3. Code change: files, function, switch name, default OFF so old results are 
+unchanged. Tests: switch OFF gives today's d2_results exactly; hand-made tracks:
+straight drop inside rim -> make kept; drop outside 0.5*hoop_w -> miss; ball 
+goes up after crossing -> miss; track ends at the rim -> miss.
+4. Rebuild Adrian Q4 tracks (how, which script, output path outside the repo, no
+core edits), then D1 extract on Q4 with v6 (baseline) and with d2v1 
+best_basketball.pt.
+5. Runs, each ONCE, numbers fixed now: (a) safety test on 140 build shots with 
+guard ON: pass = misses_called_makes == 0 AND makes_right >= 29. (b) Adrian Q4 
+blind test, guard ON: pass = misses_called_makes == 0 AND makes_right >= v6 
+baseline makes_right on Q4. Report both, then stop for Scott. No tuning after 
+results; any fail goes to Scott once.
+6. Who: Claude Code vets, Muse checks, coder named by Scott's roster (Cursor 
+codes the main program); Hermes and Muse check the diff.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read small_fixes_v6_copy.py  0.2s
+📖 Read keep_ball_detections.py L1090-1119  0.2s
+📖 Read small_fixes_v6_copy.py L115-134  0.2s
+📖 Read small_fixes_v6_copy.py L170-199  0.2s
+📖 Read keep_ball_detections.py L1120-1169
+📖 Read net_moved_build_results.json  0.1s
+📖 Read d2_results.json  0.1s
+📖 Read d2_results.json L50-149  0.1s
+📖 Read net_moved_summary.md  0.1s
+🔎 Find score_q4_v6_rule\.py|collect_q4_bodd\.py|extend_q4_tracker\.py|extract_robust_q4_hoops\.py|evaluate_q4_tracks\.py  3.8s
+📖 Read jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json  3.9s
+🔎 Find score_q4|collect_q4|extend_q4|extract_robust_q4|evaluate_q4  3.6s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/*.py 2>/dev/null  0.3s
+✗ $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/*q4*.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/*Q4*.py 2>/dev/null  0.1s [exit 2]
+📖 Read score_q4_v6_rule.py
+📖 Read collect_q4_bodd.py
+📖 Read extend_q4_tracker.py
+📖 Read extract_robust_q4_hoops.py
+📖 Read evaluate_q4_tracks.py
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the information needed. Let me create the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/24_fall_through_guard_spec.md  0.1s
+│ .team/specs/24_fall_through_guard_spec.md
+│ @@ -0,0 +1,78 @@
+│ +FALL-THROUGH GUARD SPEC v1 - not run
+│ +
+│ +# 1. Goal and Scott's words
+│ +
+│ +Scott 2026-11-02: "Yes, go with that revised version of Option A." He wants the make-calls of the new ball model d2v1 restricted so a make needs the ball SEEN falling through the hoop.
+│ +
+│ +The net-movement branch is dropped: net_moved_after_shot is True on 40 of 95 build misses and on 3 of the 5 false makes (C:/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json, net_moved_summary.md).
+│ +
+│ +# 2. The Rule (locked in writing by Scott — copy exactly)
+│ +
+│ +- The ball center must cross the rim's horizontal plane (hoop_y) moving DOWN.
+│ +- During that descent the ball x must stay strictly within the rim's diameter: |x - hoop_x| < 0.5 * hoop_w.
+│ +- The track must continue below rim level while keeping that alignment, even if the path is short.
+│ +
+│ +For "how far below rim" and "how many points", use ONLY a number that already exists in small_fixes_v6_copy.py or keep_ball_detections.py (name the line), or ask Scott. Do not invent a new number.
+│ +
+│ +Existing numbers in small_fixes_v6_copy.py that may serve:
+│ +- 180 px (line 239): `y_rel <= (180.0 * scale_y)` — net_depth_frames depth limit
+│ +- 80 px (lines 299, 308): `y_rel >= (80.0 * scale_y)` — column-ratio zone / deep-points threshold
+│ +- 150 px (line 149): `max_y < (150.0 * scale_y)` — short-track threshold in short_track_stays_in_net
+│ +- 5 px (line 483): `max_depth - (5.0 * scale_y)` — bounce-back tolerance
+│ +- 70 px (line 138): `max_y + (70.0 * scale_y)` — body-track band after last ball frame
+│ +- 40 px (line 143): `y0 + (40.0 * scale_y)` — falling body-track check
+│ +
+│ +# 3. Code change
+│ +
+│ +Files to create/modify (in .team/shot_detectors/ only):
+│ +- New default-OFF switch or wrapper function in a new file (e.g., fall_through_guard.py) or added to small_fixes_v6_copy.py alongside the existing switches.
+│ +- Switch name: `switch_fall_through` (or equivalent), default `False`.
+│ +- Applied in `decide_shot` (small_fixes_v6_copy.py line 174) — called by `step_arc_rule_report` (keep_ball_detections.py line 1098).
+│ +- No edits to ai_bridge.py, models/ball_detector.pt, or any core file.
+│ +- ball_confidence 0.28 unchanged.
+│ +- applied_to_core: false.
+│ +
+│ +Behavior when switch is ON:
+│ +- After the existing crossing is accepted (cross_idx), verify the three conditions above on the ball track points from that crossing forward.
+│ +- Can only turn a make into a miss; never a miss into a make.
+│ +- If any condition fails, return False with a new reason (e.g., "fall_through_fail").
+│ +
+│ +Tests (must pass before Scott sees results):
+│ +- Switch OFF gives today's d2_results exactly (makes_right=29, misses_called_makes=5).
+│ +- Hand-made tracks:
+│ +  - Straight drop inside rim (|x - hoop_x| < 0.5 * hoop_w all the way down) → make kept.
+│ +  - Drop outside 0.5 * hoop_w at any point during descent → make turned to miss.
+│ +  - Ball goes up after crossing (y decreases) → make turned to miss.
+│ +  - Track ends at the rim (no points below hoop_y) → make turned to miss.
+│ +
+│ +# 4. Rebuild Adrian Q4 tracks
+│ +
+│ +How: run the existing Q4 build scripts in order, using the video and tags already on disk:
+│ +1. collect_q4_bodd.py — collects hoop/ball boxes for the 18 Q4 tags, appends to bodd_shots.json, writes v6_tracks_q4.json to C:\Users\scott\AppData\Local\Temp\v6_tracks_q4.json (outside the repo).
+│ +2. (If needed) extend_q4_tracker.py / build_q4_candidate_tracks.py / generate_q4_forced_tracks.py — per the October pipeline, to produce a complete track file for the 18 Q4 shots.
+│ +3. No core edits; the scripts already exist at repo root and write to the Temp path.
+│ +
+│ +Then D1 extract on Q4:
+│ +- Baseline: run run_saved_v6_rule (v6) on the rebuilt Q4 tracks → record makes_right, missed_makes, misses_called_makes.
+│ +- d2v1 best_basketball.pt: run the D1 extractor (the d2v1 pipeline) on the same Q4 tracks → record same metrics.
+│ +
+│ +# 5. Runs — each ONCE, numbers fixed now
+│ +
+│ +(a) Safety test on 140 build shots with guard ON:
+│ +- Pass = misses_called_makes == 0 AND makes_right >= 29.
+│ +
+│ +(b) Adrian Q4 blind test with guard ON:
+│ +- Pass = misses_called_makes == 0 AND makes_right >= v6 baseline makes_right on Q4.
+│ +
+│ +Report both results, then stop for Scott. No tuning after results; any fail goes to Scott once.
+│ +
+│ +# 6. Who
+│ +
+│ +- Claude Code vets the plan and the code.
+│ +- Muse checks the Vetter: AGREE or DISAGREE with each VETTED/PASS; a DISAGREE stops the loop for Scott.
+│ +- Coder named by Scott's roster (Cursor codes the main program).
+│ +- Hermes and Muse check the diff.
+│ +
+│ +---
+│ +
+│ +Every fact from a file read or the lines above; otherwise "NOT FOUND - Claude Code to check".
+📖 Read 24_fall_through_guard_spec.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Created /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/24_fall_through_guard_spec.md with line 1 exactly as required.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-e6f4a7e26dd3642f20795ac58bb5ed9dd73a7542049a457d6924efa65d71e6fb
+  hermes -c "Create fall-through guard spec file"
+
+Session:        local-e6f4a7e26dd3642f20795ac58bb5ed9dd73a7542049a457d6924efa65d71e6fb
+Title:          Create fall-through guard spec file
+Duration:       2m 4s
+Messages:       34 (1 user, 32 tool calls)

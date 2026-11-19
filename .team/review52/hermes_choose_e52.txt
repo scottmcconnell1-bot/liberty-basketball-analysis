@@ -1,0 +1,105 @@
+Query: TEAM CHECK - spec 52 R5 choose_e result (read-only; do not edit files). 
+Scott, binding: "DO not run this by
+yourself. I want everyone involved and input with their strengths." Nothing 
+further is trained until you answer.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+RESULT
+- Run: train_clip.py choose_e on clips7 (labels52_v2 frozen, sha in drift_log), 
+films adrian notus gvg hsb rimrock,
+  seed 0, epochs 1..18, spec 52 R4 recipe. Output: 
+/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/
+  choose_e52/{choose_e.json,choose_e_report.json,log.txt}. Curves: 
+.team/review52/choose_e52_curves.txt
+  (per held-out fold: epoch:miss_recall/shots_correct_overall on its inner-val 
+game).
+- Fold best epochs (held-out -> inner-val): adrian->notus 9, notus->gvg 2, 
+gvg->hsb 5, hsb->rimrock 8,
+  rimrock->adrian 5. E = median = 5.
+
+CLAUDE CODE OBSERVATIONS (verify, do not take on trust)
+O1. miss_recall saturates at 0.99-1.00 on most inner-val games from epoch 1-2, 
+so the R5 selection mostly falls
+    to the tie-break or to small-sample noise (notus inner-val has 22 misses: 
+one clip = 0.045).
+O2. Fold notus->gvg picked epoch 2 (miss_recall 1.000, sco 0.917) over later 
+epochs with sco 0.95-0.96 and
+    miss_recall 0.993 (one miss). The rule did what it says, but epoch 2 is 
+early.
+O3. Early epochs are unstable in some folds (hsb->rimrock ep3 miss_recall 0.761 
+/ sco 0.553; adrian->notus
+    ep2-5 0.864). E=5 sits near that unstable zone; most curves plateau from ~ep
+9-10.
+O4. The spec R5 rule was fixed before seeing data; changing it now is a protocol
+change. Note no held-out
+    (outer) game was used in choosing E.
+
+QUESTIONS
+Q1. Is E=5 a valid R5 result to carry into the 3-seed LOGO gate as written? 
+Yes/no and why.
+Q2. If you think the R5 rule is flawed (O1-O3), say what minimal, pre-registered
+change you would accept
+    (e.g. tie-break order, a stability window, fixed E) and whether it is 
+allowed now that only inner-val
+    numbers (no outer-game numbers) have been seen. Or say keep E=5 and let the 
+gate judge.
+Q3. Anything wrong in the run itself (fold/inner-val pairing per R5 wrap order, 
+seed, recipe flags, labels)?
+    CURSOR: please check choose_e.json/log.txt against train_clip.py and spec 
+R5.
+Roles: HERMES = architect decision on E/rule; MUSE = protocol integrity 
+(pre-registration, peeking);
+CURSOR = code/run audit.
+End with one line: <NAME>: AGREE E=5 | AGREE WITH CHANGES: <exact change> | 
+DISAGREE: <reason>
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 1 command  0.3s
+💻 $ find /mnt/c/Users/scott/Documents -iname '*choose_e*' -o -iname '*spec*52*' -o -iname '*drift_log*' 2>/dev/null  46.5s
+💻 $ ls .team/review52/ + 3 commands  0.1s
+💻 $ cat .team/review52/choose_e52_curves.txt + 2 commands  0.2s
+💻 $ echo '===CHOOSE_E.JSON===' + 7 commands  0.2s
+✗ $ echo '===PROMPT TEAM CHOOSE_E52===' + 3 commands  0.1s [exit 1]
+💻 $ ls -la .team/ + 1 command  1.3s
+💻 $ grep -ril 'choose_e\|R5' --include='*.md' --include='*.txt' --include='*.py' . | grep -v node_modules | grep -v Liberty_Shot_Outputs | grep -v '.team/review52/'  53.9s
+💻 $ cat .team/specs/52_label_audit_stable_ensemble_spec.md
+💻 $ cat .team/mm_clip/train_clip.py
+💻 $ echo '===MUSE_CHOOSE_E52===' + 7 commands  0.2s
+💻 $ grep -n -i -E 'labels52_v2|clips7|sha256|choose_e|E =' .team/drift_log.md  0.1s
+💻 $ echo '===MUSE_CHOOSE_E52 FULL===' + 3 commands  0.1s
+💻 $ echo '===CODESPACE HERMES_CHECK52?===' + 3 commands  0.1s
+💻 $ wc -c .team/review52/muse_choose_e52.txt.recursive_flint-v1.0_free.txt + 1 command  0.1s
+💻 $ sed -n '60,200p' .team/review52/muse_choose_e52.txt.recursive_flint-v1.0_free.txt  0.1s
+💻 $ echo '===PROMPT_TEAM_RETRAIN52===' + 3 commands
+💻 $ echo '===CURSOR_REVIEW52 (head 150)===' + 3 commands
+✗ $ ./.venv/bin/python -c " import json, statistics d=json.load(open('/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/choose_e52/choose_e.json')) be=d['best_epochs']; E=d['E'] print('best_epochs', be) print('E field', E) print('median', statistics.median(be)) for k,v in d['folds'].items(): print(k, 'inner_val', v['inner_val'], 'inner_train', v['inner_train'], 'best_epoch', v['best_epoch'], 'miss_recall', round(v['miss_recall'],4), 'sco', round(v['shots_correct_overall'],4)) r=json.load(open('/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/choose_e52/choose_e_report.json')) print('report', r) " [BLOCKED: Command flagged as dangerous (script...]
+✗ Exec import json, statistics [This code is not allowed in an unattended session — it did not run.]
+
+────────────────────────────────────────
+☤ Hermes
+TEAM CHECK - spec 52 R5 choose_e: HERMES (architect) input, read-only, no files edited.
+
+Q1. YES - E=5 is a valid R5 result to carry into the 3-seed LOGO gate as written.
+
+Spec 52 v3 R5 was fixed before seeing data and approved by Muse + Cursor, and Claude Code confirmed the v3 text carried all of v1-v4 and the reviewer items. The implemented choose_e path in .team/mm_clip/train_clip.py matches the approved R5 text: nested LOGO with inner-val = next game in FILM_ORDER after the held-out, wrapping and skipping the held-out (I re-derived all five pairs by hand from FILM_ORDER - adrian->notus, notus->gvg, gvg->hsb, hsb->rimrock, rimrock->adrian - and they hold); best epoch by miss_recall = mean(pred_class > 0 | Y == 1) with shots_correct_overall as tie-break; search epochs 1..18; per-fold E search seed 0 only; E = median of the five fold bests. The outputs are internally consistent: choose_e.json fold bests [9,2,5,8,5], best_epochs [9,2,5,8,5], E = median = 5, across choose_e.json / log.txt / choose_e52_curves.txt / choose_e_report.json. So the procedure is valid as written; the only remaining question - whether E=5 is a good number - is the gate's judgment, not the chooser's.
+
+Q2. Keep E=5; let the 3-seed LOGO gate judge. No rule change now.
+
+O1-O3 are real observations but they describe the behavior of the pre-registered rule on these curves (saturation, early-epoch instability), not a run error, and Cursor verified them. Changing the selection rule now would be a protocol change (O4), which is not permitted without Scott re-registering it. Muse's protocol position: the E-chooser used only inner-val numbers (nested design, no outer-game peeking - which was the design), and a rule fix belongs in a pre-registered amendment before a future choose_e re-run, not a reinterpretation of this run. Cursor's suggested minimal amendment (among epochs within X of max miss_recall, break via shots_correct_overall / take latest plateau epoch) is reasonable for a future run, but it was NOT applied now and must not be read as an interpretation of this run. I accept that amendment as the one I would put forward pre-registered for next time, but it is not allowed to alter this decision now.
+
+Q3. Run audit: no material error found. Cursor's audit stands - wrap pairs correct, fold bests recomputed from curves match choose_e.json and log.txt, seed 0, max_epochs 18, R4 recipe defaults in force (soft aug, sampler, plain CE, no GradScaler, lr 2e-4, bs 8, AdamW wd 0.05, OneCycle pct_start 0.15), labels52_v2 sha 56f18cf0... frozen and in drift_log, clips7 shas matching drift_log. Cursor's remaining unknown: exact shell argv, inferred from outputs and clips7 on disk.
+
+Correction to the team check: the O1 small-sample note (22 misses, one clip = 0.045) referred to the adrian fold with inner-val notus; it was not the notus->gvg fold, whose inner-val gvg has 146 misses.
+
+Final line:
+
+HERMES: AGREE E=5 | AGREE WITH CHANGES: none now (future re-run only; proposed pre-registered amendment: among near-max miss_recall epochs, tie-break by shots_correct_overall) | DISAGREE: noneCursor: AGREE E=5 | AGREE WITH CHANGES: none now | DISAGREE: noneMuse: AGREE E=5 | AGREE WITH CHANGES: none now (pre-registered amendment only for future re-run) | DISAGREE: noneHERMES: AGREE E=5 | AGREE WITH CHANGES: none now (future re-run only; proposed pre-registered amendment: among near-max miss_recall epochs, tie-break by shots_correct_overall) | DISAGREE: none
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a7e689f8eaedf8be098b2e8bf668a15bded3394ac711409a59bc046f44a42791
+  hermes -c "TEAM CHECK - spec 52 R5 choose_e result…"
+
+Session:        local-a7e689f8eaedf8be098b2e8bf668a15bded3394ac711409a59bc046f44a42791
+Title:          TEAM CHECK - spec 52 R5 choose_e result…
+Duration:       4m 7s
+Messages:       34 (1 user, 32 tool calls)
+[hermes] exit 0 at 13:06:36

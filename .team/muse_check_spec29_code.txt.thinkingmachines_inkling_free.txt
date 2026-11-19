@@ -1,0 +1,25 @@
+Query: Muse, check Cursor's code for .team/specs/29_bigger_wide_view_spec.md 
+(VETTED; you AGREEd). File: .team/shot_detectors/make_review_queue_page.py. 
+Claude Code ran this session: pytest .team/shot_detectors -q -> 103 passed; run 
+to Liberty_Shot_Outputs/review_queue/page_v5: gray 30, orange 9, 42 shots; 0 
+close-up jpgs differ from page_v4; wide jpgs 1920x1080; 296 MB; page JS passes 
+node --check. Check code matches spec, no dead code, nothing else touched, no 
+call changed. Reasons, then exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE".
+📖 Read 29_bigger_wide_view_spec.md  0.1s
+📖 Read make_review_queue_page.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Reasons: wide-combined only in make_review_queue_page.py; wide JPEG written at source fr (no resize, 1920x1080); layout .wrap{1fr} with .view img.wide on top then .close-view; close-up crop/resize unchanged; JS clean; no other file touched; no call/detection changes; run results match spec (gray 30 orange 9 42 shots, close-ups byte-id to v4, 296 MB).
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b77fca96e8d79bde08519846ac1078d51f1d6b87ccd5109f4a5a7efdc72b13bd
+  hermes -c "Verify Cursor shot detector matches spec"
+
+Session:        local-b77fca96e8d79bde08519846ac1078d51f1d6b87ccd5109f4a5a7efdc72b13bd
+Title:          Verify Cursor shot detector matches spec
+Duration:       11s
+Messages:       5 (1 user, 3 tool calls)

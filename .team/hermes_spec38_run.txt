@@ -1,0 +1,220 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/38_shooter_finder_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "SHOOTER FINDER SPEC v1 - not run". Plain markdown, no "\n", no "||". 
+Edit nothing else, run nothing that writes. One to two pages.
+
+Read first: .team/specs/37_rim_first_cue_fix_spec.md (L1-L6 block on top), 
+.team/specs/33_shot_flight_rules_measure_spec.md, 
+.team/shot_detectors/rim_first_finder.py (trace_shooter, slice_trace_window), 
+.team/shot_detectors/shot_rules_measure.py (release_estimate_frame :270, 
+rises_above_rim, ball_inside_player :132, combine_ball_track :163, 
+SCOTT_APPROVED_2026_11_04 :37), .team/shot_detectors/rim_first_measure.py, last 
+12 lines of .team/drift_log.md.
+
+GOAL (Scott, agreed plan): after the shot finder, the next step is finding the 
+SHOOTER of each shot moment from video only: shooter box at release and floor 
+spot (bottom-centre of the box, picture pixels). The finder still reads no tags,
+no scoreboard, no DB.
+
+FACTS (Claude Code, Proven, read-only on run37 frames.json / moments.json, 
+Adrian Q1-Q3 and Notus Q1; Q4 NOT used):
+- Shooter found: Adrian 10/116, Notus 8/36. Reasons: "ball not inside a player 
+box" 85 / 18, "no release frame" 21 / 10.
+- On the "ball not inside a player box" moments, at the chosen release frame: 
+the ball is ABOVE the head of the nearest player in 98% (Adrian) and 100% 
+(Notus), median 0.64 / 0.71 player heights above the box top; nearest player 
+centre is a median 1.2 / 1.3 x max(w,h) away (circle is 0.6). The chosen release
+frame is a median 1.04 s (Adrian) / 0.78 s (Notus) before the rim trigger; for 
+the moments where the shooter WAS found it is a median 2.96 / 2.98 s before.
+- So release_estimate_frame (last ball frame before the ball first rises above 
+the rim) picks a point already in flight; the true release is earlier.
+- Spec 37 also lowered found from 21/124 to 10/116 on Adrian; cause Unknown 
+(Inferred: fewer series means fewer v6 crops feeding the track) - say how the 
+plan checks this.
+
+WHAT TO WRITE:
+A. A video-only release rule that walks BACKWARD from the in-flight point along 
+detected ball points (v6 first, else BODD best-conf, combine_ball_track, no 
+filling of missing frames - not interpolation) until the ball is inside a player
+box (ball_inside_player, release mode 0.6, Scott approved) or the track breaks 
+(gap > MAKE_GAP_FRAMES 8 or a Scott-decided number), all inside the existing 
+3000 ms look-back (TRACE_BEFORE_MS, Scott approved; do not widen it). Pick the 
+player on that frame. Say what counts as "track breaks" and what happens if two 
+players hold it.
+B. What goes orange (no hold found, two players, ball track broken) with 
+reasons.
+C. How to MEASURE without Scott hand-tagging (Scott: "I do not want to manually 
+tag video then you check my tags"): existing tags have player name and 
+2PT/3PT/FT. Use only what is already tagged: e.g. FT shots - the shooter should 
+be at the FT spot (same floor spot within a few hoop widths across the FTs at 
+one hoop) - and 3PT vs 2PT distance from the hoop in hoop widths. Propose 
+measures, each number "Scott decides before the run". Claude Code may also 
+hand-check a small fixed sample of still frames (local only, minors) - say how 
+many and how chosen before the run.
+D. Numbers table: each with source (file:line, spec, Scott-approved) or "Scott 
+decides before the run" + proposed value.
+E. Scope: Cursor edits rim_first_finder.py (trace only), test_rim_first.py, and 
+rim_first_measure.py (shooter measures). Shot calls, make/miss, numbers from 
+spec 36/37 untouched. Can it run from saved run37 frames.json + series points 
+without video? Say yes/no and why (saved: per-frame BODD balls/players/referees,
+per-series v6 points). If yes, no video re-run is needed for the build films.
+F. Banned trials: no linear interpolation, ByteTrack, DeepSORT, early windows, 
+wider column, hoop recenter. The exact definition of "early windows" in 
+OLLAMA.md is not written down - if you cannot find it, write "NOT FOUND - Claude
+Code to check" and explain why the backward walk is not a wider or earlier 
+detection window.
+G. Honest limits. One try, then stop for Scott. Q4 blind only after Scott sees 
+the numbers.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+📖 Read 37_rim_first_cue_fix_spec.md  0.2s
+📖 Read 33_shot_flight_rules_measure_spec.md  0.2s
+📖 Read rim_first_finder.py  0.2s
+📖 Read shot_rules_measure.py  0.2s
+📖 Read rim_first_measure.py  0.2s
+📖 Read drift_log.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me find trace_shooter and slice_trace_window in rim_first_finder.py:
+────────────────────────────────────────
+
+🔎 Grep trace_shooter|slice_trace_window  0.1s
+📖 Read rim_first_finder.py  0.1s
+📖 Read rim_first_finder.py L440-579
+📖 Read rim_first_finder.py L1190-1264
+
+────────────────────────────────────────
+☤ Hermes
+I have all the source material. Let me check a couple of remaining facts: whether OLLAMA.md exists (for "early windows"), the .team/specs directory, and git branch state.
+────────────────────────────────────────
+
+🔎 Grep early windows|early_window  7.1s
+💻 $ git branch --show-current + 2 commands  0.1s
+💻 $ ls .team/specs/ | grep '^3[0-9]'
+
+────────────────────────────────────────
+☤ Hermes
+All source material confirmed. Branch is team/auto, specs numbered NN_name_spec.md, highest is 37. OLLAMA.md does not exist in the repo — "early windows" is only referenced (not defined) in AGENT_OPERATIONAL_PROTOCOL.md:45 and CLAUDE.md:28, so it is NOT FOUND - Claude Code to check. Writing the spec now.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/38_shooter_finder_spec.md
+│ .team/specs/38_shooter_finder_spec.md
+│ @@ -0,0 +1,119 @@
+│ +SHOOTER FINDER SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+│ +File: .team/specs/38_shooter_finder_spec.md (new file only; nothing else edited).
+│ +Cursor edits rim_first_finder.py (trace only), test_rim_first.py, rim_first_measure.py (shooter measures).
+│ +
+│ +1. GOAL (Scott, agreed plan)
+│ +
+│ +After the shot finder (spec 35/36/37, rim_first_finder.py), find the SHOOTER of each shot moment from video only: shooter box at release and floor spot (bottom-centre of the box, picture pixels). The finder still reads no tags, no scoreboard, and no database.
+│ +
+│ +2. WHAT IS TRUE (read this session; anything else is "NOT FOUND - Claude Code to check")
+│ +
+│ +- run37 (one try, no number changed): Adrian 116 moments, Notus 36 moments; found 97/109 and 27/31; shooter trace fell to Adrian 10/116, Notus 8/36 (drift_log.md lines 153-156).
+│ +- On the not-found moments: "ball not inside a player box" 85 (Adrian) / 18 (Notus), "no release frame" 21 / 10 (drift_log.md line 155).
+│ +- At the chosen release frame on those moments, the ball is above the head of the nearest player in 98% (Adrian) / 100% (Notus), median 0.64 / 0.71 player heights above the box top; nearest player centre is a median 1.2 / 1.3 x max(w,h) away (the hold circle is 0.6); chosen release frame is a median 1.04 s / 0.78 s before the rim trigger; where the shooter WAS found it is a median 2.96 / 2.98 s before (drift_log.md line 155).
+│ +- So release_estimate_frame (last ball frame before the ball first rises above the rim) picks a point already in flight; the true release is earlier (drift_log.md line 159).
+│ +- Spec 37 lowered found from 21/124 to 10/116 on Adrian; cause Unknown (inferred: fewer series means fewer v6 crops feeding the track) - spec 38 checks this by reporting found split by series with and without v6 points.
+│ +- ball_inside_player(mode="release"): distance ball centre to player box centre < max(w,h) * 0.6 (shot_rules_measure.py:132-153); release_trace_factor = 0.6 Scott-approved (shot_rules_measure.py:37-45, rim_first_finder.py:72).
+│ +- trace_shooter (rim_first_finder.py:474) today checks ball_inside_player on ONE frame - release_estimate_frame - then stops. No backward walk. slice_trace_window (rim_first_finder.py:449) builds the 3000 ms look-back window ending at the trigger (TRACE_BEFORE_MS = 3000, rim_first_finder.py:70; Scott-approved; do not widen it).
+│ +- combine_ball_track (shot_rules_measure.py:163-175): per frame, v6 if present else best-conf BODD; no average, no fill across gaps.
+│ +- MAKE_GAP_FRAMES = 8 (rim_first_finder.py:57, used at collect_q4_bodd.py:220).
+│ +- Saved run37 data: per-frame BODD balls/players/referees, per-series v6 points (drift_log.md: run37 frames.json + series points).
+│ +- "early windows" definition: NOT FOUND - Claude Code to check (AGENT_OPERATIONAL_PROTOCOL.md:45 and CLAUDE.md:28 ban it; neither defines it; OLLAMA.md is not in the repo).
+│ +
+│ +3. A. THE RELEASE RULE (walk backward from the in-flight point)
+│ +
+│ +For each moment whose series is a hoop (series_ok), inside the existing 3000 ms look-back ending at the trigger (TRACE_BEFORE_MS, not widened):
+│ +
+│ +1. Build the ball track for the window: slice_trace_window gives v6 points and per-frame BODD balls; combine_ball_track picks v6 first, else best-conf BODD ball on that frame. No filling of missing frames - not interpolation.
+│ +2. Start at release_estimate_frame (the in-flight point: last ball frame before the ball first rises above the rim, shot_rules_measure.py:270).
+│ +3. Walk BACKWARD frame by frame along detected ball points only.
+│ +4. At each frame, for each player box on that frame (BODD players; referees excluded - BODD_CLASSES = basketball/hoop/player, referee separate, rim_first_finder.py:43 and :89), test ball_inside_player(ball, player, 0.6, mode="release"): distance < max(w,h) * 0.6.
+│ +5. First frame walking backward where the ball is inside a player box = the hold frame. That player is the shooter. Shooter box = that box. Floor spot = bottom-centre of the box in picture pixels: x = box.x, y = box.y + box.h / 2.0 (rim_first_finder.py:557 already computes this).
+│ +6. Stop at the first hold. One try, then stop.
+│ +
+│ +What counts as "track breaks" (walk stops, moment goes orange):
+│ +- A gap between consecutive detected ball frames greater than MAKE_GAP_FRAMES (8) - or the Scott-decided number if he overrides before the run - breaks the walk; nothing earlier than the break can be the hold.
+│ +- A frame with no ball detection is a missing point, not interpolated; the walk continues to the next earlier detected point unless the gap to it exceeds the break threshold.
+│ +- The walk cannot go before lo_ms = trigger - 3000 ms (TRACE_BEFORE_MS boundary).
+│ +- No more detected points before the window start ends the walk without a hold.
+│ +
+│ +If two or more player boxes satisfy the hold test on the same hold frame: do not pick by distance. Mark the moment orange "two players hold" (both boxes recorded for audit, no floor spot committed). The finder never guesses between two players.
+│ +
+│ +4. B. WHAT GOES ORANGE (with reasons)
+│ +
+│ +- "no release frame": release_estimate_frame is None (ball never rises above the rim in the window; current behavior, rim_first_finder.py:523).
+│ +- "no ball at release frame": the track has no detected point at that frame.
+│ +- "no player at release frame": no BODD player box on the hold frame.
+│ +- "ball not inside a player box": the walk reached the window start or a track break without ball_inside_player(mode="release") 0.6 ever passing.
+│ +- "track broken": gap > 8 (or Scott-decided number) between consecutive detected ball points before any hold was found.
+│ +- "two players hold": two or more player boxes pass the hold test on the hold frame.
+│ +
+│ +Orange carries status = orange, shooter_box = null, floor_spot = null, release_frame = null (last frame checked kept for audit), reason recorded (shape _orange at rim_first_finder.py:562-569).
+│ +
+│ +5. C. MEASUREMENT WITHOUT SCOTT HAND-TAGGING (Scott: "I do not want to manually tag video then you check my tags")
+│ +
+│ +Use only what is already tagged: Adrian Q1-Q3 and Notus Q1 tags carry player name and 2PT/3PT/FT. Q4 stays blind until Scott sees the Q1-Q3 numbers.
+│ +
+│ +Measure 1 - FT spot check: for FT tags, floor spots at one hoop should cluster within N hoop widths (N = Scott decides before the run; proposed 1.5 hoop widths). Report median FT floor-spot spread per hoop. Validates the floor spot with no new tags.
+│ +Measure 2 - 3PT vs 2PT distance: for found moments matched to tags (match_shots 8000 ms, spec 36), report floor-spot distance from the hoop in hoop widths, split by tag eventtype 2PT vs 3PT. Expect 3PT farther than 2PT; Scott decides the separation number before the run (proposed: report only, no threshold).
+│ +Measure 3 - timing: for found moments, release frame to trigger in seconds, split found vs not-found (run37 read-only check: ~1 s before trigger for not-found, ~2.96 s / 2.98 s for found, drift_log.md line 155).
+│ +Measure 4 - name agreement: requires a box-to-player label, which does not exist (NOT FOUND - new). Report box + floor spot side-by-side with tag.player for Scott's review page; Scott decides before the run whether to add a label and how.
+│ +
+│ +Claude Code hand-check: a small fixed sample of still frames, local only, minors. Proposed before the run: 20 per film (40 total), chosen by fixed seed from found moments, stratified across 2PT/3PT/FT and across found/orange. Claude Code checks the hold frame vs the shooter box visually and records agree/disagree. Scott decides the count and selection before the run.
+│ +
+│ +6. D. NUMBERS TABLE (each number with source, or "Scott decides before the run" + proposed value)
+│ +
+│ +- TRACE_BEFORE_MS = 3000 ms - source: rim_first_finder.py:70; spec 33 Scott-approved (shot_rules_measure.py:40 detection_window_before_ms). Do not widen.
+│ +- MAKE_GAP_FRAMES = 8 frames - source: rim_first_finder.py:57 (is_make call collect_q4_bodd.py:220). Track-break threshold: gap > 8 between consecutive detected ball frames breaks the walk. Scott may override before the run (proposed: keep 8).
+│ +- release_trace_factor = 0.6 - source: shot_rules_measure.py:43 (SCOTT_APPROVED_2026_11_04), rim_first_finder.py:72; ball_inside_player mode="release" at shot_rules_measure.py:132-153 (distance < max(w,h) * factor).
+│ +- Hold test = ball_inside_player(mode="release") - source: shot_rules_measure.py:132.
+│ +- Ball track = combine_ball_track (v6 first, else BODD best-conf, no fill, not interpolation) - source: shot_rules_measure.py:163-175.
+│ +- Release start point = release_estimate_frame - source: shot_rules_measure.py:270; called at rim_first_finder.py:521.
+│ +- Floor spot = box bottom-centre - source: rim_first_finder.py:557.
+│ +- V6 crop - source: collect_q4_bodd.py:121-125 (rim_first_finder.py:45-49: HX 260 px, HY above 200 / below 240, conf 0.28, imgsz 640). BODD conf 0.12, imgsz 960 - rim_first_finder.py:40-41.
+│ +- Scott decides before the run (proposed values): track-break gap override = 8; FT spot clustering = 1.5 hoop widths across FTs at one hoop; 3PT vs 2PT separation = report only; Claude Code still-frame sample = 20 per film, fixed seed, stratified by kind and outcome.
+│ +- Proven results (read-only, not acceptance thresholds): run37 shooter found Adrian 10/116, Notus 8/36; "ball not inside a player box" 85/18; "no release frame" 21/10 (drift_log.md line 155). Spec 38 re-reports these after the change.
+│ +
+│ … omitted 41 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Verifying the file: line 1 exact, no literal \n, no ||.
+────────────────────────────────────────
+
+✗ Exec from hermes_tools import read_file [This code is not allowed in an unattended session — it did not run.]
+📖 Read 38_shooter_finder_spec.md
+💻 $ grep -c '\\n' .team/specs/38_shooter_finder_spec.md + 2 commands
+
+────────────────────────────────────────
+☤ Hermes
+Done. Created .team/specs/38_shooter_finder_spec.md on branch team/auto — the only file touched; nothing else edited, nothing run.
+
+Verification: line 1 is exactly SHOOTER FINDER SPEC v1 - not run; zero literal \n sequences; zero ||; 119 lines (~1.5 pages).
+
+The spec covers all seven required sections:
+
+- A (release rule): backward walk from release_estimate_frame along detected ball points only — v6 first via slice_trace_window (rim_first_finder.py:449), else best-conf BODD via combine_ball_track (shot_rules_measure.py:163), no gap filling/interpolation, ball_inside_player(mode="release", 0.6) (shot_rules_measure.py:132), hold frame = shooter, floor spot = box bottom-centre (rim_first_finder.py:557), all inside the unwidened 3000 ms TRACE_BEFORE_MS look-back (rim_first_finder.py:70). Track breaks defined (gap > MAKE_GAP_FRAMES 8, window start, missing points); two players holding → orange, never guessed.
+- B (orange): six reasons — no release frame, no ball at release frame, no player at release frame, ball never inside a player box, track broken, two players hold.
+- C (measurement without tagging): FT spot clustering within N hoop widths, 3PT vs 2PT floor-spot distance in hoop widths, release-to-trigger timing split found/not-found, box-vs-tag-player review — every number "Scott decides before the run" with proposed values; Claude Code still-frame hand-check proposed at 20 per film, fixed seed, stratified, local/minors only.
+- D (numbers table): each number with file:line/spec/Scott-approved source or "Scott decides before the run" + proposed value; proven run37 results (Adrian 10/116, Notus 8/36) labeled read-only, not targets.
+- E (scope): Cursor edits rim_first_finder.py (trace only), test_rim_first.py, rim_first_measure.py; shot calls/make-miss/spec 36-37 numbers untouched; yes — runs from saved run37 frames.json + series points (per-frame BODD balls/players/referees, per-series v6 points), no video re-run for build films.
+- F (banned): interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter banned; "early windows" definition = NOT FOUND - Claude Code to check (not in OLLAMA.md, which is absent from the repo); explanation that the backward walk is not a wider/earlier detection window.
+- G (limits): one try then stop for Scott; Q4 blind only after Q1-Q3 numbers; honest failure modes (no detection at true release frame, two players, unknown cause of spec-37 drop).
+
+All facts cite files read this session (drift_log.md lines 153-159, rim_first_finder.py, shot_rules_measure.py) or are marked NOT FOUND.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a0593344ee840f88e8418ebdbc1cf9f1795082700f9acf6e2ea31ef755d75e61
+  hermes -c "Write shooter finder spec markdown file"
+
+Session:        local-a0593344ee840f88e8418ebdbc1cf9f1795082700f9acf6e2ea31ef755d75e61
+Title:          Write shooter finder spec markdown file
+Duration:       2m 20s
+Messages:       28 (1 user, 26 tool calls)

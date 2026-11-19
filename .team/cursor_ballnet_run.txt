@@ -1,0 +1,84 @@
+## Done — script written; detector did **not** run
+
+Torch/ultralytics are missing in this sandbox. Script and non-model checks are in place. Checker should run the real measurement with the Windows venv.
+
+### Files created / changed
+- **Created:** `.team/shot_detectors/pixel_miss/ball_in_net.py`
+- **Appended:** `.team/shot_detectors/pixel_miss/README.md` (short “Ball in net” section; prior net_check text kept)
+- **Not edited:** `ai_bridge.py`, `net_detector.py`, `ai_analyzer.py`, `settings_store.py`, `models/ball_detector.pt`, or any other protected file
+- **No commit / no git changes made by me** beyond those two files
+
+### Commands and console output (verbatim)
+
+**1. Dependency check**
+```text
+$ python3 -c "import torch, ultralytics; print(torch.__version__, ultralytics.__version__)"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import torch, ultralytics; print(torch.__version__, ultralytics.__version__)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'torch'
+```
+
+**2. Non-model checks** (shot selection, counts, frames, boxes, confidence)
+```text
+=== 1. ball_confidence (BINDING NOTE a) ===
+ball_confidence=0.25 (from settings_store.py:13 default (no saved row))
+OK
+
+=== 2. shot selection / counts ===
+results_path=/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json
+Shot counts after dedupe: build=140 missed_makes=19 correct_makes=28 real_misses=93
+OK: 140 = 19 + 28 + 93, each (film,t) once
+
+=== 3. AFTER_OFFSETS / peak frames ===
+sample missed_make film=notus_a1 t=64200 peak=1605
+sample frames peak+1..+6 = [1606, 1607, 1608, 1609, 1610, 1611]
+hoop=(440.6, 145.3) w=59.9 rim_r=29.95
+OK
+
+=== 4. frame reading + net box + Column A window (no model) ===
+video=/mnt/c/Users/scott/Documents/liberty-basketball-analysis/uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 exists=True
+  frame 1606: frame=1280x720 net_box=(407,152,473,229) window_xy=(120,0) window=640x640
+  ... (same through 1611)
+OK: frames readable; net boxes; 640x640 windows; centre_in_net
+
+=== 5. review crop set size ===
+review_crop_shots count=39
+OK
+
+=== 6. torch/ultralytics ===
+NOT AVAILABLE: No module named 'torch'
+Detector run was NOT done in this sandbox.
+
+ALL NON-MODEL CHECKS PASSED
+```
+
+**3. Script entry + compile**
+```text
+$ python3 -m py_compile .team/shot_detectors/pixel_miss/ball_in_net.py
+py_compile OK
+
+$ python3 .team/shot_detectors/pixel_miss/ball_in_net.py --out .team/shot_outputs_test/ball_in_net
+ball_confidence=0.25 (from settings_store.py:13 default (no saved row))
+Shot counts after dedupe: build=140 missed_makes=19 correct_makes=28 real_misses=93
+ERROR: ultralytics/torch not available (No module named 'ultralytics'). Checker must run with the Windows venv.
+exit=1
+```
+
+### Proven
+| Item | Result |
+|------|--------|
+| `ball_confidence` | **0.25** from `settings_store.py:13` default (no `ai.ball_confidence` row in DB; read-only URI used) |
+| Shot counts | **140 = 19 + 28 + 93**, each `(film, t)` once |
+| Frames | `peak+1`..`peak+6`; sample frames readable |
+| Column A window | **640×640** crop, no upscale |
+| Detector run | **No** — `torch` / `ultralytics` absent; nothing installed |
+
+### Checker run (Windows venv)
+```cmd
+.venv\Scripts\python.exe .team/shot_detectors/pixel_miss/ball_in_net.py --out C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_in_net
+```
+
+**STOP** — measurement not done here; no detector tuning; nothing applied to core.The sandbox job finished as expected: `ball_in_net.py` compiles, shot counts check out (140 = 19+28+93), then it exits because torch/ultralytics aren’t installed. Detector measurement still needs the Windows venv run from the checker.
+[cursor_wsl] exit 0 at 15:01:24

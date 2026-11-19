@@ -1,0 +1,15 @@
+Hermes, you are the Architect. EDIT ONE file: .team/specs/20_c_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Change line 1 to "STAGE C JOB SPEC v2 - nothing built". Plain markdown, no line-number prefixes, no literal "\n". Create nothing else. If your write tool refuses, say so plainly. v1 was REJECTED by Claude Code; the record is .team/specs/20_c_job_spec_v1_REJECTED.md (read its first line).
+
+Make ONLY these changes; keep everything else as written:
+
+1. Section 4: the files (ACTIVE.md, .team/specs/04_notus_scoreboard_plan_v3.md, .team/specs/05_reliable_detector_architecture.md) say only "within 25 s" and do NOT record a direction. Replace the "Finding" paragraph with: "Direction NOT recorded in the files. Fixed in advance as the stricter reading: the rise must come at or after the shot, no more than 25 s after it (shot t <= rise t <= shot t + 25 s). This is narrower than either-side, never wider."
+
+2. Section 5: the window is per shot, shot t .. shot t + 25 s (as section 4). Replace "rise time -> rise time + 25 s" with that. A rise's candidate shots are the shots whose window contains the rise.
+
+3. Section 6 counts, from d1_results.json (Claude Code counted them 2026-10-31): Adrian shots in the 140 set = 109; Adrian makes = 38; Adrian real misses = 71; Adrian makes already right after D1 = 27; Adrian makes still called misses = 11. Remove the 43 / 66 / 29 figures from the counts (43 stays only as the whole-game scoreboard result, which includes free throws). The script must compute these counts itself and stop if they differ.
+
+4. New fixed rule in section 5, stated in advance: a 1-point rise is a free throw and is never paired as a recovered field-goal make; 1-point rises are listed in their own table with any shots in their windows. Only 2- and 3-point rises can make a CLEAN pair. Note in one line whether the 140-shot list includes free throws, from the file you read, or write "NOT FOUND - Claude Code to check".
+
+5. Section 6 hard gate: a real miss with a CLEAN 2/3-point rise is a false make; must be 0; list every one by time.
+
+Every fact you add must come from a file you read; otherwise write "NOT FOUND - Claude Code to check".

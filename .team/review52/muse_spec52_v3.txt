@@ -1,0 +1,89 @@
+[muse] model recursive/flint-v1.0:free 21:41:01
+Query: You are Muse, the reviewer on the Liberty basketball film project. REVIEW
+ONLY - edit no file.
+Hermes wrote spec 52 v3: 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_au
+dit_stable_ensemble_spec.md (v2 copy: .team/review52/52_spec_v2_hermes.md). The 
+v3 change list Hermes was given: .team/review52/prompt_hermes_spec52_v3.txt 
+(C1-C3 Cursor, M1-M7 Muse). Your v2 review: .team/review52/muse_spec52_v2.txt.
+Check every item you raised on v2 is now in v3 correctly and v3 is buildable. 
+Small wording issues that do not change what gets built are not grounds to 
+disagree.
+End with one line starting exactly "MUSE: AGREE" or "MUSE: DISAGREE:" + what 
+must change.
+📖 Read 52_label_audit_stable_ensemble_spec.md  0.2s
+📖 Read muse_spec52_v2.txt  0.2s
+📖 Read prompt_hermes_spec52_v3.txt  0.2s
+📖 Read 52_spec_v2_hermes.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+I'll review the v3 spec against my v2 findings. Let me first map the context files and re-read the code context to assess buildability properly.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team -maxdepth 2 -type f  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/  0.5s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the code context files that the spec's deliverables point at, to assess buildability.
+────────────────────────────────────────
+
+📖 Read train_clip.py
+📖 Read ensemble_predict.py
+📖 Read postproc.py
+📖 Read postproc_locked51.json
+📖 Read extract_clips.py
+📖 Read eval_e2e.py
+📖 Read candidates.py
+📖 Read new_film.sh
+✗ Read find_shots_measure.py  0.2s [File not found: find_shots_measure.py]
+📖 Read q4_blind_test.py  0.2s
+📖 Read vet52.txt  0.2s
+📖 Read cursor_spec52_v2.txt  0.2s
+📖 Read muse_spec52_v3.txt
+📖 Read muse_spec52_v3.txt.recursive_flint-v1.0_free.txt
+📖 Read cursor_spec52_v3.txt
+📖 Read prompt_cursor_spec52_v3.txt
+📖 Read prompt_muse_spec52_v3.txt
+
+────────────────────────────────────────
+☤ Hermes
+Let me re-read my full v2 review carefully to make sure I check every item I raised.
+────────────────────────────────────────
+
+📖 Read muse_spec52_v2.txt
+📖 Read muse_review52.txt
+
+────────────────────────────────────────
+☤ Hermes
+Muse review of spec 52 v3 — full check against my v2 findings:
+
+Every one of the seven items I raised on v2 is now correctly resolved in v3:
+
+- Renumber R1-R10 sequentially, one requirement per number, sections in order (M1): APPLIED. v3 now runs R1-R10 cleanly in section order (A labels R1-R3, B training R4-R5, C gate R6, D coach R7, E honest R8, F freeze/blind R9-R10, G deliverables).
+- Pin postproc52.json schema exactly (M2): APPLIED. v3 R7/D pins {"shot_thr":0.5,"dedup_ms":800,"session_filter":false,"review":{...,"flag_seed_disagreement":true}} with floor 0.2, weak-shot 0.65, make/miss 0.3.
+- Restore final-fit lr/bs (M3): APPLIED. v3 R4 now carries final fit and LOGO: lr 2e-4, batch size 8, AdamW wd 0.05, OneCycle pct_start 0.15.
+- Clarify LOGO inner-split (M4): APPLIED. v3 R5 spells the nested 3/1 split with the fixed wrap order and C3 miss_recall + tie-break.
+- Define silent-reject diagnostic (M5): APPLIED. v3 R6 defines it per held-out game, over labelled misses, ensemble mean P(shot) < floor (0.2) AND all M seeds P(shot) < 0.5 -> silent reject; gate = 0.
+- Update stale silent-zone fact (M6): APPLIED. v3 FACTS now says silent zone P(shot) in [0, 0.2).
+- Honest-score tag-reuse rule (M7): APPLIED. v3 R8 now requires marking non-flagged auto-matched true tags used before flagged matching.
+
+Cursor C1-C3 and the Disagreements line from the v3 change list were also applied correctly.
+
+Buildability: confirmed. Cursor's own v3 review found the recipe buildable against .team/mm_clip/train_clip.py, extract_clips.py, ensemble_predict.py; my read of those files corroborates the v3 instructions map to concrete changes (sampler/CE/GradScaler/aug, label rules, postproc52.json, honest score).
+
+Remaining notes are wording-only (Cursor-flagged): "final fit runs exactly E" appears twice in R5; --seed plumbing sits in deliverables rather than its own R number. Neither changes what gets built.
+
+MUSE: AGREE: no changes required — all seven v2 items are correctly fixed in v3 and the v3 is buildable.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-e1641c6c863c4bc96de45c82c1ef282b8399642bc6182e90e2b7689200ef0404
+  hermes -c "You are Muse, the reviewer on the Liberty… #4"
+
+Session:        local-e1641c6c863c4bc96de45c82c1ef282b8399642bc6182e90e2b7689200ef0404
+Title:          You are Muse, the reviewer on the Liberty… #4
+Duration:       6m 4s
+Messages:       34 (1 user, 32 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE: no changes required — all seven v2 items are correctly fixed in v3 and the v3 is buildable.

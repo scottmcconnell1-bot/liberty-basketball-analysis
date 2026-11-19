@@ -1,0 +1,104 @@
+Query: OPTIONS ONLY. Do not edit, create or run anything that writes. Repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis (Linux path) = 
+C:/Users/scott/Documents/liberty-basketball-analysis, branch team/auto. Read 
+files if useful.
+
+PROBLEM (Scott, 2026-11-02): "We have to do better at the makes." Single panning
+camera, Jr High game film. Make/miss on the 140 tagged build shots (Adrian Q1-Q3
++ Notus A1 Q1), shot times given by Scott's tags:
+- all shots 122/140 right (87%); misses 93/93 right (100%); makes only 29/47 
+(62%). 0 misses called makes is a hard rule (Golden Rule; never loosen).
+- Make rule (unchanged, Stage A copy): small_fixes_v6_copy.decide_shot via 
+.team/shot_detectors/keep_ball_detections.py (D1). A make in the core is 
+ball_through_rim or net_moved_after_shot.
+- Reasons the 18 still-missed makes fail (v6 ball model): no_valid_crossing 6, 
+column_ratio_low 4, ball_went_up 2, ball_box_jump 2, short_net_depth 1, 
+ball_bounces_up 1, ball_starts_well_below 1, sideways_drift 1.
+- Frame diagnosis on those missed makes (frames near the anchor): v6: 
+ball_not_detected 109, tracker_jumped_to_false_candidate 169. New model d2v1 
+(fine-tuned on Scott's 514 live-play labels; val mAP50 0.32 -> 0.78): 
+ball_not_detected 61, tracker_jumped_to_false_candidate 213.
+- d2v1 swapped into D1 unchanged: makes_right 29 (recovered 2, lost 1) but 5 
+misses called makes (all Adrian; their old reasons were short tracks: 
+short_track_left_net x2, ball_box_jump, short_net_depth, short_make_bodd_fail). 
+Results: 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/test2/d2_results.json; 
+D1: .../ball_arc/d1_results.json and candidates.json (all detections per frame, 
+top 3 by confidence in the near-hoop zone).
+- Already tried: Stage A small fixes (0 of 19), D1 keep detections + RANSAC arc 
+(1 of 19), Stage C scoreboard pairs (3 of 11 Adrian, checker only; Scott: 
+scoreboard only counts makes, not a stat source), free vision LLM (3 of 4 on a 
+tiny test, called a miss a make).
+- BANNED trials (do not propose): linear interpolation, ByteTrack, DeepSORT, 
+early windows, a wider column, hoop recenter. No looser cutoff. No tuning on the
+test after seeing results. models/ball_detector.pt and ball_confidence 0.28 are 
+Scott gates.
+- Scott's ideas: ignore balls that are not in play (warmup, halftime, rack/bench
+balls, off court); use the game clock to know when the game is on (free throws 
+happen with the clock stopped; scoreboard not always in view).
+- Test limit: the only untouched tagged shots are Adrian Q4 (18 shots). Notus A 
+is untagged.
+- Hardware: RTX 5060 8 GB laptop GPU.
+
+GIVE 3 to 5 OPTIONS to raise makes caught while keeping 0 misses called makes. 
+For each: (1) one-line idea, (2) how it works on this data, (3) which of the 18 
+failure reasons it targets, (4) risk of false makes and how it is guarded, (5) 
+effort (hours/days) and what it needs from Scott, (6) how it would be tested 
+fairly. Then name the ONE you would do first and why. Plain words, short. Every 
+fact from a file you read or this prompt; mark guesses as guesses.
+
+You are Muse. End with one line starting MUSE: AGREE (meaning: options given).
+⏳ Provider temporarily unavailable — retrying automatically in 15s (cycle 1/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 30s (cycle 2/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 64s (cycle 3/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 63s (cycle 4/5); press Esc to stop
+⏳ Provider temporarily unavailable — retrying automatically in 68s (cycle 5/5); press Esc to stop
+⏳ Automatic recovery gave up after 5 cycles — the provider is still unavailable.
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.0s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.6s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.7s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.6s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.6s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.1s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.3s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.4s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.4s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.1s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 2.9s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 4.9s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+❌ API failed after 3 retries — HTTP 503: Provider returned error
+   💀 Final error: HTTP 503: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter reported it was overloaded on all 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 503: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-87877d28f1d69c9663986cbaac1e4b787340aaa2d042434c6258164d553dd12a
+  hermes -c "OPTIONS ONLY. Do not edit, create or run…"
+
+Session:        local-87877d28f1d69c9663986cbaac1e4b787340aaa2d042434c6258164d553dd12a
+Title:          OPTIONS ONLY. Do not edit, create or run…
+Duration:       5m 10s
+Messages:       2 (1 user, 0 tool calls)

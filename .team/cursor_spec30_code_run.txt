@@ -1,0 +1,10 @@
+Spec 30 coded on `team/auto`. No video run, no commit.
+
+### Files changed
+- `.team/shot_detectors/make_review_queue_page.py` — `CLIP_BEFORE_S`/`CLIP_AFTER_S` (Scott 2026-11-03); under `--wide-combined` uses `seconds_to_frames` per film fps for normal + combined cards and `mark`; flag-off still `BEFORE`/`AFTER` = 8/14; prints `clip lengths summary: …` then existing summary lines
+- `.team/shot_detectors/clip_moment_fix.py` — added `seconds_to_frames` (`round(s * fps)`)
+- `.team/shot_detectors/test_clip_moment_fix.py` — `seconds_to_frames` tests + three `group_clip_extent(..., before=50, after=38)` facts (935..1086=152, 60378..60539=162, 68778..68874=97)
+
+### Proven
+- `python3 -m pytest test_clip_moment_fix.py -q` → **22 passed**Spec 30 is in place on `team/auto`: longer clips under `--wide-combined` (2.0 s / 1.5 s), tests **22 passed**. No commit made.
+[cursor_wsl] exit 0 at 19:14:05

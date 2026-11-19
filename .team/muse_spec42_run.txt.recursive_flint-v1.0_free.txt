@@ -1,0 +1,47 @@
+Query: Muse, you check. Read-only. Repo: 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis.
+Read .team/specs/42_ft_band_lane_spec.md (Claude Code's M1-M6 block at top wins 
+over the text), .team/specs/42_ft_lane_proto.py, 
+.team/shot_detectors/ft_half_circle.py, last 4 lines of .team/drift_log.md.
+Check: (1) spec + M1-M6 match the prototype method and the SETTINGS FIXED block;
+(2) nothing chosen after seeing Adrian Q4; Q4 is one blind try; (3) the gate can
+catch a coding error; (4) no rule broken (no core edits, no tags read by finder,
+no banned trials, one try then stop for Scott); (5) anything missing that Cursor
+needs to code it.
+Answer in at most 12 lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE.
+📖 Read 42_ft_band_lane_spec.md  0.1s
+📖 Read 42_ft_lane_proto.py  0.1s
+📖 Read ft_half_circle.py  0.2s
+💻 $ tail -n 4 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+💻 $ git status + 2 commands  108.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ | grep -i -E "42|q4_measure|handcheck" + 1 command  0.3s
+💻 $ grep -n "_apply_ft_decision\|ft_line_not_found\|too_far_from_hoop\|no_lane_lines\|free_throw_line" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/rim_first_finder.py
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "rim_first_finder.py" -not -path "*/node_modules/*" 2>/dev/null + 2 commands  14.3s
+📖 Read 42_q4_measure.py
+💻 $ grep -n "_apply_ft_decision\|ft_line_not_found\|too_far_from_hoop\|no_lane_lines\|free_throw_line\|decide_ft\|debug_image" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py
+💻 $ grep -n "ft_line_not_found\|ft_reason\|free_throw_line\|duplicate\|ft_shooter" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_measure.py
+💻 $ sed -n '2230,2380p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py
+💻 $ sed -n '370,460p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_measure.py
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ | grep -i -E "ft_|test_ft|half" + 2 commands  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE check, spec 42 (FT band + lane), read-only pass:
+(1) M1-M6 match the prototype and the SETTINGS FIXED block; internally consistent (band [0,0.35], HOOP_DIST_MAX 3.8, LANE_*). Live ft_half_circle.py still has spec 41 BAND_FRONT=0.15/BAND_BACK=1.2, so Cursor must swap to 0.0/0.35 before gating.
+(2) Nothing chosen after seeing Adrian Q4; Q4 is the one blind try, settings pre-fixed, no tuning after. OK.
+(3) Gate can catch a coding error: design sufficient (raw-frame Q1-Q3 retrace, same reason/shooter feet within 1 px, --ft-off == run39b, mismatch stops). OK.
+(4) No rule broken: no core edits, no tags read, no banned trials, one try then stop. OK.
+(5) Missing for Cursor: flip band constants; add too_far_from_hoop/no_lane_lines fail-then-stop; lane_crossings(); views add lane_segments + hoop_dist_h; debug draw; _apply_ft_decision new reasons; rim_first_measure new-reason counts + duplicate_of_found_ft; 42_handcheck_results.json missing.
+
+Verdict: spec holds; gaps are Cursor-side execution items.
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-9f5cf076dc30c33008cbdff42b86ec352f04ed8696ea9352d3075e9c2b1cb308
+  hermes -c "Muse, you check. Read-only. Repo…"
+
+Session:        local-9f5cf076dc30c33008cbdff42b86ec352f04ed8696ea9352d3075e9c2b1cb308
+Title:          Muse, you check. Read-only. Repo…
+Duration:       4m 10s
+Messages:       23 (1 user, 21 tool calls)

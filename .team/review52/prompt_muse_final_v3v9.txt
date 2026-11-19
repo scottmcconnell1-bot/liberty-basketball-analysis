@@ -1,0 +1,9 @@
+You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+FINAL check. (1) .team/specs/52a_class0_restore_prereg.md v3: counts fix (Claude Code verified: adrian out-of-session rows are all also far-from-tag, so unique = 26, not 32) (adrian unique 26, pool 277, oos
+definition 48b in_session(is_ft=True)), build order (Cursor builds session_filter + gate path + tests + labels52a + sha
+first; Claude Code verifies; Muse + Cursor confirm; then training), R7 amendment, dissent record. (2)
+.team/specs/53_referee_signals_spec.md v9: pass bar only when the step is enabled; violation wording.
+End with two lines:
+MUSE 52a: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (spec 53 v9)

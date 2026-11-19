@@ -1,0 +1,59 @@
+## Spec 53 v4 — Cursor re-review (read-only)
+
+**v4 fixes Muse’s v3 gap:** §2 “Per-shot cue fusion” is restored; POSE LIMIT / DETECTABLE EVENTS correctly point at §2. Core pose → hook path is still buildable. **Not every named fusion cue has a concrete on-disk source**, and **48b is not a score overlay reader**.
+
+### Proven — build surface
+
+| Piece | Status |
+|---|---|
+| BODD `"r"` in `frames.json` | Yes — `_compact_frame` / `_referees_from_frames`; rimrock/gv/hsb runs have `"r"` |
+| `assign_shot_calls(..., referee_boxes, ...)` | Accepts, does not read (hook point) |
+| `postproc.py` / `ensemble_predict.py` | Exist; no ref override yet — thin additive hook OK |
+| Spec 48b `game_session.py` | Clock/session only — **never reads score** (`test_module_source_has_no_score_reader`) |
+| Outputs | `Liberty_Shot_Outputs/game_session_48b/{adrian,gv,idaho,notus}/` — `session.json` + `samples.json` (clock `v`/`t_ms`) |
+| Spot clips | `rimrock_77_*`, `gvg_149_*`, `rimrock_253_*` under `.team/review52/spot_media/` |
+| GPU pose | ultralytics + `yolov8-pose.yaml` in liberty-gpu; **no `*pose*.pt` pinned** |
+
+### Cue → concrete source (§2)
+
+| Cue | Concrete source? |
+|---|---|
+| Arm event + `t_ms` | **New** — pose on `"r"` crops (`ref_signals.py` proposed) |
+| Time vs release/rim | **Yes** — moment `t_ms` / `release_frame` in finder |
+| Nearest / lead ref | **Yes** — `"r"` geometry (distance logic new, boxes exist) |
+| Players stop | **Yes** — `ft.stillness` in `ft_half_circle.py` |
+| Clock overlay stops | **Yes, where board exists** — 48b `samples.json` clock holds; **Rimrock has no 48b board** |
+| FT lineup next | **Yes** — `free_throw_line` / `maybe_free_throw` |
+| Score overlay change / not | **Not 48b.** Score API = `scoreboard_clock.py` + `scoreboard_pair_rises.py`; track on disk = **Adrian only**. No general score-overlay reader for rimrock/gvg/hsb |
+| Ball handed to ref | **No safe source** — ball-in-ref / ref-holding were the **spec-36** false-fire proxies |
+| Throw-in restart | **No detector** |
+| `#22` travel fists | **Not pose-detectable** — must stay fusion/unknown, not a claimed pose class |
+
+### Scott addendum check
+
+- Book + multi-cue deduction, category + evidence, unknown → coach ≤20: **in v4 §2**
+- Feed spec-52 scoring (exclude fouled/waved-off/warm-up from e2e denom): **in §7**
+- Addendum’s “probability/category” → v4 ships **category only** (fine if intentional)
+
+### Required changes before coding fusion rules
+
+1. **Do not cite 48b as the score-overlay reader.** 48b = clock stop / session / FT windows. Score-change cue must name `scoreboard_clock` / pair-rises **or** “where readable → else omit cue / unknown,” especially on Rimrock (prototype waved-off clip).
+2. **Drop or explicitly defer** “ball handed to ref” and “throw-in” until a non–spec-36 source exists; keep stop/restart cues that exist (`stillness`, clock hold, FT reason).
+3. **`#22` / fist / thumbs / 3-finger:** keep “never claimed from pose”; violation path must not imply pose sees rotating fists.
+4. Add a one-line **cue→file** table in the spec so builders cannot invent proxies.
+
+3-clip pose overlay prototype (crop `"r"` → keypoints) remains buildable after team agree + Step 0; full `waved_off = wave + score unchanged` is **not** buildable on Rimrock with what exists today.
+
+### Files
+
+**Reuse:**  
+`.team/shot_detectors/rim_first_finder.py`, `game_session.py`, `ft_half_circle.py`, `scoreboard_pair_rises.py`, `scoreboard_clock.py`, `.team/mm_clip/postproc.py`, `ensemble_predict.py`, `models/player_detector.pt`, `data/scoreboard_tracks/` (Adrian), `Liberty_Shot_Outputs/rim_first/run50gpu_rimrock|run44_gv|run49base_hsb/frames.json`, `Liberty_Shot_Outputs/game_session_48b/*/`, `.team/review52/spot_media/`, `.team/review52/{addendum_ref53_scott,nfhs_signals_reference,spot_check_52_answers,labels52_v2}.json|md|txt`
+
+**New (after agree):**  
+`.team/shot_detectors/ref_signals.py`, `test_ref_signals.py`  
+(+ thin optional hook in `assign_shot_calls` and/or `postproc`/`ensemble_predict`)
+
+**Do not touch:** spec 52 training, `.team/mm_clip/` train path, core pipeline, `models/ball_detector.pt`
+
+CURSOR: AGREE WITH CHANGES: name 48b as clock/session only (not score); map score-change to scoreboard_clock/pair-rises or "where readable→unknown"; drop/defer ball-to-ref and throw-in; keep #22/fist out of pose claims.The frames.json survey finished: 40 files under `Liberty_Shot_Outputs`. Newer rim-first runs (`run50gpu_rimrock`, `run44_gv`, `run49base_hsb`, …) carry the `"r"` referee key; older top-level `adrian`/`notus` frames do not. That matches the v4 buildability note already in the review.
+[cursor_wsl] exit 0 at 16:16:08

@@ -1,0 +1,11 @@
+All named functions verified in `scoreboard_clock.py`. Now let me check files the plan claims exist (scorebook, film tags, videos, Adrian track), since I must catch claims without evidence.
+All supporting facts check out: `scoreboard_clock.py` really has all seven functions the Vetter named (`_red_mask` scoreboard_clock.py:73, `_warm_mask` :66, `_segment_digit` :138, `_digit_groups` :177, `_score_value` :116, `_load_templates` :126, `read_scoreboard` :278); the Notus scorebooks exist with `home_team`/`away_team` and finals 29–48; both Notus videos, the film tags, and the Adrian track exist; the plan touches no protected file, no cutoff, no banned trial, and lists everything under `## Files`.
+
+But the plan body contradicts the stamp it was vetted under, in two places the Vetter missed:
+
+1. Details §1 still tells the coder to import `read_digits` and `seven_segment_templates` from `scoreboard_clock.py` — those functions do not exist. The stamp's condition (a) names the right ones, but the operative Details text the coder executes still carries v1 error #4 unfixed.
+2. Stamp condition (b) requires `measure_notus_rois.py` to be **non-interactive** and to check the board at **10 times spread across each game**. Details §2 says "Use **interactive** or semi-automated detection" with only ~3 example timestamps (300s/600s/900s) and **5 crops per game**. Following the details would violate the veto condition; following the stamp would contradict the plan the coder was told to build.
+
+The stamp also claims the plan "fixes all four errors from v1," yet the body demonstrably doesn't carry fix #4 and partially ignores fix #3. The Vetter stamped corrections on top of a body it did not correct.
+
+MUSE: DISAGREE: NEXT_TASK.md's Details contradict its own VETTED conditions — §1 imports nonexistent functions (read_digits, seven_segment_templates) and §2 specifies interactive detection with ~3 timestamps/5 crops per game, while condition (b) requires non-interactive measurement checked at 10 times per game.

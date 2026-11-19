@@ -1,0 +1,122 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. FIRST read NEXT_TASK.md with your read tool (the write tool 
+refuses files you have not read). Your v6 plan was REJECTED: read the first line
+of .team/specs/09_notus_reader_v7_REJECTED.md for the three remaining defects 
+(v6 reasons are fixed; keep them fixed). Rewrite NEXT_TASK.md so its body 
+carries every fix; keep your Diagnosis section and the per-game measurement. Do 
+not run any code and do not create any file this time (no scratch scripts). 
+Never open .team/specs/04_notus_holdout_truth.json or holdout_*.png. Include a 
+heading exactly ## Files. STRICT: edit ONLY NEXT_TASK.md. If a tool reports an 
+error or refusal, say so plainly.
+📖 Read NEXT_TASK.md  0.1s
+📖 Read 09_notus_reader_v7_REJECTED.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now I have both files. The rejection lists three defects to fix in the v7 plan. I'll rewrite NEXT_TASK.md with all fixes incorporated.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -49,8 +49,13 @@
+│
+│  ## Fix Plan
+│
+│ -### 0. Step 0 is DONE — ROI boxes verified and eye-read values exist
+│ -**No re-work needed.** The fitting-frame crops (`.team/notus_fit_crops/`) and Vetter eye-read values (`.team/notus_fit_crops/eye_read_values.json`) already exist from the previous cycle. The coder already copied `data/roi/notus_scoreboard_rois.json` → `data/roi/notus_scoreboard_rois_approved_2026-10-26.json` and verified tens/ones boxes on fitting frames where the tens digit was confirmed lit. Any box corrections have been written back to `data/roi/notus_scoreboard_rois.json`. Proceed directly to step 1.
+│ +### 0. Step 0 — Per-game box check on fitting frames (REPLACES "verified, no re-work")
+│ +**The box check was never run; the Diagnosis shows Game A boxes are misaligned.**  
+│ +Run a per-game box check on the fitting-frame crops (`.team/notus_fit_crops/`) using eye-read values from `.team/notus_fit_crops/eye_read_values.json`:
+│ +- For each slot crop where the Vetter-confirmed digit is non-blank (lit), apply the current frozen red mask (from the pooled thresholds, if available) and measure mask coverage inside the box.
+│ +- If coverage is below a reporting threshold (e.g., <15% red pixels), search a bounded shift: ±8 px in x, ±6 px in y, width/height fixed. Evaluate the shifted box on the same fitting-frame crops for that game; pick the shift that maximizes median mask coverage across lit slots.
+│ +- Write corrected boxes back to `data/roi/notus_scoreboard_rois.json` (under the appropriate `games/*/scores` or `default/scores`). The approved copy `data/roi/notus_scoreboard_rois_approved_2026-10-26.json` already exists.
+│ +- Report the per-game shifts to the Vetter before proceeding to colour measurement.
+│
+│  Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559  
+│  Holdout times (s): A1 246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1; A 232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9  
+│ @@ -59,7 +64,7 @@
+│  ---
+│
+│  ### 1. Measure per-game Notus red-digit colour on fitting frames ONLY
+│ -Using the (verified) ROI boxes from step 0 on fitting frames only, **separately for Game A1 and Game A**:
+│ +Using the (verified/corrected) ROI boxes from step 0 on fitting frames only, **separately for Game A1 and Game A**:
+│  - The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json`. For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (the ON segments for a digit are the letters common to EVERY pattern that maps to that digit — 6 → c,d,e,f,g; 7 → a,b,c; 9 → a,b,c,f,g; every other digit has one pattern; region names are the letters a–g, as in `_SEGMENTS`). Union those ON-segment regions, and collect all pixels inside that union.
+│  - **Rule (fixed before measuring)**: For each crop, compute the median V of its ON-region pixels. Keep only the pixels with V >= that crop's median V — these are the "lit pixels". Pool the lit pixels across all crops **for that game**. On that pooled set, take the central 98% of the hue distribution (handling wrap-around at 180: map hues >165 to hue-180 so the red cluster is contiguous around 0, compute the 1st and 99th percentiles, map back to 0–179). Also take the 10th percentile of V and the 10th percentile of S over the same pooled lit pixels. These four numbers become the frozen `NOTUS_H_MIN`, `NOTUS_H_MAX` (the contiguous hue interval in 0–179), `NOTUS_S_MIN`, and `NOTUS_V_MIN` **for that game**.
+│  - Write `h_min`, `h_max`, `s_min`, `v_min` to `data/roi/notus_red_thresholds_A1.json` and `data/roi/notus_red_thresholds_A.json`. The coder runs the measurement and writes the files; **this plan contains no final cutoff numbers**.
+│ @@ -84,10 +89,12 @@
+│  _NOTUS_GEOMETRY_A1: dict | None = None
+│  _NOTUS_GEOMETRY_A: dict | None = None
+│
+│ -# Explicit game_id -> game_key map from ROI JSON keys
+│ +# Explicit game_id -> game_key map from ROI JSON "games" keys (full ids)
+│ +# The coder must read the two full ids from data/roi/notus_scoreboard_rois.json
+│ +# and populate this map. Example structure (exact keys come from the ROI file):
+│  _NOTUS_GAME_MAP: dict[str, str] = {
+│ -    "A1": "A1",
+│ -    "A": "A",
+│ +    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": "A1",
+│ +    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": "A",
+│      # add others if ROI keys differ
+│  }
+│
+│ @@ -203,7 +210,10 @@
+│      # _SEVEN_SEGMENT maps pattern_string -> digit_string (e.g., "abcedf" -> "0")
+│      # Look up the sorted lit-segment string directly
+│      from scoreboard_clock_720p import _SEVEN_SEGMENT  # or import at module top
+│ -    return _SEVEN_SEGMENT.get(on_str)  # returns int or None if no valid pattern
+│ +    digit_str = _SEVEN_SEGMENT.get(on_str)  # returns digit STRING or None
+│ +    if digit_str is None:
+│ +        return None
+│ +    return int(digit_str)  # convert string "5" -> int 5
+│
+│  def _read_notus_score(frame: np.ndarray, cells: dict, game_id: str) -> int | None:
+│      """Read home or away score (two digits). BLANK tens + readable ones = single digit.
+│ @@ -217,8 +227,12 @@
+│      tens_crop = frame[y_t:y_t+h_t, x_t:x_t+w_t]
+│      ones_crop = frame[y_o:y_o+h_o, x_o:x_o+w_o]
+│
+│ +    # Resolve game_key from full game_id — NO default; unknown id must raise
+│ +    if game_id not in _NOTUS_GAME_MAP:
+│ +        raise KeyError(f"Unknown game_id for Notus reader: {game_id}. Add to _NOTUS_GAME_MAP.")
+│ +    game_key = _NOTUS_GAME_MAP[game_id]
+│ +
+│      # Load per-game dead-band thresholds (written by measurement step)
+│ -    game_key = _NOTUS_GAME_MAP.get(game_id, "A1")  # default to A1 if unknown
+│      if game_key == "A1":
+│          thresholds = _load_notus_thresholds_A1()
+│      else:
+│ @@ -284,12 +298,12 @@
+│  ---
+│
+│  ## Files
+│ -- `scoreboard_clock_720p.py` — add per-game `_load_notus_thresholds_A1/A`, `_load_notus_geometry_A1/A`, `_notus_red_mask(crop, game_key)`, `_read_notus_digit(crop, game_key, T_on, T_off)` with dead-band rule, `_read_notus_score(frame, cells, game_id)`; use `_read_notus_score` for Notus games.
+│ +- `scoreboard_clock_720p.py` — add per-game `_load_notus_thresholds_A1/A`, `_load_notus_geometry_A1/A`, `_notus_red_mask(crop, game_key)`, `_read_notus_digit(crop, game_key, T_on, T_off)` with dead-band rule and `int()` conversion, `_read_notus_score(frame, cells, game_id)` with full-id game map and raise-on-unknown; use `_read_notus_score` for Notus games.
+│  - `scripts/fit_notus_segments.py` — import `_notus_red_mask`; add 20 holdout times to `_sample_timestamps` exclusion; fit per game; write `notus_segment_geometry_A1.json` and `notus_segment_geometry_A.json`.
+│  - `data/roi/notus_red_thresholds_A1.json` — created by step 1 measurement (keys: `h_min`, `h_max`, `s_min`, `v_min`, `T_on`, `T_off`).
+│  - `data/roi/notus_red_thresholds_A.json` — created by step 1 measurement (keys: `h_min`, `h_max`, `s_min`, `v_min`, `T_on`, `T_off`).
+│ -- `data/roi/notus_scoreboard_rois.json` — corrected boxes from step 0 (tens/ones boxes updated in place under `games/*/scores` and `default/scores`).
+│ -- `data/roi/notus_scoreboard_rois_approved_2026-10-26.json` — copy of original ROI file before any in-place change (step 0, already done).
+│ +- `data/roi/notus_scoreboard_rois.json` — corrected boxes from step 0 box check (tens/ones boxes updated in place under `games/*/scores` and `default/scores`).
+│ … omitted 11 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten NEXT_TASK.md incorporates all three defects from the rejection:
+
+1. _NOTUS_GAME_MAP keyed by full game IDs — map now uses the exact keys from notus_scoreboard_rois.json ("jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334" etc.), _read_notus_score raises KeyError on unknown game_id (no silent default).
+
+2. int() conversion — _read_notus_digit converts _SEVEN_SEGMENT.get(on_str) (returns "5") to int before arithmetic; blank tens ("") → 0 only for BLANK.
+
+3. Step 0 box check — replaced "verified, no re-work" with an actual per-game box check on fitting frames: measure mask coverage on lit slots; if coverage low, search bounded shift (±8px x, ±6px y, w/h fixed); write corrected boxes; report shifts to Vetter before colour measurement.
+
+The Diagnosis section with per-game measurements is preserved, and ## Files heading is exactly as required. Only NEXT_TASK.md was edited.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-336ffa2ac74b083a4c992becb06d23e477c62a255e45363c32c79eeafc0c0aac
+  hermes -c "Rewrite NEXT_TASK.md with v7 defects and fixes"
+
+Session:        local-336ffa2ac74b083a4c992becb06d23e477c62a255e45363c32c79eeafc0c0aac
+Title:          Rewrite NEXT_TASK.md with v7 defects and fixes
+Duration:       2m 26s
+Messages:       7 (1 user, 5 tool calls)

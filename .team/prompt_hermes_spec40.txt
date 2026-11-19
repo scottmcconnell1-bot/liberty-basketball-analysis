@@ -1,0 +1,23 @@
+Hermes, you are the Architect. WRITE ONE new file: .team/specs/40_free_throw_half_circle_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "FREE THROW HALF CIRCLE SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing else, run nothing that writes. One to two pages.
+
+Read first: .team/specs/39_shooter_fix_spec.md (P0-P6 + SETTINGS FIXED block), .team/stage1b_frozen_0943/measurement_report.md (top 15 lines) and .team/stage1b_frozen_0943/stage1b_court_lines.py (skim), .team/shot_detectors/rim_first_finder.py (trace, retrace), last 12 lines of .team/drift_log.md, memory rule below.
+
+SCOTT 2026-11-06 (binding): "The FT line ... is actually a half circle. The FT shooter will always be in that half circle by him or herself when shooting freethrows." and "I wouldn't go with player space, that would only be effective for fts. I would use the half circle. If there is no player movement and one is in the half circle, then players are preparing for a free throw." Scott also: Claude Code picks settings before the run (he does not approve cutoffs), and "aim for higher results".
+
+FACTS (Claude Code, Proven, read-only on saved run39 files):
+- Player stillness 1-3 s before the rim trigger (median per-player move per second, in player heights, nearest-box match between frames 1 s apart): FT 0.11 (n 38, Q3 0.13, max 0.55), 2PT 0.42 (n 56, Q1 0.32), 3PT 0.38 (n 30, Q1 0.28).
+- Shooter trace on FTs is the worst case: in the hand-checked FTs the current trace is right 8/21; a lane player is picked or the card goes orange.
+- "Most isolated player" fixed FTs (16/21) but broke 21/30 non-FT picks - REJECTED by Scott; do not use it.
+- Earlier full-court line fit (Stage 1b, frozen) succeeded 0 of 60 frames (Adrian, Notus). So do NOT fit the whole court. Target only the FT half circle in front of the hoop the shot goes to, on still frames.
+- The half circle is painted: Adrian gym black, Notus gym red (Claude Code looked at frames). FT lane lines are also painted (Adrian white, Notus blue/red).
+- Saved per frame: BODD player/ball/referee boxes, hoop box per series (frames.json); video files are local (uploads/...). Film shows minors: images stay local.
+
+WRITE:
+A. FT detector (video only): stillness (number and window chosen by Claude Code before the run; propose a value with the facts above) AND exactly one player's feet (box bottom-centre) inside the detected FT half circle -> moment flagged free_throw, shooter = that player. If stillness holds but the half circle is not found -> orange "ft_circle_not_found" (never guess).
+B. Half circle finder: smallest thing that can work - e.g. in the still frame, search a region set by the hoop box (the FT line is 15 ft from the backboard; give the region in hoop widths with the reason), find painted-line pixels by colour/edges, fit an arc/ellipse (perspective) or a line + half-ellipse; say what is reused from stage1b_court_lines.py and what is new; how the finder knows the court colour per gym without a hand setting (or say it needs one per gym, and how few frames). No trained model, no tracker, no interpolation.
+C. Where it plugs in: after the trace, only on still moments; it overrides the trace shooter only for free_throw moments; everything else untouched. Shot calls, make/miss, hoop steps untouched.
+D. Measure: tags only to measure (FT tags vs free_throw flags: found / missed / false); FT shooter right/wrong on a NEW frozen hand-check sample (seed 40, FT moments not in the spec-38/39 samples where possible); count of non-FT moments wrongly flagged free_throw (must be near 0). Q4 blind only after Scott sees numbers.
+E. 3-point arc: say how the same finder extends to the 3PT arc later (not in this run).
+F. Numbers table: each number with source, or "fixed by Claude Code before the run" + proposed value + reason.
+Rules: no core edits (court_homography.py is not to be edited), no training, no banned trials (linear interpolation, ByteTrack, DeepSORT, early windows = OLLAMA.md:31-39, wider column, hoop recenter), finder reads no tags/scoreboard/DB, one try then stop for Scott. Cursor edits rim_first_finder.py / test_rim_first.py and ONE new file .team/shot_detectors/ft_half_circle.py (+ its tests in test_rim_first.py or a new test_ft_half_circle.py).
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to check".

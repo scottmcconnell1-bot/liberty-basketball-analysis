@@ -1,0 +1,24 @@
+I've read the four governing files. Now, as Muse, I must verify the plan's claims against the repo: the three video paths, the model, the `.venv`/commands, and `run_v8.py` references.
+Glob found the model but none of the videos, no `dist/scripts/run_v8.py`, and no `.venv` — let me verify these with directory listings and a broader search before concluding.
+All three videos and the model exist. The plan references `dist/scripts/run_v8.py` — let me confirm where `run_v8.py` actually lives and check the lines it cites (model loading, conf 0.3, interpolation, CUDA settings). Also verify the videos are non-trivial files.
+`dist/scripts/run_v8.py` exists (glob missed it — path separator quirk). Now let me read the lines the plan cites: model load (25–26), conf 0.3 (71–73), interpolation (85–98), and CUDA forcing.
+All paths check out. Now two remaining verifications: (1) confirm `nfhs_gam0a66d85e12` really is the Adrian game per the record, and (2) confirm the coder's target script and output dirs don't already exist on disk (which would turn them into edits of existing files).
+Verification complete. My findings as Muse:
+
+**Paths (Proven — checked this session):**
+- All three videos exist with real sizes: `uploads/nfhs_gam0a66d85e12.mp4` (2.6 GB; ACTIVE.md line 51 confirms it is the Adrian game), `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` (1.5 GB), `uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4` (1.4 GB).
+- `models/court_keypoint_detector.pt` exists; `dist/scripts/run_v8.py` exists; `.venv/Scripts/python.exe` exists.
+
+**V1's five rejections — all fixed in v2 (Proven, against files on disk):**
+1. Adrian path corrected to the real file. 2. Valid single script with `.venv` python (v1's `python -m .team.stage1...` removed). 3. Self-contradiction gone: v2 has no homography (`H_computed` always `false`, `H_inliers`/`reproj_error_px`/`half_court_y_ft` always `null`), no half-court fields or means, and no Stage-2 gates — acceptance criteria are artifact/schema checks only.
+4. Floor-point naming dropped: `keypoints_detected_conf_0_3` counts all 18 keypoints at conf ≥ 0.3, matching run_v8.py's own threshold (line 71: `conf=0.3`). 5. GPU allowed; evenly spaced frames only.
+
+**Banned trials:** none. Interpolation explicitly forbidden and named (run_v8.py lines 85–98 — verified those lines are the interpolate loop); no ByteTrack, DeepSORT, early windows, or tag-based selection.
+
+**Existing files:** none of the coder's targets exist on disk yet (`scripts/stage1_measure_keypoints.py` absent, `.team/stage1_keypoints/` absent); no source file is edited. v2 is stricter than the architecture's Stage-1 gate (defers even Notus gates to Stage 2 after the Vetter labels indices), which loosens nothing.
+
+**Would the measurement mislead?** No — landmark names are declared hypotheses with evidence frames ("UNCLEAR" allowed), counts are anchored to the model's own working threshold, and the copied load/access pattern matches run_v8.py lines 25–26/71–73.
+
+Two cosmetic nits, neither misleading nor rule-crossing: the "Exact Commands" fence labels itself `bash` but mixes an Ubuntu `cd /mnt/...` with a Windows invocation — the operative line (venv python running `scripts/stage1_measure_keypoints.py` from repo root) is unambiguous and is what acceptance criterion 6 pins; and the Files list lists the plan file itself as coder-editable, which is inherent to the stamp workflow (Golden Rule 4), not a project-code change.
+
+MUSE: AGREE

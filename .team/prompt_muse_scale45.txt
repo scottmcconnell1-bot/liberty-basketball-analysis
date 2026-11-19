@@ -1,0 +1,27 @@
+You are advising the Liberty basketball team on ONE decision. Read-only: do not change files.
+Scott said: "I may be wrong as well" -- give your honest view, disagree if you think Claude Code is wrong.
+
+Facts (see the last 2 entries of .team/drift_log.md and .team/specs/44_gv_handcheck.md):
+- Spec 44 Garden Valley BLIND: make/miss (D1 v6 + d2v1 vote, unchanged) on rim-first moments found 10/64 real makes;
+  51 real makes called miss silently (incl. 6 clear made FTs). FT rule: 19/28 found, 1 false.
+- Claude Code diagnosis: the make rule (ai_bridge.py run_saved_v6_rule ~line 908-1290, small_fixes_v6_copy.py)
+  uses FIXED PIXEL distances (80/180 px below rim, 50 px "starts below", 60 px box jump, 200 px, 12 px/frame)
+  tuned on Adrian = 1920x1080, grouped hoop ~98 px wide (docstring: "Grouped hoop is 90-110px wide").
+  The rule already multiplies these by track keys _court_scale_x/_court_scale_y, but they are never set (=1.0).
+- GV is 1280x720, grouped hoop median 64 px. Notus is 720p, hoop 64 px. Idaho/Riverstone/HSB are 720p.
+- Evidence on SEEN tagged build shots, coach tag times (no rim-first): v6 makes found Adrian 27/38, Notus 2/9 (d2v1 same).
+- Ruled out: hoop pick (track hoop == finder hoop on makes); window timing (crossing sample median 33 GV vs 34 tags).
+
+Scott earlier said makes/misses "exhausted all possibilities" -> no new make/miss logic or tuning. Now Scott says the scale idea
+"seems worth a chance to test".
+
+Claude Code proposal (spec 45, one setting, no new logic): in the wrapper only, set _court_scale_x = _court_scale_y = hoop_w / 98
+per track (98 = Adrian build hoop median, fixed now). No edit to the rule files. Checks: Adrian unchanged (scale ~1; must
+reproduce existing results); Notus seen-report (not a test); GV re-scored as seen (not a test, already looked at).
+Then ONE blind test on an unseen 720p film (Riverstone), labels + score frozen first, hand-check before score, then stop for Scott.
+
+Questions: (1) Is the diagnosis right, or is something else the bigger cause? (2) Is the scale fix worth one test? Any risk
+(e.g. hoop_w noise, constants that should not scale, d2v1 also scaled, overwhelming the coach)? (3) Change anything in the plan?
+Answer in at most 10 short lines. End with one line: RECOMMEND: <one sentence>.
+
+Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

@@ -1,0 +1,62 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Confirm .team/specs/52b_check_rule_prereg.md v2 applies the Muse and Cursor 
+changes (review52/cursor_spec52b.txt,
+review52/muse_spec52b.txt): seed_disagreement-only corroboration, other cues 
+FUTURE, qualified disclosure, silent
+unchanged and stated not fixed by 52b, stale next-step refreshed. Protocol 
+honest as written?
+End with one line: CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team -type f  0.8s
+📖 Read 52b_check_rule_prereg.md
+📖 Read cursor_spec52b.txt
+📖 Read muse_spec52b.txt
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ 2>/dev/null + 1 command  0.9s
+📖 Read ensemble_predict.py
+📖 Read hermes_spec52b_v2.txt  0.1s
+📖 Read cursor_spec52b_v2.txt  0.1s
+📖 Read muse_spec52b_v2.txt  0.2s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/silent3/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ | grep -i "52b\|silent"  0.4s
+📖 Read silent3_answers.json
+📖 Read postproc52.json
+📖 Read postproc52a.json
+📖 Read cursor_gate52a.txt
+📖 Read test_mm52.py
+📖 Read gate52.py
+
+────────────────────────────────────────
+☤ Hermes
+MUSE (reviewer) — read-only pass. No files edited, created or rewritten. Output = review text.
+
+Subject: .team/specs/52b_check_rule_prereg.md v2 versus the Muse and Cursor changes from their v1 reviews (.team/review52/muse_spec52b.txt, .team/review52/cursor_spec52b.txt).
+
+Verdict: CONFIRMED. The v2 applies all five required changes and the protocol is honest as written post-amendment, with two minor non-blocking residuals.
+
+Change 1 — seed_disagreement-only corroboration: CONFIRMED APPLIED (v2, lines 82-88). check(i) := flagged_auto(i) OR corroborated_extra(i); flagged_auto keeps the weak / abs(pmake-0.5) / seed_disagreement conditions; corroborated_extra := NOT auto called AND in-session AND floor <= P_shot < thr AND corroborated(i); corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate; ball_near_rim / trajectory / referee_score cues marked FUTURE (not built; referee = spec 53), not part of the rule. Verified against code: seed_disagreement(PM, i, thr) exists in ensemble_predict.py (lines 83-95) and is the only corroboration cue; the extras loop currently applies no second cue (all in-session floor <= P < thr candidates are extras today), which is exactly why the new gate is scoped to the re-gate through postproc52b.json under the post-approval code surface.
+
+Change 2 — other cues FUTURE: CONFIRMED APPLIED (v2 line 88). Unbuilt cues are marked FUTURE, not presented as a live code surface; referee = spec 53, not built.
+
+Change 3 — qualified disclosure: CONFIRMED APPLIED (DISCLOSURE (v2), lines 125-129). Motivation is tied to the observed gate52a check failure (checks 150 / rimrock 77 over the hard cap 20; band noise). Values carried over unchanged from postproc52 / postproc52a (thr 0.5, dedup_ms 800, floor 0.2, weak 0.65, mm 0.3, seed flag true) - NOT picked from logo52a numbers. It must NOT be called a clean pre-registration unqualified: motivation is post-hoc (observed failure), values carried over frozen / unpicked. Carried-over values verified against postproc52.json and postproc52a.json (shot_thr 0.5, dedup_ms 800, floor 0.2, weak 0.65, mm 0.3, flag_seed true; session_filter false -> true across the two per the re-gate wiring). dedup_ms 800 confirmed.
+
+Change 4 — silent unchanged and stated not fixed by 52b: CONFIRMED APPLIED (v2 lines 92-101 relation; 103-108 v2 note). Silent definition UNCHANGED (option i); 52b does NOT fix the 3 silents; Scott confirmed ALL 3 labels are CORRECT (silent3/silent3_answers.json: each is the first shot of a 2-shot sequence); no labels52b for them; silent fix = separate model-side workstream (2-shot/putback-aware sequence cue), NOT in this prereg; no sequence cue here.
+
+Change 5 — stale next-step refreshed: CONFIRMED APPLIED (v2 lines 142-146). The 3-clip silent-reject label check is RESOLVED (Scott's answers confirm all 3 labels are CORRECT); NO labels52b needed; labels52_v2.json untouched; silent fix = separate workstream, not in this prereg; next step = Scott approves this v2 prereg; then run the SAME-5 re-gate (Scott 'A') with postproc52b.json.
+
+Protocol honesty as written: YES, post-amendment. No cue overclaim (unbuilt cues marked FUTURE; referee = spec 53, not built); no unqualified clean-pre-registration claim (DISCLOSURE qualifies); no peeking (option (ii) rejected; silent kept as honest fail-backstop; check band floor <= P < thr is disjoint from silent P < floor and silent is P-only/flags-ignored, so no check rule clears the 3 silents); no logo52a check estimates; cap 20 hard/no truncation; open question (whether seed-only corroboration brings gvg/rimrock checks <= 20) left un-estimated, R10 blind films as the stronger test.
+
+Minor residuals, non-blocking: Status header (v2, line 10) still reads PRE-REGISTERED (v2) unqualified, with the qualification now sitting in the Validation DISCLOSURE; and Muse's synthesis asked that band-candidate seed-disagreement threshold handling be pinned before Cursor builds, though v2 names seed_disagreement(PM, i) (thr defaults to shot_thr 0.5, carried over frozen) and Cursor's audit judged the predicate codeable as written.
+
+Assessment: the v2 applies the Muse and Cursor changes and the protocol is honest as written. Only minor residuals remain, neither a blocker to Scott approving the v2 prereg for the SAME-5 re-gate.
+
+CURSOR: AGREE WITH CHANGES: v2 applies the Muse and Cursor changes (seed_disagreement-only corroboration, other cues FUTURE, qualified disclosure, silent unchanged/not fixed, stale next-step refreshed) and the protocol is honest as written.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-1015694d6d216f8d9cc9f3514014e6980e30eebb1e86f1ba25bfc3a8989d8c8e
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #58"
+
+Session:        local-1015694d6d216f8d9cc9f3514014e6980e30eebb1e86f1ba25bfc3a8989d8c8e
+Title:          You are MUSE, the REVIEWER (not Hermes)… #58
+Duration:       3m 16s
+Messages:       24 (1 user, 22 tool calls)

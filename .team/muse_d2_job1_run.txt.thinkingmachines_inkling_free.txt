@@ -1,0 +1,50 @@
+Query: You are Muse, the checker. CHECK Claude Code's VETTED verdict on 
+.team/specs/22_d2_label_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). v1 was REJECTED 
+(first paragraph of .team/specs/22_d2_label_job_spec_v1_REJECTED.md). This job 
+only picks 600 crops from untagged film and makes a local labelling page; Scott 
+approved D2 decision 1. No training.
+Check: (1) only the 7 films of .team/specs/21_d2_plan.md section 1; nothing from
+the build set, holdout, Adrian Q4 or Notus A1; (2) the holdout distance uses 
+each film's own fps and holdout_names.json (binding note in section 1 body); (3)
+the BODD path matches collect_q4_bodd.py and models/ball_detector.pt is not 
+read; (4) the pick rule is fixed before running and uses no truth; (5) output 
+and page stay outside the repo and are never published (film shows minors); (6) 
+tests cover the exclusions, 600 frames, the seed, and the LOST rule; (7) it 
+stops before training; (8) anything the stamp missed. Cite by section. Do not 
+edit files.
+End with exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE: <reason with file 
+and section>".
+📖 Read 22_d2_label_job_spec.md  0.1s
+📖 Read 22_d2_label_job_spec_v1_REJECTED.md
+📖 Read 21_d2_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+MUSE: AGREE — all 8 points verified by citation in v2:
+
+(1) §1: exactly 7 films listed; exclusions (Notus A1 Q1, Adrian Q1–Q3, Q4, Notus A1 Q2–Q4, holdout) explicitly named; build set excluded.
+(2) §1 binding note (§43) + Notus line (§30): each film's own fps (25/30) used with holdout_names.json via round(ms × fps/1000); listed numbers flagged as slips, not used.
+(3) §2 line: BODD path = C:/.../BODD_yolov8n_0001.pt (collect_q4_bodd.py:21); models/ball_detector.pt never read; stamp confirms.
+(4) §3: two-pass fixed (stride 25; window -10..+30; SEEN/LOST defined), no truth; seed 42; quota 85/86 fixed before running.
+(5) §4–§5: output/page at C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_frames/ outside repo; no publish; minors protected by no commit/upload.
+(6) §6: 8 tests cover exclusions (§1), 600 frames (§3), seed reproducibility (§4), LOST within 8 (§8), holdout >125 (§2), quota (§5).
+(7) §7: stops after label.html; no training (Decision 2 separate).
+(8) Missing from stamp: §9 marks estimates/NOT FOUND; §5 fixes download-via-Downloads (v1 error); crop clamped at edges (native, not 520×440 — v1 fix). All covered.
+────────────────────────────────────────
+
+🌐 Browser Final verification line — no file edits made  2.5s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-96b503dfa40837b2dccc5d48760acfdaa1a544a45a0309efa32b7c58317d439f
+  hermes -c "Check 22 d2 label job spec verdict"
+
+Session:        local-96b503dfa40837b2dccc5d48760acfdaa1a544a45a0309efa32b7c58317d439f
+Title:          Check 22 d2 label job spec verdict
+Duration:       37s
+Messages:       10 (1 user, 8 tool calls)

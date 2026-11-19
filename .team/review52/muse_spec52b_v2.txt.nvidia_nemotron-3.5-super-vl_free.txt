@@ -1,0 +1,48 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create 
+or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Confirm .team/specs/52b_check_rule_prereg.md v2 applies the Muse and Cursor 
+changes (review52/cursor_spec52b.txt,
+review52/muse_spec52b.txt): seed_disagreement-only corroboration, other cues 
+FUTURE, qualified disclosure, silent
+unchanged and stated not fixed by 52b, stale next-step refreshed. Protocol 
+honest as written?
+End with one line: CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+📖 Read 52b_check_rule_prereg.md  0.6s
+🔎 Grep review52  0.6s
+
+────────────────────────────────────────
+☤ Hermes
+I have the spec v2. Now let me read the two review reference files to compare.
+────────────────────────────────────────
+
+📖 Read cursor_spec52b.txt
+📖 Read muse_spec52b.txt
+
+────────────────────────────────────────
+☤ Hermes
+Review of .team/specs/52b_check_rule_prereg.md v2 against review52/cursor_spec52b.txt and review52/muse_spec52b.txt:
+
+seed_disagreement-only corroboration — APPLIED. Spec line 87: corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate. Rule reduces cleanly to check(i) := flagged_auto(i) OR corroborated_extra(i) with corroboration = seed disagreement alone (line 82-88).
+
+other cues FUTURE — APPLIED. Spec line 88: ball_near_rim / trajectory / referee_score cues marked FUTURE (not built; referee = spec 53), not part of the rule. Matches cursor O1 audit (no such cues exist in ensemble_predict.py/gate52.py; referee is spec 53 territory).
+
+qualified disclosure — APPLIED. Spec lines 124-129 (DISCLOSURE v2): motivation admitted post-hoc (observed gate52a check failure), values carried over frozen/unpicked from postproc52/52a, explicitly "must NOT be called a clean pre-registration unqualified." Resolves muse O2 credibility tension without overclaiming.
+
+silent unchanged and stated not fixed by 52b — APPLIED. Spec lines 92-101 pin silent as P-only fail-backstop unchanged; lines 103-108 state explicitly: silent definition UNCHANGED, "52b does NOT fix the 3 silents," all 3 labels confirmed correct per silent3_answers.json, no labels52b file, silent fix = separate model-side (2-shot/putback) workstream, no sequence cue in this prereg. Matches cursor required change #2 and muse O3 option (i).
+
+stale next-step refreshed — APPLIED. Spec lines 142-146 replace the stale "wait for 3-clip check" with "RESOLVED: Scott's answers confirm ALL 3 labels correct; NO labels52b needed; labels52_v2.json untouched. Next: Scott approves this v2 prereg; then run the SAME-5 re-gate with postproc52b.json." Matches cursor required change #3.
+
+Protocol honest as written? — Yes. Cap 20 unchanged with first-principles rationale (lines 117-120); honest scoring unchanged (lines 110-115); dedup_ms 800 matches postproc52/52a (line 78); code surface/tests section consistent (lines 132-140). No peeking: no sequence cue baked in despite the 3 known silent cases; blind R10 films cited as the stronger test.
+
+CURSOR: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-278138dda750c02d9e6bf7871b2019e81bfc499b056c5ef913774bec191579f4
+  hermes -c "Review 52b prereg spec for Cursor and Muse changes"
+
+Session:        local-278138dda750c02d9e6bf7871b2019e81bfc499b056c5ef913774bec191579f4
+Title:          Review 52b prereg spec for Cursor and Muse changes
+Duration:       1m 27s
+Messages:       8 (1 user, 6 tool calls)

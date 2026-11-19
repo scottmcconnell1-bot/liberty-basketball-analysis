@@ -1,0 +1,28 @@
+Spec SHA matched (`e4ebccff…`). Item 4 steps 2–3 built; no extract/train/gate run.
+
+### Built
+- `extract_clips.py` — `--window clips7` (default) / `--window 52d` (T0=-0.88, STEP=0.16, END=6.0, N=44, K_TRIG=6); crop unchanged; `labels52a:` source
+- `train_clip.py` — R4 `Sequential(Dropout(0.5), Linear(512,3))`, no seq; time-shift ±1; predict bs=8; G8 speed guard (>1.06 s/step → STOP for Scott)
+- `ensemble_predict.py` — 52d predict path (no seq, bs=8); 52b `shot_list` / postproc52b untouched
+- `test_mm52.py` — 52d pin asserts; logo52/logo52a gate + 52b tests kept
+- `.team/review52/build52d_commands.txt` — Windows GPU commands
+
+### Candidates (Proven)
+clips7a t_ms match `adrian.json` / `notus.json` / `gv.json` / `hsb.json` / `rimrock_mv.json` — **not** `*_mv` for adrian/notus/gvg. Commands use those files.
+
+### Tests (WSL)
+`324 passed, 2 skipped, 3 deselected` (same holdout deselects + `q4_blind_test` ignore). Torch head tests skipped (no torch on system py; same as 52c).
+
+### Changed files (sha256)
+| File | sha256 |
+|------|--------|
+| `.team/mm_clip/extract_clips.py` | `5e672cbd5ecb01b9dfaba470e9672a3c3fe719fa59ab738f61d956f5ffc70ae9` |
+| `.team/mm_clip/train_clip.py` | `d0a12118549cbd5936c3309cc16f1d5eb96c0f718a410b801ad1048490fd6007` |
+| `.team/mm_clip/ensemble_predict.py` | `d2540498e805ff2fa1850992edeea575a469de23dfcd3214a0fc289f4b3223d9` |
+| `.team/mm_clip/test_mm52.py` | `6f440f9675224dec7aec9e14b4439d32093234e9f2830605abc0f287da80ec9e` |
+| `.team/review52/build52d_commands.txt` | `9904fd2ce1a99a6c4a4540003e5cd70f24f86323b7556efb6439ab19b38fb145` |
+
+Unchanged: postproc52b `3a950337…`, postproc52 `150ff7e6…`, postproc52a `ec70b330…`.
+
+**CURSOR: BUILT**That background search for extract video paths was killed earlier (it was taking too long). It didn’t matter — the film→video map came from `rim_first/*/moments.json`, and those paths are already in `build52d_commands.txt`.
+[cursor_wsl] exit 0 at 20:22:51

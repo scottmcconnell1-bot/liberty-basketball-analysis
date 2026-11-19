@@ -1,0 +1,12 @@
+Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are the Architect. Read TEAM_RECOVERY.md, AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md, docs/agent_handoffs/ACTIVE.md (sections Makes from the scoreboard and Court size and the moving camera), docs/architecture/BIRDS_EYE_HOMOGRAPHY_DESIGN.md, docs/architecture/HOMOGRAPHY_INTEGRATION_PLAN.md, court_homography.py, the half-court functions in ai_bridge.py, pick_court_points.py, dist/scripts/run_v8.py (it runs models/court_keypoint_detector.pt, a YOLO pose model with 18 court keypoints per frame), scoreboard_clock.py, net_detector.py, and OLLAMA.md (banned trials).
+
+Scott's direction (2026-10-26): no manual tagging; make/miss must be 100% accurate; choose the MOST RELIABLE approach across many situations (different gyms, camera pans and zooms, occlusion, lighting), not the easiest. Return to the bird's-eye work, half-court and court keypoints, and a mixture of independent detectors.
+
+Write an architecture proposal to .team/specs/05_reliable_detector_architecture.md covering:
+1. Per-frame court geometry: use the court keypoint model to rebuild the homography on every frame (or every few frames), so bird's-eye positions stay right while the camera pans; how half court and the lane are found automatically; how bad frames are detected and rejected.
+2. Independent make/miss signals and how they are combined: scoreboard score change (proven 43/43 on Adrian), ball through the rim, net motion, ball path in court coordinates. Say how disagreements are handled (flag for Scott's review, never guess) and how each signal's reliability is measured.
+3. Shot attempts and the shooter without tags: the ball leaving a player toward the rim, the player's team and jersey.
+4. A staged order of small, testable tasks. Stage 1 must be measuring the court keypoint model on about 20 frames spread across each game (Adrian and both Notus games), saving overlay crops for the Vetter to check by eye: which 18 points it finds, how often, and how accurate.
+5. Risks, and what would prove each stage worked, as measured numbers.
+
+STRICT: create or edit ONLY .team/specs/05_reliable_detector_architecture.md. Do not create, edit, or delete any other file. Do not run code that writes files. Quote numbers only from commands you ran or from the files above.

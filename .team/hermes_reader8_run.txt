@@ -1,0 +1,71 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. FIRST read NEXT_TASK.md with your read tool (your write tool 
+refuses to overwrite a file you have not read). Your hue amendment to step 1 is 
+REJECTED by the Vetter for one reason, which also existed in v4 and which the 
+Vetter missed then: the Notus digits are made of separate LED DOTS with dark 
+gaps between them (see .team/notus_fit_crops/*_cell_*.png). Step 1 collects ALL 
+pixels inside the ON-segment regions, so the dark gap pixels (random hue, low S 
+and V) are included: the central-98% hue interval can widen to almost every hue,
+and the 10th-percentile S and V come from the gaps, so the mask would light the 
+dark board and OFF segments would read as ON. Fix step 1 with a rule fixed in 
+advance that does not depend on the cutoff: inside the ON-segment regions of 
+each eye-read crop, keep only the brightest half of the pixels (V >= the median 
+V of that crop's ON-region pixels) as "lit pixels"; measure the hue interval 
+(central 98%, wrap-around handled), the 10th percentile of S and the 10th 
+percentile of V on those lit pixels only, then freeze them. Add a REPORT-ONLY 
+check after freezing: the share of pixels in OFF-segment regions (segments not 
+lit for the eye-read digit, and blank tens slots) that pass the frozen mask, per
+game; it is reported to the Vetter and NOT used to tune anything. Also fix the 
+comment in the step 2 mask code: after mapping, h_min > h_max (wrap through 0) 
+is the EXPECTED case for red, not one that "should not occur". Keep the VETTED 
+stamp line and everything else unchanged. Do NOT open 
+.team/specs/04_notus_holdout_truth.json or any holdout_*.png. STRICT: edit ONLY 
+NEXT_TASK.md; create no other file; run no code. If a tool reports an error or 
+refusal, say so plainly.
+📖 Read NEXT_TASK.md
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -45,9 +45,10 @@
+│
+│  ### 1. Measure Notus red-digit colour on fitting frames ONLY (no gate/holdout frames)
+│  Using the (possibly corrected) ROI boxes from step 0 on fitting frames only:
+│ -- The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json` (written by the Vetter). For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (the ON segments for a digit are the letters common to EVERY pattern that maps to that digit — 6 → c,d,e,f,g; 7 → a,b,c; 9 → a,b,c,f,g; every other digit has one pattern; region names are the letters a–g, as in `_SEGMENTS`). Union those ON-segment regions, and collect pixels inside that union.
+│ -- **Rule (fixed before measuring)**: From those lit-segment pixels, take the central 98% of the hue distribution (handling wrap-around at 180: map hues >165 to hue-180 so the red cluster is contiguous around 0, compute the 1st and 99th percentiles, map back to 0–179). Also take the 10th percentile of V and the 10th percentile of S over the same pixels. These four numbers become the frozen `NOTUS_H_MIN`, `NOTUS_H_MAX` (the contiguous hue interval in 0–179), `NOTUS_S_MIN`, and `NOTUS_V_MIN`.
+│ +- The coder loads the eye-read values from `.team/notus_fit_crops/eye_read_values.json` (written by the Vetter). For each crop where the Vetter-confirmed digit is non-blank, look up the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box) **for only the segments that are ON for that digit** (the ON segments for a digit are the letters common to EVERY pattern that maps to that digit — 6 → c,d,e,f,g; 7 → a,b,c; 9 → a,b,c,f,g; every other digit has one pattern; region names are the letters a–g, as in `_SEGMENTS`). Union those ON-segment regions, and collect all pixels inside that union.
+│ +- **Rule (fixed before measuring)**: For each crop, compute the median V of its ON-region pixels. Keep only the pixels with V >= that crop's median V — these are the "lit pixels". Pool the lit pixels across all crops. On that pooled set, take the central 98% of the hue distribution (handling wrap-around at 180: map hues >165 to hue-180 so the red cluster is contiguous around 0, compute the 1st and 99th percentiles, map back to 0–179). Also take the 10th percentile of V and the 10th percentile of S over the same pooled lit pixels. These four numbers become the frozen `NOTUS_H_MIN`, `NOTUS_H_MAX` (the contiguous hue interval in 0–179), `NOTUS_S_MIN`, and `NOTUS_V_MIN`.
+│  - Write `h_min`, `h_max`, `s_min`, `v_min` to `data/roi/notus_red_thresholds.json`. The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│ +- **REPORT-ONLY check (after freezing, no tuning)**: For each fitting frame, also collect pixels in OFF-segment regions (segments NOT lit for the eye-read digit, and blank tens slots). Using the frozen mask (`h_min`/`h_max`/`s_min`/`v_min`), compute the fraction of those OFF-region pixels that pass the mask. Report the per-game share to the Vetter; do NOT use it to adjust any threshold.
+│
+│  ---
+│
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -79,7 +79,7 @@
+│      if h_min <= h_max:
+│          mask = cv2.inRange(hsv, (h_min, s_min, v_min), (h_max, 255, 255))
+│      else:
+│ -        # wrap-around interval (should not occur after central-98% rule but handle anyway)
+│ +        # wrap-around interval (h_min > h_max is the EXPECTED case for red after central-98% rule)
+│          low = cv2.inRange(hsv, (0, s_min, v_min), (h_max, 255, 255))
+│          high = cv2.inRange(hsv, (h_min, s_min, v_min), (179, 255, 255))
+│          mask = cv2.bitwise_or(low, high)
+
+────────────────────────────────────────
+☤ Hermes
+Done. Both changes applied to NEXT_TASK.md:
+
+1. Step 1 — Now computes the median V per crop's ON-region pixels, keeps only pixels with V ≥ that median ("lit pixels"), pools across crops, then measures central-98% hue interval, 10th-percentile S, and 10th-percentile V on the pooled lit pixels. Added the REPORT-ONLY check on OFF-segment regions (segments not lit for the eye-read digit + blank tens slots) reporting per-game false-positive share to the Vetter with no tuning.
+
+2. Step 2 mask comment — Changed from "should not occur after central-98% rule but handle anyway" to "h_min > h_max is the EXPECTED case for red after central-98% rule".
+
+The VETTED stamp line and all other content remain unchanged.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-64379942b54ba5b550f8cc5dd4c1e133178374b7395aa49f79055ce5013d43a8
+  hermes -c "Fix Notus digit hue sampling in step 1"
+
+Session:        local-64379942b54ba5b550f8cc5dd4c1e133178374b7395aa49f79055ce5013d43a8
+Title:          Fix Notus digit hue sampling in step 1
+Duration:       1m 7s
+Messages:       8 (1 user, 6 tool calls)

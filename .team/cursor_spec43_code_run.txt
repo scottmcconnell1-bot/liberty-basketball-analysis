@@ -1,0 +1,49 @@
+Spec 43 implemented. Settings only: `RELEASE_DX_MAX=0.8`, `MAYBE_STILL_MAX=0.25`.
+
+### `release_frame` before `annotate_free_throws`
+**Yes — the key is already on the moment in both paths (steps not moved).** It may be `None` when the shooter trace found no release.
+
+- **Live:** `moment.update(trace_shooter(...))` writes `release_frame` (via `_trace_fields` / `_orange`) before FT annotation:
+
+```1643:1660:.team/shot_detectors/rim_first_finder.py
+                moment.update(
+                    trace_shooter(
+                        ...
+                    )
+                )
+```
+
+then `annotate_free_throws(...)` at 2011–2021.
+
+- **Retrace:** `_apply_shooter_trace` sets it, then FT runs:
+
+```2411:2418:.team/shot_detectors/rim_first_finder.py
+def _apply_shooter_trace(...):
+    ...
+    moment["release_frame"] = traced.get("release_frame")
+```
+
+```2521:2534:.team/shot_detectors/rim_first_finder.py
+            _apply_shooter_trace(copied, traced)
+        ...
+        annotate_free_throws(...)
+```
+
+### Tests
+```
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q
+```
+(`.venv/bin/python` missing on WSL; Windows venv only has `Scripts/python.exe`)
+
+**99 passed in 3.21s**
+
+### Functions added/changed
+- **Added:** `RELEASE_DX_MAX`, `MAYBE_STILL_MAX`, `_nearest_ball_at_release`
+- **Changed:** `decide_ft` (N1/N2/V5 + `release_frame`/`stillness` kwargs), `_decision` (`ft_maybe_shooter_box`), `annotate_free_throws`, `_apply_ft_decision`, `ft_section`, `_render_ft`, tests in `test_ft_half_circle.py`
+
+### Choices not spelled out
+- Named helper `_nearest_ball_at_release` for the proto `min(..., key=(abs, frame))` tie rule
+- `_decision(..., ft_maybe_shooter_box=)` instead of a separate maybe builder
+- Measure key `maybe` (list of `{t_ms, eventtype}`); counts under `release_not_shooter` / `maybe_free_throw`
+- Append `"maybe_free_throw"` to `flags` only if missing; deepcopy `ft_maybe_shooter_box` on apply
+[cursor_wsl] exit 0 at 17:50:49

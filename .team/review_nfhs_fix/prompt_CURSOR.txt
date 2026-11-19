@@ -1,0 +1,39 @@
+You are CURSOR.
+Your strength: code - read nfhs.py, nfhs_download_jobs.py and tests/test_nfhs_recover.py in the repo and check the implementation.
+Files: .team/review_nfhs_fix/fix.diff, .team/review_nfhs_fix/test_nfhs_recover.py, .team/review_nfhs_fix/suite_failures_same_before_after.txt (full suite: identical failure list with and without the fix; 1116 passed).
+
+ROLE: You are reviewing a small bug fix in the Liberty Film Tool (Flask app), NOT the shot model.
+Read-only review. Do not edit any files.
+
+SCOTT'S PROBLEM (2026-11-19): NFHS download of game gam3f2777618 (8.23 GB, ~6 min) finished, then
+yt-dlp's final "fixup" (repair to normal MP4) step reported a failure and exited non-zero. nfhs.py
+treated any non-zero exit as failure, so the game was never added to the library, although the file
+uploads/nfhs_gam3f2777618.mp4 is a valid MP4 (ffprobe: h264 1920x1080 25fps + aac, 12794 s,
+319750 frames; decode-tested at 7 points start..end, all clean). Flask logs did not keep yt-dlp's
+output, so the exact fixup error is unknown. Scott: "Fix the program to work properly."
+
+THE FIX (diff in .team/review_nfhs_fix/fix.diff; new tests tests/test_nfhs_recover.py):
+1. yt-dlp output is always saved to logs/nfhs_download_<id>_<ts>.log with the bearer token removed.
+2. If yt-dlp exits non-zero but the final file (or yt-dlp's <name>.temp.mp4 fixup output) exists:
+   - leftover .temp.mp4 that is a good MP4 -> replace the final file with it;
+   - final file is a good MP4 (ffprobe mp4/mov + video stream + duration>0 + last 5 s decodes) -> accept;
+   - final file is a readable video but not MP4 (raw MPEG-TS) -> ffmpeg -c copy -bsf:a aac_adtstoasc
+     +faststart remux, verify, replace (retry while Windows holds a lock);
+   - otherwise -> error as before, now with the log path.
+   On recovery the job completes with a "warning" field.
+   Reasoning: yt-dlp only renames .part to the final name after all fragments are downloaded, so an
+   existing final file means the download finished and a post-step failed.
+3. Tests: 7 new tests with real tiny ffmpeg-made videos (good mp4, unrepaired mpegts, leftover temp,
+   garbage, cut-off mp4, full fake-yt-dlp run exit 1 -> success+warning, no file -> still error, token
+   never in log/error). 34/34 NFHS tests pass. Full-suite before/after comparison: see results file.
+
+QUESTIONS FOR YOU:
+Q1. Is the "final file exists => download finished" reasoning right for yt-dlp HLS (native and ffmpeg
+    downloaders) and for --download-sections clips? Any case where a partial video gets accepted?
+Q2. Is the "good MP4" check (probe + decode last 5 s) strong enough? Would you add an expected-
+    duration check (e.g. vs NFHS metadata) and how?
+Q3. Any risk in replacing the file (data loss, a locked file, disk space for an 8 GB remux)?
+Q4. Anything that should change before Scott uses it?
+
+Answer each Q briefly, then ONE verdict line starting exactly with:
+CURSOR: AGREE   or   CURSOR: AGREE WITH CHANGES: <list>   or   CURSOR: DISAGREE: <reason>

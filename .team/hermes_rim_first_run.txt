@@ -1,0 +1,200 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/35_rim_first_shot_finder_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "RIM-FIRST SHOT FINDER SPEC v1 - not run". Plain markdown, no 
+line-number prefixes, no literal "\n". Edit nothing else, run nothing that 
+writes (reading files/JSON, sqlite SELECT read-only are fine). If your write 
+tool refuses, say so plainly. One to two pages.
+
+Scott 2026-11-04: "Throw that at Hermes and Muse and see what you all agree on 
+as next steps and fixes." So: FIRST give your own honest opinion of Claude 
+Code's proposal (agree / disagree / change, with reasons from the code and 
+results), THEN write the plan you would back. Muse will critique after you, and 
+Claude Code will vet.
+
+WHAT WE LEARNED (Claude Code, this session):
+- Spec 33 (four flight-end rules; 
+.team/specs/33_shot_flight_rules_measure_spec.md, results 
+Liberty_Shot_Outputs/shot_rules_measured/summary.md): tagged shots called 
+SHOT/AIRBALL only adrian 33/109, notus 5/31. Fakes removed well (adrian 53/106 +
+50 orange, notus 23/31). Release trace-back 36/38 when a shot was found.
+- Spec 34 (.team/specs/34_ball_track_check_spec.md, 
+Liberty_Shot_Outputs/ball_check/summary.md): on every NOT_A_SHOT failure the 
+ball came from BODD full frame, not v6 crop; v6 crop sees the ball ~1/4 of 
+window frames. Claude Code hand-labelled 20 failed frames: 7 wrong object (spare
+balls on bench/sideline x3, referee, floor logo, 2 unclear near players), 5 ball
+leaves the TOP of the picture during the arc (camera framed tight above the 
+backboard), 4 real ball at the rim but a 4-7 frame gap tripped the 3-frame rule,
+1 real ball beside the rim called PASS (player box overlap), 3 real ball but a 
+later moment (play moved on).
+- Make/miss (works, coach page 41/42, 0 differ) = v6 on the hoop crop 
+(collect_q4_bodd.py v6_ball) from the tag time.
+- event_generator.py:1071 rim_arc_shots exists (peak within 280 px of hoop, rise
+>= 170 px) - spec 32: 14 found, 0 extra on the stored DB rows; not called in the
+pipeline.
+
+CLAUDE CODE'S PROPOSAL (rim-first): run the v6 hoop-crop detector over the whole
+game (Q1-Q3 + Notus Q1 for design), and call a shot moment when a ball comes 
+DOWN INTO the rim area from above (seen by v6, where make/miss already proves it
+reliable). Then trace backward from that moment (BODD full frame) only along the
+ball that left the rim area, to the shooter's hands -> shooter box + floor spot.
+Spare balls / referee / logos never come down into the rim, so they drop out; 
+arcs leaving the top of the frame still come back into view near the rim; short 
+gaps matter less. Gives up: airballs and hard shots -> orange coach cards. One 
+trial; designed on Q1-Q3 + Notus only; blind check on Adrian Q4 afterwards; 
+make/miss check before and after (.venv python 
+.team/shot_detectors/make_review_queue_page.py --wide-combined --out-dir <new> 
+-> gray 30 / orange 9 / 42 shots / same combined groups as page_v6). Stop if it 
+fails; Scott decides whether shot finding goes to coach review.
+
+YOUR PLAN MUST COVER:
+1. Your opinion (agree/disagree/change) and any better idea, with evidence.
+2. Exact detection: which model, crop, conf, imgsz - from existing code 
+(file+line); how "comes down into the rim area" is decided (reuse existing 
+numbers: rim_r 72 / 0.735 hoop widths, +40 band, rim_arc rise/peak, ai_bridge 
+gates - name them); any new number = "Scott decides before the run" with a 
+proposed value. Hoop position over the whole game (camera pans): how the crop 
+follows the hoop without banned hoop recenter - read what "hoop recenter" meant 
+in the banned list (OLLAMA.md / DETECTOR_PROPOSAL_REJECTION.md / 
+AGENT_OPERATIONAL_PROTOCOL.md) and say plainly whether your plan is the same 
+thing.
+3. Cost: frames to process (Q1-Q3 Adrian and Notus Q1 spans), estimate marked as
+estimate.
+4. Measure: found / extra / timing vs tags (8000 ms window, 
+find_shots_measure.match_shots), per kind; release trace + shooter box rate; Q4 
+blind run only after Scott sees Q1-Q3 numbers.
+5. Make/miss safety: files untouched; the check above before and after.
+6. Code: new scripts under .team/shot_detectors/ (name them), pure functions + 
+tests; output dir under Liberty_Shot_Outputs/ (refuse if exists). Rules: no core
+edits, no training, no banned trials (linear interpolation, ByteTrack, DeepSORT,
+early windows, wider column, hoop recenter), no tuning after results, DB 
+read-only, images local (minors).
+7. Roles: Claude Code vets, Muse checks, Cursor codes; stop for Scott with Scott
+numbers and the table.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+📖 Read 33_shot_flight_rules_measure_spec.md  0.2s
+📖 Read 34_ball_track_check_spec.md  0.2s
+📖 Read event_generator.py L1060-1109  0.2s
+📖 Read event_generator.py L1110-1189
+📖 Read make_review_queue_page.py  0.2s
+📖 Read OLLAMA.md  0.2s
+📖 Read DETECTOR_PROPOSAL_REJECTION.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+✗ Read collect_q4_bodd.py  0.2s [File not found: collect_q4_bodd.py]
+🔎 Find collect_q4_bodd  2.9s
+📖 Read ball_track_check.py  2.9s
+🔎 Grep collect_q4_bodd  20.5s
+🔎 Find collect_q4_bodd  2.8s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "collect_q4_bodd.py" 2>/dev/null  11.3s
+📖 Read collect_q4_bodd.py
+📖 Read collect_flight_tracks.py
+📖 Read collect_flight_tracks.py L300-449
+📖 Read collect_flight_tracks.py L100-199
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the context needed. Let me write the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/35_rim_first_shot_finder_spec.md
+│ .team/specs/35_rim_first_shot_finder_spec.md
+│ @@ -0,0 +1,150 @@
+│ +RIM-FIRST SHOT FINDER SPEC v1 - not run
+│ +
+│ +1. ARCHITECT OPINION ON CLAUDE CODE'S PROPOSAL
+│ +
+│ +AGREE with the core concept: v6 on the hoop crop is proven reliable for make/miss (coach page 41/42 shots correct, 0 differ from tags; collect_q4_bodd.py v6_ball). Using "ball comes DOWN INTO the rim area from above" as the shot trigger leverages this proven reliability and avoids BODD full-frame false positives (spare balls, referee, lights, crowd) that caused spec 33's low SHOT/AIRBALL rates (Adrian 33/109, Notus 5/31).
+│ +
+│ +CHANGE required: The proposal says "run the v6 hoop-crop detector over the whole game." This would require moving the crop to follow the hoop as the camera pans — what the user calls "hoop recenter." The banned list in OLLAMA.md / DETECTOR_PROPOSAL_REJECTION.md / AGENT_OPERATIONAL_PROTOCOL.md explicitly names: linear interpolation, ByteTrack, DeepSORT, early windows, wider column. "Hoop recenter" is not in those files, but the user's prompt adds it to the banned list. In collect_flight_tracks.py (spec 33, VETTED), the v6 crop uses BODD-detected hoop position per frame with fallback to `last_hoop` (lines 367–382) — this IS moving the crop with the pan. If that is the banned "hoop recenter," it was already VETTED in spec 33 and the ban would be new. If "hoop recenter" means post-hoc adjustment during a single shot's flight, my plan avoids it.
+│ +
+│ +MY PLAN: Run BODD full-frame (conf 0.12, imgsz 960) over the whole game to detect the hoop in every frame AND find candidate "ball coming down into the rim zone" moments. At each candidate moment, run v6 crop (conf 0.28, imgsz 640, hx±260, hy-200..hy+240) in a short window (±500 ms) to confirm rim crossing and get precise crossing frame. Then trace backward from that moment using BODD full-frame (not v6) to the shooter's hands → shooter box + floor spot. This uses v6 ONLY where proven (at the rim), avoids continuous v6 and hoop recenter, and drops airballs/hard shots to orange coach cards (Scott's standing rule).
+│ +
+│ +BETTER IDEA: The proposal's "trace backward along the ball that left the rim area" is correct — spare balls/referee/logos never come down into the rim, arcs leaving the top of frame still come back near the rim, short gaps matter less. My plan makes this concrete with existing numbers and a clear BODD→v6 handoff.
+│ +
+│ +2. EXACT DETECTION
+│ +
+│ +2.1 Models, crops, confidence, imgsz (from existing code)
+│ +
+│ +| Component | Model | Crop | Conf | Imgsz | Source |
+│ +|-----------|-------|------|------|-------|--------|
+│ +| BODD full-frame (scan) | `BODD_yolov8n_0001.pt` | Full frame (1920×1080 Adrian, 1280×720 Notus) | 0.12 | 960 | collect_flight_tracks.py:311–312, 340–342 |
+│ +| BODD classes kept | basketball, hoop, player | — | — | — | collect_flight_tracks.py:348–350 |
+│ +| v6 ball (confirm at rim) | `ball_net_runs/v6/weights/best.pt` | Hoop crop: hx±260, hy-200..hy+240 | 0.28 | 640 | collect_q4_bodd.py:121–125, v6_ball() |
+│ +| v6 crop center | Hoop position at candidate frame (from BODD hoop detection that frame) | — | — | — | collect_flight_tracks.py:367–369, 379–380 |
+│ +
+│ +2.2 "Comes down into the rim area" — precise decision (all numbers from existing code)
+│ +
+│ +A candidate shot moment is a frame `f` where ALL hold:
+│ +
+│ +1. **Hoop detected this frame**: BODD hoop box exists at frame `f` (collect_flight_tracks.py:367–369). Let `(hx, hy, hw, hh)` = that hoop box. `hoop_w = hw`.
+│ +2. **Ball detected this frame**: BODD basketball box exists at frame `f` (collect_flight_tracks.py:371–374). Let `(bx, by)` = ball center.
+│ +3. **In rim zone**: `dist((bx,by), (hx,hy)) <= rim_contact_dist * hoop_w` where `rim_contact_dist = 0.735 hoop widths` (spec 33, Scott approved; from `court_memory.py:165` `rim_r=72` / Adrian median `hoop_w=98` = 0.735). In px: `dist <= 0.735 * hoop_w`.
+│ +4. **At or above rim**: `by <= hy + 40` (from `court_memory.py:190` `y <= hoop_y + 40`). In hoop widths: `(hy - by) / hoop_w >= -40/hoop_w` (ball not far below rim).
+│ +5. **Coming DOWN (falling)**: Ball y-coordinate increased from previous frame with ball detection: `by > prev_by` (where `prev_by` is ball y at previous frame where BODD detected a ball). This uses BODD full-frame sequence — no tracker, no gap filling.
+│ +6. **Rise before fall (arc gate)**: There exists a prior frame `f_rise < f` (within 3000 ms / 75 frames at 25 fps) where ball was detected AND `by_rise < hy - rim_r` (ball above rim height; `rim_r=72` px from `court_memory.py:165`). Rise in px: `hy - rim_r - by_rise >= 170` px (from `event_generator.py:1071` `rim_arc_shots` `min_rise=170.0`). This mirrors the proven rim arc pattern.
+│ +7. **Peak near hoop**: At the highest point (min `by`) between `f_rise` and `f`, distance to hoop <= 280 px (from `event_generator.py:1071` `rim_arc_shots` `max_dist=280.0` AND `court_memory.py:150` `close_to_rim` `max_dist=280.0`). In hoop widths: `peak_dist / hoop_w <= 280 / hoop_w` (≈ 2.86 on Adrian, ≈ 4.34 on Notus).
+│ +
+│ +If all 7 hold → candidate shot moment at frame `f`. Run v6 crop in window `[f - 500 ms, f + 500 ms]` (12 frames each side at 25 fps) to confirm rim crossing and get precise crossing frame.
+│ +
+│ +**New number (Scott decides before run)**: `v6_confirm_window_ms = 500` (proposed). Reason: short window around candidate; v6 only needs to see the rim crossing. If different, Scott overrides.
+│ +
+│ +2.3 Hoop position over the whole game (camera pans) — no banned hoop recenter
+│ +
+│ +BODD full-frame detects the hoop in every frame (collect_flight_tracks.py:340–369). The hoop box `(hx, hy, hw, hh)` is available per frame. For candidate moments, we use the hoop detected **in that same frame** (line 379: `if hoop_box is not None: hx_hy = (hoop_box["x"], hoop_box["y"])`). If BODD misses the hoop in a frame, we do NOT fall back to `last_hoop` for candidate detection — we simply have no candidate that frame. This avoids "hoop recenter" (moving the crop based on stale hoop position). The v6 confirm window uses the hoop position at the candidate frame only (short ±500 ms window, camera pan negligible).
+│ +
+│ +This is NOT the same as collect_flight_tracks.py's `last_hoop` fallback (lines 381–382), which was VETTED for spec 33. My plan: no fallback for candidate detection; v6 confirm uses single-frame hoop position.
+│ +
+│ +3. COST ESTIMATE
+│ +
+│ +| Film | Duration (Q1–Q3) | Frames (25 fps) | BODD full-frame passes | v6 confirm windows (est. candidates) |
+│ +|------|------------------|-----------------|------------------------|--------------------------------------|
+│ +| Adrian | ~32 min (1920 s) | ~48,000 | 1 | ~150 candidates × 25 frames = 3,750 |
+│ +| Notus Q1 | ~8 min (480 s) | ~12,000 | 1 | ~40 candidates × 25 frames = 1,000 |
+│ +| **Total** | **~40 min** | **~60,000** | **2** | **~4,750 v6 frames** |
+│ +
+│ +BODD full-frame: ~60,000 frames × 2 films. v6 confirm: ~4,750 frames (only at candidates). **Estimated GPU time: ~8–12 minutes total** (BODD ~30 ms/frame, v6 ~20 ms/frame on GPU). Marked ESTIMATE — real time recorded in run log.
+│ +
+│ +4. MEASURE
+│ +
+│ +Run on Adrian Q1–Q3 (109 tags) + Notus Q1 (31 tags) + fake shots from spec 32 (Adrian Q1–Q3: 106 extra, Notus Q1: 31 extra). Total moments = 140 tagged + 137 fake = 277.
+│ +
+│ +Output dir: `Liberty_Shot_Outputs/rim_first/` (script refuses if exists).
+│ +
+│ +Per moment, using `find_shots_measure.match_shots` (8000 ms window, spec 33):
+│ +
+│ +| Metric | How measured |
+│ +|--------|--------------|
+│ +| Found / extra per kind | Match finder moments to tags (8000 ms). Report: true positives (matched tagged), false positives (finder only), false negatives (tagged only), per kind (2PT/3PT/FT). |
+│ +| Timing error | For matched: `|finder_t_ms - tag_t_ms|` median / max per kind. |
+│ +| Release trace + shooter box rate | For each true positive (Rule 2 SHOT): trace backward from v6 confirm crossing frame along BODD full-frame ball track to first frame where ball center inside a player box (distance < max(w,h) × `release_trace_factor` = 0.6, spec 33). Report: success %, median frames back, shooter box (frame, x,y,w,h). No tracker_id. |
+│ +| Rim crossing precision | For true positives: v6 crossing frame vs tag frame offset (ms). |
+│ +| Orange cards | Moments where candidate detection fired but v6 confirm failed OR trace failed OR ambiguous (gap > 3 frames during trace). Reason recorded. |
+│ +
+│ +**Q4 blind run ONLY after Scott sees Q1–Q3 numbers.** No Q4 data read, detected, or reported in this spec (C5 / VETTED).
+│ +
+│ +5. MAKE/MISS SAFETY
+│ +
+│ +Files and outputs the make/miss path uses (this spec touches NONE):
+│ +
+│ +- `.team/shot_detectors/make_review_queue_page.py` — builds coach review page
+│ … omitted 72 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 35_rim_first_shot_finder_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. Created .team/specs/35_rim_first_shot_finder_spec.md with all 7 required sections, 150 lines (~2 pages).
+
+Summary of my opinion: AGREE with the rim-first core concept (v6 at rim is proven), but CHANGE the "run v6 over whole game" part — that requires hoop recenter (moving crop with pan), which the user added to the banned list. My plan: BODD full-frame scans whole game to find "ball comes down into rim zone" candidates using 7 precise gates from existing code, then v6 confirm ONLY at those moments (±500 ms window), then trace backward on BODD to shooter. This uses v6 only where proven, avoids continuous v6 and hoop recenter, drops airballs to orange cards.
+
+Key "Scott decides" numbers for the stop gate: the 7 from spec 33 (rim_contact_dist=0.735, near_hoop_dist=1.833, gap_threshold_frames=3, catch_distance_factor=0.5, release_trace_factor=0.6, detection_window_before_ms=3000, detection_window_after_ms=2000) plus my new v6_confirm_window_ms=500. All fixed before run.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-64b66dbd87b77916f7771a332fd20707054d3502bdaf9be6b91de4580bb2295d
+  hermes -c "Create RIM-FIRST SHOT FINDER SPEC v1"
+
+Session:        local-64b66dbd87b77916f7771a332fd20707054d3502bdaf9be6b91de4580bb2295d
+Title:          Create RIM-FIRST SHOT FINDER SPEC v1
+Duration:       3m 49s
+Messages:       35 (1 user, 33 tool calls)

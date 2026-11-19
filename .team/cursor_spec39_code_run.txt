@@ -1,0 +1,28 @@
+Spec 39 is in the rim-first walk. Both fixes default on for a live run and a retrace. `--fixes-off` turns both off, and that path is the spec 38 walk. The hold test, the two-player stop, the 8-frame break, shot calls, and make/miss are unchanged. F3 is not implemented.
+
+`.venv/Scripts/python.exe` did not run here (WSL interop error, exit 1, no version printed). The suite was run with `python3`:
+
+```
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+```
+
+**72 passed** in 2.16s.
+
+`rim_first_measure.py` was not edited. Nothing was committed. No video and no model was run.
+
+**Added:** `box_iou`, `inside_fraction`, `merge_same_body`, `is_referee_player`, `_box_xyxy`, `_xyxy_area`, `_box_area`, `_player_boxes_only`, `_rounded_box_key`, `_shooter_fix_names`, `_referees_from_frames`.
+
+**Changed:** `_trace_walk_back`, `trace_shooter`, `emit_moments`, `detect_span`, `_apply_shooter_trace`, `retrace_moments`, `run_retrace`, `build_arg_parser`, `main`. The `_balls_and_players_from_frames` docstring now says referees stay in `"r"`.
+
+**Choices the spec left open:**
+
+- Boxes are center `x,y` plus `w,h`, the same geometry as `floor_spot` (`y + h/2`).
+- Merge sorts by `x, y, w, h`, then original index, and repeatedly merges the first pair with IoU at least `MERGE_IOU`. An area tie keeps the earlier box. The kept object is that box, not a new union.
+- An IoU tie while following a box keeps the earlier merged box.
+- A box already classed `"referee"` is removed before merge and before the referee test, so it cannot swallow a player. The new test is only for a player box that covers `"r"` boxes.
+- On each walked frame the order is merge, then drop referee players, then the existing hold test. `is_referee_player` always matches against merged boxes. `fix_merge` only controls the hold list. Both flags off skips both steps.
+- The cache key is `(frame, x, y, w, h)` rounded to 0.1, and it lives for one walk.
+- The one-frame trace does not apply the filters. Every moment still gets `shooter_fixes`, in the order `ref` then `merge`, listing only the flags that are on.
+- The referee window uses every saved player and referee frame, including frames outside the 3000 ms trace slice. A frame counts once, on the first referee that meets `REF_INSIDE`. A zero-area box scores 0.
+- `--fixes-off` clears both flags together. The old walk tests call the walk with both flags off so they still expect the spec 38 result.
+[cursor_wsl] exit 0 at 13:00:08

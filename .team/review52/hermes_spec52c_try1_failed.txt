@@ -1,0 +1,96 @@
+Query: You are HERMES, the architect. Write NEW file 
+.team/specs/52c_first_shot_sequence_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-15): the team designs a MODEL fix for the blind spot on 
+the first shot of a 2-shot sequence
+(shot then putback / second shot). Pre-registered; Muse + Cursor review; Scott 
+approves; then same-5 re-gate (binding,
+Scott 'A') and later R10 blind films (NOTUS_A, IDAHO_CITY, RIVERSTONE).
+Facts: Scott confirmed (review52/silent3/silent3_answers.json) notus 252520 (3PT
+miss, then missed putback at 255120),
+rimrock 274807 (miss, then make at 280040), gvg 1158600 (miss, then miss at 
+1159760) are real misses. The model gives the
+first shot P(shot) 0.08-0.18 (all 3 seeds < 0.5) and the second 0.94-0.995. 
+Clips: .team/mm_clip/extract_clips.py
+(32 frames, rim-centred 96x112 crop; check fps / window offsets vs candidate 
+t_ms), train_clip.py (r2plus1d_18, 3 class,
+R4 recipe), candidates cand5/*.json, clips7a training set, labels52a.
+Do:
+1. Diagnose from CODE and DATA DEFINITIONS first (not by tuning on these 3): 
+where is the first shot inside its
+   32-frame window (does the window end before the ball reaches the rim? does 
+the label-1 clip of a first shot look
+   like the class-0 'rebound scramble' pattern? how many training rows are 
+first-of-sequence shots per film, from
+   labels alone: a real shot with another real shot within N s after it)? You 
+may open the 3 clips' frames.
+2. Propose ONE smallest model-side change, e.g. (a) longer / shifted temporal 
+window, (b) add a second
+   context clip or a 'next shot within N s' sequence feature, (c) oversample 
+first-of-sequence shots, (d) other.
+   Fix every value now with a reason not taken from the 3 silent P values or 
+logo52a gate numbers.
+3. Disclosure: the change is motivated by the 3 observed silents; same-5 re-gate
+is binding (Scott) but R10 blind is the
+   stronger test; silent definition unchanged.
+4. Exact build + run order (new clips dir if needed, sha freeze, tests, E=5, 
+seeds 0 1 2, runs/logo52c, gate52 with the
+   52b postproc), fail -> stop for Scott. Combine with 52b check rule in one 
+re-gate.
+End with "HERMES: PREREG WRITTEN".
+
+────────────────────────────────────────
+☤ Hermes
+HERMES: Architect. First, per AGENTS.md I read TEAM_RECOVERY.md, then I need the current state of the specs and the model code before writing this prereg.
+────────────────────────────────────────
+
+📖 Read TEAM_RECOVERY.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 1 command  1.9s
+✗ $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/candidates/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/candidates/cand5/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/clips7a/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/labels52a/  0.7s [exit 2]
+
+────────────────────────────────────────
+☤ Hermes
+The candidates/clips/labels paths differ from what I guessed. Let me map the full .team tree and read the key specs (52b, 52c context, silent3).
+────────────────────────────────────────
+
+✗ $ ls -la + 3 commands  1.7s [exit 2]
+💻 $ ls -la .team/ | grep -iE 'silent|review52|design|rejected' + 4 commands  1.3s
+📖 Read hermes_spec52c.txt
+💻 $ find . -maxdepth 3 -iname '*silent*' -not -path './.git/*' 2>/dev/null + 4 commands  1.3s
+📖 Read 52a_class0_restore_prereg.md
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/silent3/ + 5 commands  1.1s
+📖 Read 52b_check_rule_prereg.md  0.1s
+📖 Read silent3_answers.json
+📖 Read silent3.html
+📖 Read train_clip.py
+⏳ Provider temporarily unavailable — retrying automatically in 16s (cycle 1/5); press Esc to stop
+⚠️ openrouter stream drop (APIError) after 11.5s — attempt 1/3 dropped, reconnecting
+⚠️  Attempt 1/3 failed: HTTP 502: Provider returned error
+⏳ Retrying in 2.6s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 503: Provider returned error
+⏳ Retrying in 5.2s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 503: Provider returned error
+⚠️  Attempt 1/3 failed: HTTP 404: Provider returned error
+⏳ Retrying in 2.2s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 404: Provider returned error
+⏳ Retrying in 5.5s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 404: Provider returned error
+❌ API failed after 3 retries — HTTP 404: Provider returned error
+   💀 Final error: HTTP 404: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter didn't answer after 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 404: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c18e22e31d1b4402440415072cb1c9f060d787f1894a4e99575c3101c7b3fe8a
+  hermes -c "You are HERMES, the architect. Write NEW file… #2"
+
+Session:        local-c18e22e31d1b4402440415072cb1c9f060d787f1894a4e99575c3101c7b3fe8a
+Title:          You are HERMES, the architect. Write NEW file… #2
+Duration:       2m 5s
+Messages:       22 (1 user, 20 tool calls)
+[hermes] exit 1 at 10:51:31

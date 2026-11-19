@@ -1,0 +1,9 @@
+﻿You are Muse, the checker. Check Claude Code's VETTED verdict on the plan .team/specs/15_net_check_plan.md
+(stamp and BINDING NOTE a are at the top). Read the plan, net_detector.py lines 455-480 and 50-100,
+.team/shot_detectors/pixel_miss/measure_net_moved.py lines 155-180, and AGENT_OPERATIONAL_PROTOCOL.md Golden Rules.
+Check: (1) the counts (140 shots = 19 missed makes + 28 correct makes + 93 real misses); (2) the before-frame and
+delta design really answers "rim is the same orange as the ball"; (3) the HSV ranges with binding note a match
+net_detector.py:74-76; (4) no protected file edited, no cutoff loosened, no banned trial (linear interpolation,
+ByteTrack, DeepSORT, early windows, wider column, hoop recenter), no hard-coded results, outputs outside the repo;
+(5) anything wrong in the stamp itself. Do not edit any file.
+End with exactly one line that starts with "MUSE: AGREE" or "MUSE: DISAGREE: <reason with file and line>".

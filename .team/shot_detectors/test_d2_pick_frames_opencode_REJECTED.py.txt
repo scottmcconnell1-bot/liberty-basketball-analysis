@@ -1,0 +1,23 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
+import d2_pick_frames as d
+
+def test_in_zone():
+    assert d.in_zone(100, 100, 100, 100, 30) is True
+    assert d.in_zone(1000, 100, 100, 100, 30) is False
+
+def test_crop_box_clamps():
+    x0,y0,x1,y1 = d.crop_box(10, 10, 100, 100)
+    assert x0 == 0 and y0 == 0
+
+def test_compute_quotas_sums():
+    yields = {f[0]: 1000 for f in d.FILMS}
+    q = d.compute_quotas(yields)
+    assert sum(q.values()) == d.TOTAL_TARGET
+    assert all(q[s] in (85, 86) for s in q)
+
+def test_film_count():
+    assert len(d.FILMS) == 7
+
+def test_total_target():
+    assert d.TOTAL_TARGET == 600

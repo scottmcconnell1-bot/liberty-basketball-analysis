@@ -1,0 +1,1 @@
+0baa2eea0b214b7732b184f9d8987a25b5bf867e9fcda047f32b1fc270a6c48a *specs/52c_first_shot_sequence_prereg.md

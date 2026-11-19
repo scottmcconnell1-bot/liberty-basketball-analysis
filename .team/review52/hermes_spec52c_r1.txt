@@ -1,0 +1,340 @@
+Query: You are HERMES, the architect. Write NEW file 
+.team/specs/52c_first_shot_sequence_prereg.md (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided (2026-11-15): the team designs a MODEL fix for the blind spot on 
+the first shot of a 2-shot sequence
+(shot then putback / second shot). Pre-registered; Muse + Cursor review; Scott 
+approves; then same-5 re-gate (binding,
+Scott 'A') and later R10 blind films (NOTUS_A, IDAHO_CITY, RIVERSTONE).
+Facts: Scott confirmed (review52/silent3/silent3_answers.json) notus 252520 (3PT
+miss, then missed putback at 255120),
+rimrock 274807 (miss, then make at 280040), gvg 1158600 (miss, then miss at 
+1159760) are real misses. The model gives the
+first shot P(shot) 0.08-0.18 (all 3 seeds < 0.5) and the second 0.94-0.995. 
+Clips: .team/mm_clip/extract_clips.py
+(32 frames, rim-centred 96x112 crop; check fps / window offsets vs candidate 
+t_ms), train_clip.py (r2plus1d_18, 3 class,
+R4 recipe), candidates cand5/*.json, clips7a training set, labels52a.
+Do:
+1. Diagnose from CODE and DATA DEFINITIONS first (not by tuning on these 3): 
+where is the first shot inside its
+   32-frame window (does the window end before the ball reaches the rim? does 
+the label-1 clip of a first shot look
+   like the class-0 'rebound scramble' pattern? how many training rows are 
+first-of-sequence shots per film, from
+   labels alone: a real shot with another real shot within N s after it)? You 
+may open the 3 clips' frames.
+2. Propose ONE smallest model-side change, e.g. (a) longer / shifted temporal 
+window, (b) add a second
+   context clip or a 'next shot within N s' sequence feature, (c) oversample 
+first-of-sequence shots, (d) other.
+   Fix every value now with a reason not taken from the 3 silent P values or 
+logo52a gate numbers.
+3. Disclosure: the change is motivated by the 3 observed silents; same-5 re-gate
+is binding (Scott) but R10 blind is the
+   stronger test; silent definition unchanged.
+4. Exact build + run order (new clips dir if needed, sha freeze, tests, E=5, 
+seeds 0 1 2, runs/logo52c, gate52 with the
+   52b postproc), fail -> stop for Scott. Combine with 52b check rule in one 
+re-gate.
+End with "HERMES: PREREG WRITTEN".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by exploring the repository structure and reading the key files to understand the conventions before writing the spec.
+────────────────────────────────────────
+
+📖 Read TEAM_RECOVERY.md  24.0s
+✗ Read liberty-basketball-analysis  24.0s [Cannot read '/mnt/c/Users/scott/Documents/lib...]
+🔎 Grep extract_clips|train_clip  24.0s
+
+────────────────────────────────────────
+☤ Hermes
+Let me explore the .team directory structure and find the relevant code files.
+────────────────────────────────────────
+
+💻 $ ls -la + 2 commands  1.9s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me look at the specs directory fully and find the mm_clip code files.
+────────────────────────────────────────
+
+💻 $ ls -la .team/specs | grep -E "5[0-9]" + 3 commands  0.7s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the key spec files and code in parallel to understand the conventions.
+────────────────────────────────────────
+
+📖 Read 52a_class0_restore_prereg.md
+📖 Read 52b_check_rule_prereg.md
+📖 Read extract_clips.py
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read train_clip.py, gate52.py, postproc files, and the candidates.
+────────────────────────────────────────
+
+📖 Read train_clip.py
+📖 Read gate52.py
+📖 Read postproc52a.json
+📖 Read postproc52.json
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read ensemble_predict.py, the silent3 answers, and check what candidate/labels files exist.
+────────────────────────────────────────
+
+📖 Read ensemble_predict.py
+✗ $ ls -la .team/mm_clip/cand5/ 2>/dev/null + 4 commands  0.5s [exit 1]
+
+────────────────────────────────────────
+☤ Hermes
+Let me look at the previous spec 52c attempts and check what exists already.
+────────────────────────────────────────
+
+📖 Read hermes_spec52c.txt  0.1s
+📖 Read hermes_spec52c_try1_failed.txt  0.1s
+📖 Read hermes_spec52c_r1.txt  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me check the cand5 directory contents, clips7a, test file, and the labels structure.
+────────────────────────────────────────
+
+💻 $ echo "=== cand5 ===" + 8 commands  0.9s
+📖 Read test_mm52.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Let me check the clips7a directory, labels52a structure, and game_session module.
+────────────────────────────────────────
+
+✗ $ find . -name 'clips7a*' -not -path './.git/*' 2>/dev/null + 3 commands [BLOCKED: Command flagged as dangerous (script...]
+💻 $ find . -name 'clips7a*' -not -path './.git/*' 2>/dev/null + 2 commands  40.0s
+📖 Read clips7a_sha.txt  0.2s
+📖 Read labels52a_class0_restore.json  0.2s
+✗ Read game_session.py  0.2s [File not found: game_session.py]
+💻 $ ls .team/shot_detectors/ + 1 command  0.7s
+📖 Read labels52a_class0_restore.json L60-139
+📖 Read labels52a_class0_restore.json L2960-3079
+📖 Read game_session.py
+
+────────────────────────────────────────
+☤ Hermes
+Let me check the build notes and the labels52a film structure.
+────────────────────────────────────────
+
+📖 Read cursor_build52.txt
+📖 Read cursor_build52a.txt
+📖 Read labels52a_class0_restore.json L2840-2959
+📖 Read candidates.py
+💻 $ find /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs -name 'gate52_report.json' 2>/dev/null + 2 commands  1.2s
+
+────────────────────────────────────────
+☤ Hermes
+The cand5 dir is in Liberty_Shot_Outputs. Let me examine it and the logo52a gate report.
+────────────────────────────────────────
+
+💻 $ ls -la cand5/ + 4 commands  0.1s
+💻 $ grep -n '"rimrock"' .team/review52/labels52a_class0_restore.json + 5 commands  0.1s
+📖 Read labels52a_class0_restore.json L528-602
+📖 Read labels52a_class0_restore.json L736-810
+📖 Read labels52a_class0_restore.json L2544-2618
+
+────────────────────────────────────────
+☤ Hermes
+Let me read the y arrays for gvg and rimrock to confirm labels at those indices.
+────────────────────────────────────────
+
+📖 Read labels52a_class0_restore.json L658-777
+📖 Read labels52a_class0_restore.json L778-877
+📖 Read labels52a_class0_restore.json L878-977
+💻 $ grep -n '"y":' .team/review52/labels52a_class0_restore.json + 1 command
+📖 Read labels52a_class0_restore.json L2945-2984
+✍️ Write /home/scott/.hermes/cache/scratch/seq_diag.py  0.1s
+│ /home/scott/.hermes/cache/scratch/seq_diag.py
+│ @@ -0,0 +1,31 @@
+│ +import json
+│ +from pathlib import Path
+│ +
+│ +p = Path("/mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/labels52a_class0_restore.json")
+│ +d = json.load(open(p))
+│ +
+│ +silents = {"notus": 252520, "rimrock": 274807, "gvg": 1158600}
+│ +seconds = {"notus": 255120, "rimrock": 280040, "gvg": 1159760}
+│ +
+│ +for film, data in d["films"].items():
+│ +    t = data["t_ms"]
+│ +    y = data["y"]
+│ +    shots = [(ti, yi) for ti, yi in zip(t, y) if yi in (1, 2)]
+│ +    shot_set = set(ti for ti, _ in shots)
+│ +    print(f"=== {film}: {len(t)} moments, {len(shots)} real shots (y in 1,2)")
+│ +    # silent confirmation
+│ +    for s, sec in silents.items():
+│ +        if film == s:
+│ +            i = t.index(sec)
+│ +            print(f"   silent {sec}: y={y[i]}  (second shot at {seconds[s]} -> gap {seconds[s]-sec} ms)")
+│ +    for N in (2000, 4000, 6000, 8000, 10000):
+│ +        fos = []
+│ +        for ti, yi in shots:
+│ +            later = [tj for tj in shot_set if ti < tj <= ti + N]
+│ +            if later:
+│ +                fos.append((ti, yi, min(later) - ti))
+│ +        print(f"   N={N}ms: first-of-sequence shots (real shot w/ another real shot within {N}ms after): {len(fos)}/{len(shots)}")
+│ +        if film in silents and N >= 6000:
+│ +            for ti, yi, gap in fos:
+│ +                if ti in (silents[film],):
+│ +                    print(f"      silent first shot {ti} y={yi}, next shot at +{gap} ms")
+📖 Read trigger2.py
+💻 $ python3 /home/scott/.hermes/cache/scratch/seq_diag.py  0.1s
+💻 $ echo "=== spec52b sha ===" + 5 commands  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+I have all the context I need. Let me verify the test baseline runs and check tag file paths before writing the spec.
+────────────────────────────────────────
+
+💻 $ ls data/film_tags/ + 1 command  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+pytest isn't installed in this WSL python (the Windows .venv is the standard test runner here per cursor_build52a.txt — I'll note that convention in the spec). Tag files and paths are all confirmed. Now I'll write the spec.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md
+│ .team/specs/52c_first_shot_sequence_prereg.md
+│ @@ -0,0 +1,268 @@
+│ +# Spec 52C - First-Shot-of-Sequence Model Fix (PRE-REGISTERED) v1
+│ +
+│ +Author: HERMES (Architect)
+│ +Date: 2026-11-15
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +Outputs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/
+│ +
+│ +## Status
+│ +
+│ +PRE-REGISTERED (v1). The change set below is frozen BEFORE any code change or training.
+│ +This is the binding pre-registration for the first-shot-of-sequence model fix.
+│ +
+│ +## Binding decision (Scott, 2026-11-15)
+│ +
+│ +- Scott decided (2026-11-15): the team designs a MODEL fix for the blind spot on the
+│ +  first shot of a 2-shot sequence (shot then putback / second shot).
+│ +- Pre-registered; Muse + Cursor review; Scott approves; then the SAME-5 re-gate is the
+│ +  binding pass/fail (Scott 'A'); later R10 blind films: NOTUS_A, IDAHO_CITY, RIVERSTONE.
+│ +- The re-gate combines this spec (52c model change) with spec 52b (check rule) in ONE
+│ +  re-gate using postproc52b.json.
+│ +
+│ +## Inputs read this session (no source changed by this spec)
+│ +
+│ +- .team/specs/52a_class0_restore_prereg.md (v3)
+│ +- .team/specs/52b_check_rule_prereg.md (v2)
+│ +- .team/specs/52_label_audit_stable_ensemble_spec.md (v3; R6/R7/R8)
+│ +- .team/review52/hermes_gate52a.txt, .team/review52/muse_gate52a.txt,
+│ +  .team/review52/cursor_gate52a.txt
+│ +- .team/review52/labels52a_class0_restore.json
+│ +  sha256 = d8d2acd4eaa04004924e3919c0fc3a98ee34f93efe5244d6aa33171b229df384
+│ +  (labels52a is FROZEN and is NOT changed by this work; no labels52c file is created)
+│ +- .team/review52/silent3/silent3_answers.json (Scott's label confirmation)
+│ +- .team/mm_clip/extract_clips.py, train_clip.py, ensemble_predict.py, gate52.py,
+│ +  postproc52.json, postproc52a.json, test_mm52.py
+│ +- .team/review52/clips7a_sha.txt (clips7a frozen: adrian, gvg, hsb, notus, rimrock npz;
+│ +  sha file at /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/clips7a_sha.txt)
+│ +- Liberty_Shot_Outputs/mm_clip/runs/logo52a/gate52_report.json (baseline being answered)
+│ +
+│ +## Gate facts being answered (baseline: logo52a, E=5, seeds 0 1 2)
+│ +
+│ +OVERALL FAIL (binding re-gate target):
+│ +
+│ +- adrian: ensemble auto 94.5 PASS (all conditions PASS)
+│ +- notus: auto 90.3, silent_reject 1 -> FAIL (silent_eq_0)
+│ +- gvg: auto 95.9, checks 150 (cap 20), silent_reject 1 -> FAIL
+│ +- hsb: auto 97.1 PASS (all conditions PASS)
+│ +- rimrock: auto 95.1, checks 77 (cap 20), silent_reject 1 -> FAIL
+│ +- honest coach review 93.5-99.3; spread <= 5 all games.
+│ +
+│ +The 3 silents (labelled misses, ens P(shot) < floor 0.2, all 3 seeds P(shot) < 0.5):
+│ +notus t=252520, rimrock t=274807, gvg t=1158600. Scott confirmed all 3 first shots are
+│ +real misses (review52/silent3/silent3_answers.json).
+│ +
+│ +## Item 1 - Diagnosis from CODE and DATA DEFINITIONS first (no tuning on the 3 silents)
+│ +
+│ +### 1.1 Clip window geometry (extract_clips.py)
+│ +
+│ +- T0 = -0.88 s, STEP = 0.08 s, N = 32 -> window [t_trig - 0.88, t_trig + 1.60] s,
+│ +  32 frames, trigger at index K_TRIG = int(round(-T0/STEP)) = 11 (frame 11 of 32,
+│ +  i.e. 34% through the clip, exactly at t_trig).
+│ +- Crop: hoop-centred, 2.6 x hoop width x 3.0 x hoop width, resized 96 x 112 (BGR uint8).
+│ +- fps: read from the video at extract (cv2.CAP_PROP_FPS); frame k sampled at
+│ +  round((t_trig + T0 + k*STEP) * fps). There is NO extra offset between candidate t_ms
+│ +  and the clip: the moment t_ms IS the trigger, so the clip is anchored on t_ms.
+│ +- Frame k time = t_trig - 0.88 + k*0.08.
+│ +
+│ +### 1.2 What the candidate t_ms means (trigger2.py)
+│ +
+│ +- Moment = FIRST frame where the ball is within R_TRIG = 1.0 hoop width of that frame's
+│ +  hoop centre, after a ball point was above the rim (y < hy - 0.3*hw, within 3.0 hw in x)
+│ +  within LOOKBACK_S = 1.2 s. Triggers closer than MERGE_S = 1.5 s merge; moment = first
+│ +  trigger frame of the group; hoop = that frame's hoop.
+│ +- Consequence: t_ms approximates ball AT / NEAR THE HOOP (rim contact), NOT the release.
+│ +- For a jump shot/3PT, release-to-rim is roughly 0.8-1.2 s, so release sits about
+│ +  1 s before frame 11, inside the window (frame ~4-8).
+│ +
+│ +### 1.3 Where the first shot sits inside its 32-frame window
+│ +
+│ … omitted 190 diff line(s) across 1 additional file(s)/section(s)
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md  0.1s
+│ .team/specs/52c_first_shot_sequence_prereg.md
+│ @@ -71,8 +71,9 @@
+│    within LOOKBACK_S = 1.2 s. Triggers closer than MERGE_S = 1.5 s merge; moment = first
+│    trigger frame of the group; hoop = that frame's hoop.
+│  - Consequence: t_ms approximates ball AT / NEAR THE HOOP (rim contact), NOT the release.
+│ -- For a jump shot/3PT, release-to-rim is roughly 0.8-1.2 s, so release sits about
+│ -  1 s before frame 11, inside the window (frame ~4-8).
+│ +- For a jump shot/3PT, release-to-rim is roughly 0.8-1.2 s, so release is at
+│ +  t_trig - 0.8 .. t_trig - 1.2, i.e. at or just before the window start (frame 0):
+│ +  the clip opens on late flight, shows rim contact at frame 11, then the aftermath.
+│
+│  ### 1.3 Where the first shot sits inside its 32-frame window
+│
+
+────────────────────────────────────────
+☤ Hermes
+Let me verify the final file ends correctly and spot-check the full content.
+────────────────────────────────────────
+
+💻 $ tail -5 .team/specs/52c_first_shot_sequence_prereg.md + 4 commands  31.2s
+
+────────────────────────────────────────
+☤ Hermes
+Done. The file is written: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52c_first_shot_sequence_prereg.md (269 lines, ends with HERMES: PREREG WRITTEN). This is the only file created or changed.
+
+What the spec contains
+
+Diagnosis (Item 1, from code/data definitions, not tuning on the 3 silents):
+- extract_clips.py: 32-frame window [t_trig − 0.88, t_trig + 1.60] s, 0.08 s step, trigger at frame 11 (K_TRIG=11), hoop-centred 96×112 crop; the moment t_ms IS the trigger, no extra offset.
+- trigger2.py: t_ms = first frame ball within 1.0 hoop width of the hoop after being above the rim in the prior 1.2 s → t_ms ≈ rim contact, not release. So the ball reaches the rim at ~frame 11 (inside the window — the window does NOT end before rim arrival), but the clip's last 2/3 of a missed first shot is rebound scramble = class-0 appearance.
+- Second shot arrives +1160 ms (gvg, inside at frame ~25), +2600 ms (notus, outside), +5233 ms (rimrock, outside) — for 2 of 3 silents the model never sees the follow-up shot.
+- From labels52a alone: first-of-sequence shots (real shot + another real shot within N s) at N=6000 ms: adrian 13/121, notus 3/30, gvg 32/218, hsb 23/140, rimrock 21/123 → 92/632 ≈ 15%, all confirmed y=1 misses with second shots at +2600/+5233/+1160 ms.
+- Root cause: no sequence information in the input; first-shot-miss clips look like class-0 scramble.
+
+One pinned model-side change (Item 2, option b): seq_follower = 1.0 iff another candidate moment has t_ms in (t, t+6000] (SEQ_WINDOW_MS=6000 pinned with a domain reason, not from silent P values or gate numbers), computed from candidate t_ms only (identical at train/predict, no labels), concatenated to the r2plus1d_18 pooled 512-d features → Linear(513, 3), dropout 0.5 and all R4 hyperparameters unchanged. E=5, seeds 0 1 2, no new clips dir (clips7a frozen, t_ms already embedded).
+
+Disclosure (Item 3): motivated by the 3 silents; same-5 re-gate binding (Scott 'A'); R10 blind (NOTUS_A/IDAHO_CITY/RIVERSTONE) is the stronger test; silent-reject definition unchanged.
+
+Build + run order (Item 4): sha-freeze spec → code changes → GPU-free tests in test_mm52.py → postproc52b.json lock (52b check rule, session_filter=true) with sha → train logo52c (E=5, seeds 0 1 2) → combined 52c+52b re-gate via gate52.py --postproc postproc52b.json with the exact same-5 truth args → fail stops for Scott, no retune.
+
+Verified against live files: labels52a y values (notus 252520/255120 both y=1; rimrock 274807/280040 y=1; gvg 1158600 y=1), logo52a gate report (notus 90.3 silent 1; gvg 95.9 checks 150 silent 1; rimrock 95.1 checks 77 silent 1; OVERALL FAIL), gate52/postproc/test conventions, and sha file formats. Note: pytest isn't installed in this WSL python; per existing convention, tests run on the Windows .venv.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-823d4bf0a26953b5e20287a1884cf39bc9f2912f5f53650e8335f6be0bf674d6
+  hermes -c "Write new file specs first shot sequence prereg"
+
+Session:        local-823d4bf0a26953b5e20287a1884cf39bc9f2912f5f53650e8335f6be0bf674d6
+Title:          Write new file specs first shot sequence prereg
+Duration:       10m 37s
+Messages:       83 (1 user, 81 tool calls)
+[hermes] exit 0 at 11:06:44

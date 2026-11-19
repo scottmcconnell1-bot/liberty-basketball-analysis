@@ -1,0 +1,145 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Read .team/stage1_keypoints/VETTER_FINDINGS.md, 
+.team/stage1_keypoints/measurement_report.md, and your architecture 
+.team/specs/05_reliable_detector_architecture.md with the verdict 
+.team/specs/05_VERDICT_claude.md. Stage 1 showed the court keypoint model finds 
+at least 4 points on only 8 of 20 Notus A1 frames (12 with zero) even when the 
+painted lines are clearly visible. Scott wants the MOST RELIABLE approach across
+gyms, camera pans and zooms, not the easiest. Compare and recommend between: (A)
+detecting the painted court lines directly (red and blue paint at Liberty, white
+at Adrian) and fitting them to the known NFHS court model (lane, free-throw 
+circle, three-point arc, center line, baselines, sidelines) to get a homography 
+per frame; (B) retraining the keypoint model on these gyms using frames 
+auto-labeled by (A) and reviewed by Scott; (C) both, with (A) primary and the 
+model as a cross-check. Then write a Stage 1b coder plan that MEASURES approach 
+(A) on the SAME 60 frames used in Stage 1 (frame indices are in 
+.team/stage1_keypoints/*/summary_*.json), with overlays of the fitted court 
+model drawn over each frame so the Vetter can judge by eye, and per-frame 
+numbers (lines found, fit error in pixels, success or failure), so (A) and the 
+keypoint model can be compared frame by frame. Rim-center origin (FT line 
++13.75, baseline -5.25, lane +/-6). Liberty court is 92 ft; Adrian's length is 
+unknown. No banned trials (no interpolation), no existing file changed, outputs 
+under .team/stage1b_lines/. Include a heading exactly ## Files. STRICT: create 
+or edit ONLY .team/specs/08_stage1b_court_lines_plan.md. Do not create, edit, or
+delete any other file. Do not run code that writes files.
+📖 Read VETTER_FINDINGS.md  0.1s
+📖 Read measurement_report.md  0.1s
+📖 Read 05_reliable_detector_architecture.md  0.1s
+📖 Read 05_VERDICT_claude.md  0.1s
+🔎 Find summary_.*\.json  0.3s
+🔎 Find summary  0.2s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/stage1_keypoints -type f -name "*.json" 2>/dev/null  0.1s
+📖 Read summary_adrian.json
+📖 Read summary_notus_a1.json
+📖 Read summary_notus_a.json
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the context. Let me write the Stage 1b plan.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/08_stage1b_court_lines_plan.md
+│ .team/specs/08_stage1b_court_lines_plan.md
+│ @@ -0,0 +1,283 @@
+│ +# Stage 1b: Court Lines Detection — Coder Plan
+│ +
+│ +**Author:** Hermes (Architect)  
+│ +**Date:** 2026-10-26  
+│ +**Status:** Plan for Vetted implementation  
+│ +**Gate:** Must pass Vetter review before OpenCode implements
+│ +
+│ +---
+│ +
+│ +## Executive Comparison & Recommendation
+│ +
+│ +### Approach (A): Direct Painted-Line Detection + NFHS Model Fit
+│ +Detect red/blue lines (Liberty) or white lines (Adrian) per frame using color segmentation + line detection (Hough / LSD / Canny + RANSAC), then fit detected line segments to the known NFHS court geometry (lane 12 ft wide, FT line 13.75 ft from rim center, baseline 5.25 ft behind rim center, lane corners at ±6 ft, 3-pt arc radius 19.75 ft, center line, sidelines at ±25 ft). Output: per-frame homography from image → court feet (rim-center origin).
+│ +
+│ +**Pros:**  
+│ +- Zero training data needed; works on any gym with painted lines visible  
+│ +- Geometric constraints (parallel lane lines, perpendicular FT line, known arc radius) reject outliers automatically  
+│ +- Interpretable: Vetter can see fitted lines overlaid on frames and judge by eye  
+│ +- Adapts to camera pan/zoom per frame — no temporal smoothing required  
+│ +- Liberty 92 ft court length known; Adrian length measured from fit (baseline-to-baseline)  
+│ +- No banned trials (no interpolation, no learned model to retrain)
+│ +
+│ +**Cons:**  
+│ +- Color thresholds differ by gym (red/blue vs white) — need per-gym color config  
+│ +- Glare, shadows, worn paint, or player occlusion can break line segments  
+│ +- Must handle partial views (zoomed-in on lane may not show 3-pt arc or center line)
+│ +
+│ +### Approach (B): Retrain Keypoint Model on Auto-Labeled Frames
+│ +Use (A) to auto-label 60 frames per gym, Scott reviews/corrects, then fine-tune `court_keypoint_detector.pt`.
+│ +
+│ +**Pros:**  
+│ +- Could generalize to frames where lines are partially occluded  
+│ +- Fast inference once trained
+│ +
+│ +**Cons:**  
+│ +- Stage 1 proved the 18-keypoint model fails on these gyms (8/20 frames with ≥4 points on Notus A1) — retraining on 60 frames is insufficient for robustness across pans/zooms  
+│ +- Black box: Vetter cannot inspect "why" a keypoint was placed  
+│ +- Requires GPU training pipeline, validation set, hyperparameter search — not a small measurable task  
+│ +- Still needs (A) for the auto-labels, so (A) must work first
+│ +
+│ +### Approach (C): Both, (A) Primary + Model Cross-Check
+│ +Run (A) every frame; run keypoint model as a sanity check; flag frames where they disagree > threshold.
+│ +
+│ +**Pros:**  
+│ +- Defense in depth; catches (A) failures on weird frames  
+│ +- Model disagreement becomes a review signal for Scott
+│ +
+│ +**Cons:**  
+│ +- Adds complexity before (A) is proven  
+│ +- Model adds compute with unproven value on these gyms
+│ +
+│ +---
+│ +
+│ +### Recommendation: **Start with (A) only. Measure it rigorously on the same 60 frames. Decide on (B)/(C) after seeing numbers.**
+│ +
+│ +**Rationale:**  
+│ +- The Vetter's finding: "the zero-point frames show the lane, free-throw circle, arcs, and center line clearly. The model, not the video, is the problem."  
+│ +- Painted lines are the ground truth; the model is a noisy observer of them  
+│ +- (A) is the most reliable across gyms/pans/zooms because it uses the invariant NFHS geometry, not a learned prior  
+│ +- Scott wants "the MOST RELIABLE approach across gyms, camera pans and zooms, not the easiest"  
+│ +- (A) produces per-frame homography directly; (B) and (C) depend on (A) working first  
+│ +- If (A) achieves ≥70% valid homography on Notus A1 (matching the Stage 1 keypoint gate), it earns the right to be primary
+│ +
+│ +---
+│ +
+│ +## Stage 1b Goal
+│ +
+│ +Measure approach (A) on the **exact same 60 frames** used in Stage 1 (20 per game: Adrian, Notus A1, Notus A), with:
+│ +
+│ +1. **Overlay images:** Fitted NFHS court model drawn over each frame (lines in court-space colors, projected through the per-frame homography back to image pixels)
+│ +2. **Per-frame JSON:** Lines found, fit error in pixels, success/failure, homography matrix, half-court Y in feet
+│ +3. **Summary report:** Aggregate numbers so (A) and the keypoint model can be compared frame-by-frame
+│ +
+│ +**No banned trials.** No interpolation. No existing file changed. All outputs under `.team/stage1b_lines/`.
+│ +
+│ +---
+│ +
+│ +## Court Geometry (NFHS, Rim-Center Origin)
+│ … omitted 205 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 08_stage1b_court_lines_plan.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. Created .team/specs/08_stage1b_court_lines_plan.md with:
+
+- Comparison & recommendation: Approach (A) — direct painted-line detection + NFHS model fit — is the most reliable across gyms/pans/zooms. (B) and (C) depend on (A) working first; retraining on 60 frames is insufficient for robustness.
+- Stage 1b goal: Measure (A) on the exact same 60 frames (20 per game) with overlays, per-frame JSON, and a comparison report.
+- Court geometry: Rim-center origin, FT line +13.75, baseline -5.25, lane ±6, Liberty 92 ft (half-court 40.75 ft), Adrian measured.
+- Algorithm: Color segmentation (red/blue for Liberty, white for Adrian) → line segments (Hough/LSD) → RANSAC fit to 12 NFHS lines + 3-pt arc + FT circle → per-frame homography with success criteria (reprojection error ≤ 2 px, ≥ 4 inliers, condition number < 1e4).
+- Outputs: 60 overlay PNGs + 60 JSONs + 3 summaries + measurement_report.md under .team/stage1b_lines/.
+- Pass gates: ≥ 70% success on Notus A1/A, half-court Y within 40.75 ± 2 ft, frame-by-frame comparison vs keypoint model.
+- Constraints: No banned trials, no interpolation, no existing file changes, independent per-frame processing.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a91c86feb81af5119c6ad8f198f179589c701d9407d84bda104368bb7fb36415
+  hermes -c "Compare court detection approaches A B C"
+
+Session:        local-a91c86feb81af5119c6ad8f198f179589c701d9407d84bda104368bb7fb36415
+Title:          Compare court detection approaches A B C
+Duration:       1m 41s
+Messages:       21 (1 user, 19 tool calls)

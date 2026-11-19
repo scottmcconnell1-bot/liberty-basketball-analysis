@@ -1,0 +1,83 @@
+**Proven:** page built. 1404 PNGs. Only file created in the repo: `.team/shot_detectors/pixel_miss/build_review_page.py`.
+
+### Command
+```bash
+python3 .team/shot_detectors/pixel_miss/build_review_page.py --out .team/shot_outputs_test/missed_makes_review --results /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/net_moved_build_results.json
+```
+
+### Console output (verbatim)
+```
+Results: 2/12 makes
+SCORE: 5/111 right, 7 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** DOES NOT PASS 85-SCORE TARGET ***
+Results: 8/27 makes
+SCORE: 15/111 right, 12 makes missed, 0 misses called makes
+85-SCORE TARGET: 85 right, 21 makes missed, 5 false makes
+100% TARGET: 111 right, 0 makes missed, 0 false makes
+*** DOES NOT PASS 85-SCORE TARGET ***
+[missed_make_01] notus_a1 t=64200 peak=1605 reason=no_valid_crossing
+[missed_make_02] notus_a1 t=142600 peak=3629 reason=column_ratio_low: 0.25
+[missed_make_03] notus_a1 t=159300 peak=3983 reason=no_valid_crossing
+[missed_make_04] notus_a1 t=212300 peak=5333 reason=ball_went_up
+[missed_make_05] notus_a1 t=357500 peak=8983 reason=column_ratio_low: 0.0
+[missed_make_06] notus_a1 t=483400 peak=12085 reason=no_valid_crossing
+[missed_make_07] notus_a1 t=774600 peak=19398 reason=ball_went_up
+[missed_make_08] adrian t=342800 peak=8573 reason=ball_bounces_up/ball_bounces_up
+[missed_make_09] adrian t=638300 peak=15992 reason=ball_starts_well_below
+[missed_make_10] adrian t=717000 peak=17953 reason=no_valid_crossing
+[missed_make_11] adrian t=801800 peak=20045 reason=no_valid_crossing
+[missed_make_12] adrian t=1231400 peak=30785 reason=column_ratio_low: 0.0
+[missed_make_13] adrian t=1792900 peak=44822 reason=short_net_depth
+[missed_make_14] adrian t=1836700 peak=45959 reason=ball_box_jump
+[missed_make_15] adrian t=2479100 peak=62031 reason=no_valid_crossing
+[missed_make_16] adrian t=2870400 peak=71803 reason=column_ratio_low: 0.0
+[missed_make_17] adrian t=2962500 peak=74062 reason=sideways_drift/sideways_drift
+[missed_make_18] adrian t=3045900 peak=76169 reason=ball_box_jump
+[missed_make_19] adrian t=3095700 peak=77401 reason=no_valid_crossing
+[correct_make_01] adrian t=41900 peak=1048 reason=ok
+[correct_make_02] adrian t=48600 peak=1228 reason=ok
+[correct_make_03] adrian t=88400 peak=2254 reason=ok
+[correct_make_04] adrian t=167200 peak=4221 reason=ok
+[correct_make_05] notus_a1 t=240800 peak=6049 reason=ok
+[correct_make_06] notus_a1 t=370600 peak=9294 reason=ok
+[correct_make_07] adrian t=389900 peak=9769 reason=ok
+[correct_make_08] adrian t=501900 peak=12575 reason=ok
+[correct_make_09] adrian t=566900 peak=14217 reason=ok
+[correct_make_10] adrian t=590900 peak=14799 reason=ok
+[miss_01] adrian t=21300 peak=533 reason=no_valid_crossing
+[miss_02] adrian t=39400 peak=1045 reason=short_track_left_net/short_track_left_net
+[miss_03] notus_a1 t=55400 peak=1387 reason=no_valid_crossing
+[miss_04] notus_a1 t=95600 peak=2396 reason=no_valid_crossing
+[miss_05] adrian t=120800 peak=3095 reason=no_valid_crossing
+[miss_06] adrian t=134600 peak=3395 reason=ball_bounces_up/ball_bounces_up
+[miss_07] adrian t=186000 peak=4692 reason=ball_went_up
+[miss_08] adrian t=190200 peak=4833 reason=short_combined_track
+[miss_09] notus_a1 t=192100 peak=4825 reason=tracker_swap_bodd_ball
+[miss_10] adrian t=217000 peak=5460 reason=ball_starts_well_below
+
+Built review page at .team/shot_outputs_test/missed_makes_review
+Shots processed: 39 (19 missed makes, 10 correct makes, 10 misses)
+Frames extracted: 39 × 36 = 1404 PNGs
+Cause template written: cause_template.json (19 entries, all null)
+Open index.html in a browser to assign causes.
+STOP — page built, causes assigned by human
+```
+
+(`run_saved_v6_rule` prints the SCORE lines when details are loaded; exit code was 0.)
+
+### PNGs written
+**1404** (39 × 36) under `.team/shot_outputs_test/missed_makes_review/`
+
+### Files created
+| Path | Role |
+| --- | --- |
+| `.team/shot_detectors/pixel_miss/build_review_page.py` | **only** repo source file (untracked; not committed) |
+| `.team/shot_outputs_test/missed_makes_review/index.html` | main page |
+| `.team/shot_outputs_test/missed_makes_review/cause_template.json` | 19 null causes |
+| `.team/shot_outputs_test/missed_makes_review/cause_counts.md` | stub table |
+| `.team/shot_outputs_test/missed_makes_review/shots/{missed_make_01…19,correct_make_01…10,miss_01…10}/` | each with `frames/frame_000…035.png`, `overlay_data.json`, `shot_meta.json`, `detail.html` |
+
+No protected files edited. Causes left for a human. STOP.
+[cursor_wsl] exit 0 at 22:25:21

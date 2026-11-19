@@ -1,0 +1,82 @@
+## TEAM REVIEW — Spec 52b v1 (read-only)
+
+**Bottom line:** Corroboration as a check *idea* is fine, but v1 as written overclaims cues that do not exist. With Scott’s 3-clip fact, the check rule cannot clear the silents; keeping silent unchanged (option i) is the honest path.
+
+---
+
+### Proven / Inferred / Unknown
+
+**Proven**
+- `seed_disagreement` is the only corroboration cue in `.team/mm_clip/ensemble_predict.py` (`seed_disagreement`, used on autos in `shot_list`).
+- No `ball_near_rim_cue`, `ball_trajectory_cue`, or `referee_score_cue` in the mm_clip predict path (`ensemble_predict.py` has zero matches; extras are all `lo <= P < thr` with no second cue).
+- Spec 53 referee work is separate, not built into mm_clip (spec 53: no mm_clip changes).
+- Today’s check count: `nck = flagged autos + len(extra)` — every band extra counts; no corroboration gate.
+- `silent_reject_count`: labelled miss ∧ ens P(shot) &lt; floor ∧ all seeds P(shot) &lt; 0.5 — flags ignored.
+- `dedup_ms`: **800** in both `postproc52.json` and `postproc52a.json` (spec matches).
+- Scott answers: `.team/review52/silent3/silent3_answers.json` (sha256 `541b1fc3…`); three silent moments are real first-of-two-shot misses.
+
+**Inferred**
+- With only `seed_disagreement`, `corroborated_extra` ≈ band candidate where ≥1 seed ≥ thr and ≥1 seed &lt; thr (or make/miss split among shot-callers). Unanimous below-thr noise drops out of checks.
+- The three silents (P ~0.08–0.18, all seeds &lt; 0.5) sit **below floor**, so they are neither extras nor seed-disagree → no check rule clears them.
+
+**Unknown**
+- Whether seed-only corroboration brings gvg/rimrock checks ≤ 20 (not estimated from logo52a).
+- Whether a future sequence cue would recover the three first shots without new false checks.
+
+---
+
+### O1 — Real cues for re-gate
+
+| Cue | Status |
+|-----|--------|
+| `seed_disagreement` | Real today |
+| `ball_near_rim_cue` | Not in predict path |
+| `ball_trajectory_cue` | Not in predict path |
+| `referee_score_cue` | Spec 53; not built; not mm_clip |
+
+**For a re-gate implementable now:** `corroborated(i) := seed_disagreement(PM, i)` only. Naming the other three as if live is false code surface.
+
+---
+
+### O2 — Pre-reg honesty (Muse)
+
+Structure is mostly clean: carried-over thr/floor/weak/mm/dedup; no new numbers from logo52a; failure-mode disclosure is present.
+
+Weaknesses:
+1. Inputs include logo52a preds/report while the rule OR’s three unimplemented cues — looks like a wish-list after the FAIL, not a locked predicate.
+2. “Next step: wait for 3-clip check” is **stale** — Scott already confirmed labels.
+3. If v2 adds a sequence/putback cue *because of these three*, that is peeking unless framed as a **new** prereg after disclosure, not slipped into 52b as if it were first principles from day one.
+
+Check-rule choice (corroboration vs rank-cap) after seeing band noise on label-0 is acceptable **if** values stay frozen and non-existent cues are stripped or marked FUTURE.
+
+---
+
+### O3 — Silent vs check rule
+
+Spec correctly keeps silent unchanged and unreachable by floor raise / truncate. With labels confirmed:
+
+- **(i) Keep silent as-is** → notus / gvg / rimrock still FAIL silent until a **model / sequence** fix (e.g. first shot before a high-P auto). Check-rule work stays separate. Honest, smallest for *this* prereg.
+- **(ii) Redefine silent / add “candidate before confident auto” now** → designed after these three cases → disclosure/peeking; larger than a check-predicate change.
+
+**Prefer (i).** Do not bake (ii) into 52b v1.
+
+---
+
+### O4 — `dedup_ms`
+
+**800** in postproc52 and postproc52a. Spec line is correct.
+
+---
+
+### Required changes before Scott approval / re-gate
+
+1. `corroborated(i) := seed_disagreement(PM, i)` only; mark other cues FUTURE or drop them.
+2. State explicitly: 52b does **not** fix the three silents; separate workstream under (i).
+3. Refresh “next step” for completed silent3 answers; do not invent labels52b for those three (labels are correct).
+4. Keep silent definition and FAIL-on-silent; no sequence cue in this prereg after peeking at the three.
+
+---
+
+MUSE: AGREE WITH CHANGES: strip/FUTURE non-built cues; seed_disagreement-only v1; keep silent (i); no post-hoc sequence cue in this prereg; refresh stale 3-clip next-step  
+CURSOR: AGREE WITH CHANGES: only seed_disagreement exists; dedup_ms=800 confirmed; extras currently unfiltered; silent P-only so check rule cannot clear the 3; do not estimate checks from logo52a
+[cursor_wsl] exit 0 at 10:05:25

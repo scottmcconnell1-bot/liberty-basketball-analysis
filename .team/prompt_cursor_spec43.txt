@@ -1,0 +1,15 @@
+You are the Coder. Implement spec 43 (.team/specs/43_ft_next_release_spec.md). Claude Code's block V1-V5 at the top OVERRIDES the Hermes text below it. Muse AGREE. Settings are fixed (SETTINGS FIXED + V1-V5); add no other number. The method is Claude Code's prototype .team/specs/43_ft_proto.py (decide and decide_full; ignore cache loading/printing). Match its geometry and order exactly.
+
+Files only: .team/shot_detectors/ft_half_circle.py, .team/shot_detectors/test_ft_half_circle.py, .team/shot_detectors/rim_first_finder.py (annotate_free_throws, _apply_ft_decision), .team/shot_detectors/rim_first_measure.py (count release_not_shooter and maybe_free_throw; list maybe moments with their tag eventtype). Nothing else. stage1b files read only. Do not commit. No video or models in tests. Everything else unchanged; --ft-off still reproduces the spec 39 trace exactly; with stillness <= 0.15 and a single passing first candidate the result equals spec 42.
+
+ft_half_circle.py (each new number a named constant "spec 43, fixed by Claude Code 2026-11-08"):
+- RELEASE_DX_MAX 0.8, MAYBE_STILL_MAX 0.25.
+- decide_ft new keywords release_frame: Optional[int] = None, stillness: Optional[float] = None (V5).
+- N1: too_far_from_hoop / no_lane_lines / release_not_shooter record the first failure reason and continue with the next candidate; end: first failure reason if any, else line_not_one / ft_line_not_found.
+- N2 after lanes: ball point nearest in frame to release_frame (tie -> earlier frame), |ball x - box x| / box h > 0.8 -> release_not_shooter. No release_frame or no ball point -> pass.
+- V5 maybe path and return shape exactly as written in V5.
+rim_first_finder.py: annotate_free_throws computes ft.stillness once; None or > 0.25 -> not_still with no frame read; else read the frame and call decide_ft(..., stillness=value, release_frame=moment.get("release_frame")). Report in your answer whether release_frame is already set on the moment when annotate_free_throws runs, in the live run AND in retrace (cite lines). Do not move steps. _apply_ft_decision handles release_not_shooter (free_throw false, trace unchanged) and maybe_free_throw (V5: ft_maybe_shooter_box, "maybe_free_throw" appended to moment["flags"], trace unchanged).
+Tests (synthetic): first candidate fails lanes, second passes -> free_throw_line with the second; all fail -> first failure reason; release far -> release_not_shooter then next candidate; no release_frame -> check skipped; tie -> earlier frame; stillness 0.2 + passing -> maybe_free_throw with ft_maybe_shooter_box; stillness 0.3 -> not_still; stillness 0.1 -> normal; old still-bool path unchanged; _apply_ft_decision flags; measure counts.
+Run and print exact command + result:
+.venv/bin/python -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py .team/shot_detectors/test_ft_half_circle.py -q   (python3 if .venv cannot run)
+End with functions added/changed and choices not spelled out.

@@ -1,0 +1,16 @@
+SCOTT ANSWERS - spec 53 SCOTT DECIDES numbers (2026-11-14, verbatim + team translation to be confirmed in v5)
+1) waved_off window: "It is pretty immediate and short lasting." -> wave/scissor must START right after the ball
+   reaches the rim / is released (immediate) and be BRIEF; a late or long arm motion is not a wave-off.
+   Hermes to translate into ms (proposal to state in v5, e.g. start <= ~1000 ms after rim, duration <= ~1500 ms).
+2) 3PT arm-up min height: "His hand over his head" -> wrist keypoint above the top of the head (above nose/eye
+   keypoints by a margin), not just above the shoulder.
+3) small-ref keypoint-found share: re-asked in plain words; Scott chose "8 out of 10" -> >= 80% of referee-visible moments must have arm keypoints found, else the referee step stays off.
+4) false-fire pass bar on labelled true shots: "Never. It is very rare a referee gives a wrong shot signal."
+   -> 0 allowed: the referee step may not cancel or change ANY labelled real shot on the seen films, or it is not
+   turned on.
+foul_ref_window_ms 1500: stands (not changed by Scott).
+5) SCOTT FACT (2026-11-14, binding) on rimrock:77: "The travel was on a shot attempt and put back. You can see the
+   referee raise his hand and then spin his hands. It is there, I saw it." -> travel IS visible as arm motion:
+   arm raised (stop clock) THEN rotating hands (#22, both wrists circling each other in front of the body). This is
+   a gross wrist-trajectory pattern (both wrists near chest height, opposite-phase circular motion), not a finger
+   cue, so it must be a DETECTABLE event (rotate_hands) and rimrock:77 must come out 'violation', not 'unknown'.

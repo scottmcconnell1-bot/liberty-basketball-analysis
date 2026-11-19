@@ -1,0 +1,23 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/20_c_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "STAGE C JOB SPEC v1 - nothing built". Plain markdown, no line-number prefixes, no literal "\n". Create nothing else and edit nothing else. If your write tool refuses, say so plainly.
+
+WHY: Stage D1 is done (.team/specs/19_d1_job_spec.md; results C:/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/d1_results.json and d1_report.md). Makes right went 28 -> 29 of 47; 18 makes are still called misses: 11 Adrian, 7 Notus (Claude Code counted them from d1_results.json, 2026-10-31). The ball is not detected near the rim, so Scott chose Stage C next: pair Adrian scoreboard rises with shots. Read first: .team/specs/18_makes_misses_work_plan.md (BINDING NOTE d and "Stage C"), docs/agent_handoffs/ACTIVE.md ("Makes from the scoreboard"), scoreboard_clock.py (read only, protected), .team/shot_detectors/keep_ball_detections.py (how D1 builds its 140-shot list), AGENT_OPERATIONAL_PROTOCOL.md (Golden Rules).
+
+The spec must say, with fixed numbers written before anything runs:
+
+1. It is a MEASUREMENT script, like D1: .team/shot_detectors/scoreboard_pair_rises.py plus tests .team/shot_detectors/test_scoreboard_pair_rises.py. It changes nothing in the program. applied_to_core stays false. A make is still ball_through_rim or net_moved_after_shot; the scoreboard is a checker only, and putting it into the program is Scott's decision later.
+
+2. Inputs, read only: the existing Adrian track data/scoreboard_tracks/jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json read through scoreboard_clock.py functions (no edits, no rebuild - do NOT list scripts/build_scoreboard_track.py in any run command; the work plan's run command that does is wrong). Shots: the same 140-shot list D1 used (same loader logic; stop unless exactly 140), Adrian shots only for pairing; per-shot old/new verdicts from d1_results.json.
+
+3. Rise rule: exactly the recorded one (ACTIVE.md: a team's score counts when the new value holds for 3 one-second samples; each rise is one basket worth the rise). Quote where you found it.
+
+4. Window: 25 s (BINDING NOTE d). Find in the files whether the recorded 25 s pairing was rise-after-shot only or either side, and use exactly that; if not found write "NOT FOUND - Claude Code to check". Never wider.
+
+5. Pairing, no guessing: for each rise list every shot inside the window. A pair is CLEAN only when the rise has exactly one shot in its window AND that shot has exactly one rise in its window. Anything else is AMBIGUOUS and is never counted as a recovered make. Report it two ways (BINDING NOTE d): by time only, and by time plus the shooting team from the tag rows (say plainly that a new game has no tag rows, so the time-only count is the one that matters).
+
+6. Numbers reported: of the 11 Adrian makes still called misses - clean / ambiguous / no rise; of the Adrian real misses - clean / ambiguous / no rise (a real miss with a CLEAN rise is a false make: this is the hard gate, must be 0, report every one by time); of the Adrian makes already right - how many get a clean rise (cross-check); rises with no shot at all. Points by rise value (1/2/3) next to each pair.
+
+7. Outputs outside the repo: C:/Users/scott/Documents/Liberty_Shot_Outputs/scoreboard/pairs_results.json and pairs_report.md. Run command with the repo venv: .venv/Scripts/python.exe .team/shot_detectors/scoreboard_pair_rises.py. Live film_analysis.db only with mode=ro if needed at all.
+
+8. Stop rules: no tuning after results, no second window, no retry. After the report, stop for Scott. Notus: one paragraph only saying its reader is parked (.team/specs/09_notus_reader_v9_SHELVED.md) and Scott decides any Notus work.
+
+Every fact you add must come from a file you read; otherwise write "NOT FOUND - Claude Code to check".

@@ -1,0 +1,16 @@
+Created only the two new files. No commit. No existing files edited.
+
+**Created**
+- `.team/shot_detectors/ball_track_check.py` — distributions (D3), missing (c), failed-tagged table, coverage-bug report (D5), `--hand-check` JPEG step (D4), Q4 filter; imports `hoop_at` + `combine_ball_track` from `shot_rules_measure`
+- `.team/shot_detectors/test_ball_track_check.py` — pure tests, no video
+
+**Tests**
+
+```text
+python3 -m pytest .team/shot_detectors/test_ball_track_check.py -q
+.........                                                                [100%]
+9 passed in 1.21s
+```
+
+**Proven:** that command, this session. **Inferred:** none for the test result. **Unknown:** full CLI run on Adrian/Notus tracks (not requested; run when ready — refuses if `ball_check/` already exists).
+[cursor_wsl] exit 0 at 14:58:13

@@ -1,0 +1,146 @@
+﻿Query: Hermes, you are the Architect. EDIT ONE file: 
+.team/specs/20_c_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Change line 1 to "STAGE C JOB SPEC v2 - nothing built". Plain markdown, no 
+line-number prefixes, no literal "\n". Create nothing else. If your write tool 
+refuses, say so plainly. v1 was REJECTED by Claude Code; the record is 
+.team/specs/20_c_job_spec_v1_REJECTED.md (read its first line).
+
+Make ONLY these changes; keep everything else as written:
+
+1. Section 4: the files (ACTIVE.md, .team/specs/04_notus_scoreboard_plan_v3.md, 
+.team/specs/05_reliable_detector_architecture.md) say only "within 25 s" and do 
+NOT record a direction. Replace the "Finding" paragraph with: "Direction NOT 
+recorded in the files. Fixed in advance as the stricter reading: the rise must 
+come at or after the shot, no more than 25 s after it (shot t <= rise t <= shot 
+t + 25 s). This is narrower than either-side, never wider."
+
+2. Section 5: the window is per shot, shot t .. shot t + 25 s (as section 4). 
+Replace "rise time -> rise time + 25 s" with that. A rise's candidate shots are 
+the shots whose window contains the rise.
+
+3. Section 6 counts, from d1_results.json (Claude Code counted them 2026-10-31):
+Adrian shots in the 140 set = 109; Adrian makes = 38; Adrian real misses = 71; 
+Adrian makes already right after D1 = 27; Adrian makes still called misses = 11.
+Remove the 43 / 66 / 29 figures from the counts (43 stays only as the whole-game
+scoreboard result, which includes free throws). The script must compute these 
+counts itself and stop if they differ.
+
+4. New fixed rule in section 5, stated in advance: a 1-point rise is a free 
+throw and is never paired as a recovered field-goal make; 1-point rises are 
+listed in their own table with any shots in their windows. Only 2- and 3-point 
+rises can make a CLEAN pair. Note in one line whether the 140-shot list includes
+free throws, from the file you read, or write "NOT FOUND - Claude Code to 
+check".
+
+5. Section 6 hard gate: a real miss with a CLEAN 2/3-point rise is a false make;
+must be 0; list every one by time.
+
+Every fact you add must come from a file you read; otherwise write "NOT FOUND - 
+Claude Code to check".
+📖 Read 20_c_job_spec.md  0.1s
+📖 Read 20_c_job_spec_v1_REJECTED.md  0.1s
+📖 Read ACTIVE.md  0.2s
+📖 Read 04_notus_scoreboard_plan_v3.md  0.2s
+📖 Read 05_reliable_detector_architecture.md  0.2s
+✗ Read d1_results.json  0.2s [File not found: d1_results.json]
+📖 Read keep_ball_detections.py  0.2s
+🔎 Find d1_results\.json  6.1s
+🔎 Find d1_results\.json  4.4s
+💻 $ find /mnt/c/Users/scott/Documents -name "d1_results.json" 2>/dev/null  48.4s
+📖 Read d1_results.json
+🔎 Grep FILMS\s*=  18.5s
+🔎 Grep FILMS  1.7s
+🔎 Grep FILMS  1.5s
+📖 Read measure_net_moved.py
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the facts I need. Let me write the updated spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/20_c_job_spec.md  0.1s
+│ .team/specs/20_c_job_spec.md
+│ @@ -1,4 +1,4 @@
+│ -STAGE C JOB SPEC v1 - nothing built
+│ +STAGE C JOB SPEC v2 - nothing built
+│
+│  # Stage C Job Spec: Scoreboard Pair Rises (Measurement Only)
+│
+│ @@ -31,17 +31,21 @@
+│
+│  From `ACTIVE.md` line 11: "43 made baskets found; all 43 tagged makes matched to a rise **within 25 s of the tag**".
+│
+│ -**Finding**: The recorded 25 s pairing was **rise-after-shot only** (rise within 25 s *after* the tag). The text says "matched to a rise within 25 s of the tag" and the rise rule is "each rise is one made basket" — the scoreboard shows the score *after* the basket. The pairing direction is rise-after-shot. **Use exactly that; never wider.**
+│ +**Direction NOT recorded in the files.** The files `ACTIVE.md` (line 11), `.team/specs/04_notus_scoreboard_plan_v3.md` (line 58), and `.team/specs/05_reliable_detector_architecture.md` (line 67) all say only "within 25 s" and do NOT record a direction. Fixed in advance as the stricter reading: the rise must come at or after the shot, no more than 25 s after it (shot t <= rise t <= shot t + 25 s). This is narrower than either-side, never wider.
+│
+│  ## 5. Pairing — no guessing
+│
+│ -For each rise, list every Adrian shot inside the 25 s window (rise time → rise time + 25 s).
+│ +For each Adrian shot, the window is **shot t .. shot t + 25 s** (as section 4). A rise's candidate shots are the shots whose window contains the rise.
+│
+│  A pair is **CLEAN** only when:
+│  - The rise has exactly one shot in its window, AND
+│  - That shot has exactly one rise in its window.
+│
+│  Anything else is **AMBIGUOUS** and is **never counted as a recovered make**.
+│ +
+│ +**Fixed rule (stated in advance):** a 1-point rise is a free throw and is **never paired as a recovered field-goal make**; 1-point rises are listed in their own table with any shots in their windows. Only 2- and 3-point rises can make a CLEAN pair.
+│ +
+│ +The 140-shot list **INCLUDES free throws** (from `measure_net_moved.py::load_shot_tags` where `SHOT_KINDS = {"2PT", "3PT", "FT"}`).
+│
+│  Report the pairing **two ways** (BINDING NOTE d):
+│  1. **By time only** — rise timestamp vs shot timestamp.
+│ @@ -51,21 +55,26 @@
+│
+│  ## 6. Numbers reported (fixed before anything runs)
+│
+│ -Adrian shots in the 140 build set: 109 shots (43 makes, 66 misses — from ACTIVE.md pickup: 109 Q1–Q3 shots, 43 makes, final 51-26).
+│ +Adrian shots in the 140 build set = 109 (from `d1_results.json`, counted by Claude Code 2026-10-31).
+│ +Adrian makes = 38.
+│ +Adrian real misses = 71.
+│ +Adrian makes already right after D1 = 27.
+│ +Adrian makes still called misses = 11.
+│
+│ -From D1 results (user: "Makes right went 28 -> 29 of 47; 18 makes are still called misses: 11 Adrian, 7 Notus"):
+│ +The script must compute these counts itself and stop if they differ.
+│
+│  **Of the 11 Adrian makes still called misses:**
+│ -- CLEAN rises (one rise, one shot in window)
+│ +- CLEAN rises (one rise, one shot in window; rise value 2 or 3)
+│  - AMBIGUOUS rises (multiple shots or multiple rises)
+│  - NO RISE
+│
+│ -**Of the Adrian real misses (66):**
+│ -- CLEAN rises (a real miss with a CLEAN rise = **false make**; hard gate, must be 0 — report every one by time)
+│ +**Of the Adrian real misses (71):**
+│ +- CLEAN rises with rise value 2 or 3 (a real miss with a CLEAN 2/3-point rise = **false make**; hard gate, must be 0 — report every one by time)
+│ +- CLEAN rises with rise value 1 (free throw; listed separately, not a false make)
+│  - AMBIGUOUS rises
+│  - NO RISE
+│
+│ -**Of the Adrian makes already right (29 after D1, 28 baseline):**
+│ +**Of the Adrian makes already right (27 after D1):**
+│  - How many get a CLEAN rise (cross-check)
+│
+│  **Rises with no shot at all** (unpaired rises)
+📖 Read 20_c_job_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. The file has been updated with all five required changes:
+
+1. Line 1: Changed to STAGE C JOB SPEC v2 - nothing built
+2. Section 4: Replaced the "Finding" paragraph — direction NOT recorded in ACTIVE.md, 04_notus_scoreboard_plan_v3.md, or 05_reliable_detector_architecture.md; fixed as stricter reading shot t <= rise t <= shot t + 25 s
+3. Section 5: Window changed to per-shot shot t .. shot t + 25 s; added fixed rule that 1-point rises (free throws) are never paired as recovered field-goal makes; noted 140-shot list INCLUDES free throws (from measure_net_moved.py::SHOT_KINDS = {"2PT", "3PT", "FT"})
+4. Section 6: Counts updated from d1_results.json (Claude Code 2026-10-31): 109 Adrian shots, 38 makes, 71 misses, 27 makes already right, 11 makes still called misses; script must verify and stop if different5. Section 6 hard gate: Real miss with CLEAN 2/3-point rise = false make (must be 0, list by time); 1-point rises on real misses listed separately, not false makes
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-875bf25248f1b75bacc85b8d015bcd113ade2896c7b11e66f795dbde67e3de87
+  hermes -c "Edit C job spec v2 with timing clarification"
+
+Session:        local-875bf25248f1b75bacc85b8d015bcd113ade2896c7b11e66f795dbde67e3de87
+Title:          Edit C job spec v2 with timing clarification
+Duration:       4m 55s
+Messages:       32 (1 user, 30 tool calls)

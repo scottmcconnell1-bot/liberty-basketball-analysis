@@ -1,0 +1,38 @@
+F1–F6 fixed in the three files only. No detection, no commit.
+
+### Test command and result
+
+```text
+python3 -m pytest .team/shot_detectors/test_shot_rules_measure.py -q
+........................                                                 [100%]
+24 passed in 1.21s
+```
+
+### Functions changed
+
+**`shot_rules_measure.py`**
+- `rim_r_at_hoop` (new) — F3 scale `72 * hoop_w / 98`
+- `hoop_at` — same / earlier / later; dropped `max_dt_ms` (F4)
+- `hoop_for_frame` — dropped `max_dt_ms` (F4)
+- `gap_report` — flight span only; pre/post as context (F2)
+- `_longest_gap_in_frames` (new helper)
+- `rises_above_rim` — scaled rim_r; no `max_dt_ms` (F3/F4)
+- `release_estimate_frame` (new) — last ball frame before rise (F2)
+- `_landing_dict` (new helper)
+- `find_landing` — peak then first `y >= hoop_y`; `descent_not_seen` (F1)
+- `flight_span_frames` (new) — release..landing for gaps/coverage (F2)
+- `hits_rim` — no `max_dt_ms`
+- `is_caught_near_hoop` — scaled rim_r; no `max_dt_ms` (F3/F4)
+- `is_airball_near_hoop` — descent guard; no `max_dt_ms`
+- `is_bad_pass` — descent guard; no `max_dt_ms`
+- `is_orange_card` — flight-only gaps; reason `"descent not seen"` (F1/F2)
+- `classify_flight` — uses new landing/gap rules; no `max_dt_ms`
+- `flight_coverage` — release..landing span (F2)
+- `measure_moment` / `measure_all` / `main` — removed `max_dt_ms=4000` (F4)
+
+**`collect_flight_tracks.py`**
+- `detect_range` — restored v6 `prev` term `* 0.35`; reset on no pick (F5)
+
+**`test_shot_rules_measure.py`**
+- Updated call sites (no `MAX_DT`); F6 tests `(a)–(f)` plus coverage/span helper asserts; existing tests kept green
+[cursor_wsl] exit 0 at 13:29:33

@@ -1,0 +1,37 @@
+Spec 36 is in the three allowed files. Shot calls are separate from the shooter trace, a later moment on the same series merges unless the ball is in a player box strictly between the two triggers, and the finder still reads no tags.
+
+`.venv/Scripts/python.exe` cannot run in this sandbox (Windows executable). The same files were run with `python3`:
+
+```
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+```
+
+**60 passed in 1.97s.**
+
+**Proven:** that command, this session. **Inferred:** nothing. **Unknown:** nothing left in this slice.
+
+### Finder (`rim_first_finder.py`)
+Added: `HOOP_W_MIN_WIDTHS`, `HOOP_W_MAX_WIDTHS`, `MIN_SERIES_V6_POINTS`, `SHOOT_AROUND_MIN_BALLS`, `FOUL_REF_WINDOW_MS`, `REFEREE_CLASS`, `series_hoop_width`, `hoop_series_ok`, `film_median_hoop_w`, `series_payload`, `assign_shot_calls`, and the small helpers it uses (`_ball_in_any_box`, `_frames_touch_window`, `_best_conf_bodd`).
+
+Changed: `_box_item` (referees kept, still not mixed into players), `_compact_frame` (key `"r"`; a referee-only frame is saved), `emit_moments` (series check, no trace on a bad series, then `assign_shot_calls` before the sort), `detect_span` and `main` (pass the new numbers; `film_hoop_w` on the moments document; `frames.json` is `{"frames", "series"}` with no indent).
+
+Blocks have no finder rule. That is stated on `assign_shot_calls`.
+
+### Measure (`rim_first_measure.py`)
+Added: `EXTRA_MATCH_WINDOW_MS`, `shot_call_of`, `shot_call_counts`, `truth_entries_for_run`, `score_truth`.
+
+Changed: `build_report` (shot-only tag match, hidden tags, optional truth), `render_summary`, `build_arg_parser` (`--truth`, `--truth-run`), `main`. Existing fields and the old CLI stay.
+
+### Tests
+`test_rim_first.py`: the new pure-function cases, and `_emit` now passes the new `emit_moments` arguments. The import grep test is unchanged and still passes.
+
+### Choices the prompt did not spell out
+- No hoop width, or a film width of 0, is `not_a_hoop_size`. If size and traffic both fail, the reason is size. A ratio equal to 0.5 or 1.5 is kept.
+- Series width is the median of `hoop_samples` only. Empty samples are not a hoop, even when the points carry a width.
+- A BODD confidence tie keeps the first box, the same rule as the existing trace.
+- `merged_into_frame` is the immediately previous moment in that series, and the field is present only when that rule fires.
+- The foul window excludes the trigger by starting at `trigger_ms + 1`.
+- A moment with `shot_call` missing or null counts as a shot. A null reason is counted as `"none"`.
+- A hidden tag is also still a miss in the tag table.
+- A truth candidate can sit in more than one truth window. One shot on a put-back is correct even if an orange moment is there too. Any shot on an unclear row is `shot_on_unclear` even if an orange moment is there too. `new_extra` is its own total, not also added to `wrong`.
+[cursor_wsl] exit 0 at 19:05:49

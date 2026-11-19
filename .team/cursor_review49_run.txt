@@ -1,0 +1,7 @@
+(1) Buildable with few path/schema guesses: model JSON key layout; `hybrid49/<film>/` subtree; FT-step file path; exact d1 results filenames into features; H8 path args vs hardcode.
+(2) Soft conflict only: H4 says “same as design48.py” but design48 is LOO; H4 is all-3-fit and H5 uses `in_session` (design48 does not). H8/H4/H5 separate that. No CLI conflict with tracks/d1/vote or `build_features_doc`.
+(3) Yes — LOO + `matched_tag_t_ms` filter on: `mm_learned/frozen/features_{adrian,notus,gv}.json`, `labels_*.json`, `rules_{adrian,notus}/vote/make_miss.json`, `rim_first/mm46_gv/vote/make_miss.json` (algorithm = `design48.py`).
+(4) Yes — `tracks --scaled-crop` without `--reuse-hoops-from` runs BODD+scaled ball and writes `crop_scale.json`.
+(5) No — new files only; call existing `build_features_doc` / `in_session`.
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 12:38:58

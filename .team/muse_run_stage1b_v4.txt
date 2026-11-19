@@ -1,0 +1,18 @@
+Now I'll diff v3 against the current v4 to verify the stamp's claim, and read the earlier rejections and the Vetter findings.
+The v3→v4 diff matches the stamp exactly: only the stamp line, the added formula block, and the two `court_length_ft` sample values. The run command is byte-identical to v3's (consistent with the Vetter's backslash correction undoing Hermes's doubling). Now let me check v2, the Vetter findings, and whether any existing file was touched.
+The plan claims "no changes to existing files." Three tracked files show modifications — let me check whether they're related to this plan or preexisting.
+All checks against the checklist:
+
+**NFHS geometry (Proven, read from the v4 plan):** rim-center origin stated in the table header (line 82); FT line +13.75, baseline −5.25, lane corners ±6 (12 ft lane); 3-pt arc center (0, 0) R = 19.75; FT circle center (0, +13.75) R = 6. All match standard NFHS (lane 19 ft baseline→FT line, arc 19'9" on the basket). The backboard −4 from v1 is gone. No geometry error found.
+
+**Court-length formula fixed everywhere:** my own `diff --strip-trailing-cr` of v3 vs v4 shows exactly four changes — the stamp, the new formula block, and the two `court_length_ft` samples (81.6→92.1, 81.4/1.2→91.9/1.6). Math verifies: 2×(40.75+5.25) = 92.0; 2×(40.8+5.25) = 92.1; 2×(40.7+5.25) = 91.9; std 0.8×2 = 1.6. The formula now agrees with the table (line 89, +40.75), the geometry note (line 93, 46 − 5.25), and the v2-gate paragraphs. I also checked line 142 ("Center line: Y = H/2…"): taken literally under rim-center origin that reads 46, but the same parenthetical resolves it to "+40.75 from rim center" and every operative number in the plan (table, gate 40.75 ± 2.0, examples) is 40.75/92.0 — and a coder who implemented 46.0 would fail the Notus A1 half-court gate loudly, not silently. It cannot make the measurement look better than it is, so it does not block.
+
+**Look-better-than-it-is traps:** thresholds frozen on separate calibration frames ≥ 60 s away, measured once, no retuning (v2 rejection point c, now stated); missing center line removes a frame's half-court value but never inflates success rate (failure criteria unchanged); half-width not gated; Adrian not gated on length. keypoint comparison sums 8+5+0+7 = 20. Timestamp check: 20188 × 40 ms = 807,520 ms, consistent 25 fps.
+
+**Banned trials:** none — no interpolation, no ByteTrack/DeepSORT, no early windows, no retraining, no `run_saved_v6_rule` thresholds touched.
+
+**Existing files:** plan lists only new files (`scripts/stage1b_court_lines.py`, `config/stage1b_court_lines.yaml`, outputs under `.team/stage1b_lines/`, which does not exist yet). Repo state shows three modified tracked files — `.team/run_hermes.sh` (a one-line PATH export for launching Hermes in WSL), and two `data/hoopsalytics/` panel-history runtime artifacts — all session infra/data, none touched by this plan. All v1/v2 rejection reasons (full `## Files`, Windows run command, sidelines not fixed at ±25, no tuning contradiction) are confirmed satisfied in the v4 body.
+
+**Vetter's own edit:** the run command is byte-identical between v3 and v4, which is exactly what the stamp describes — Hermes doubled the backslashes and the Vetter restored `.\.venv\Scripts\python.exe`, the same correction Claude already accepted in v3. It is disclosed in the stamp and matches the command the protocol itself prescribes (section 6.3). A formatting restore, not planning or coding. Acceptable.
+
+MUSE: AGREE

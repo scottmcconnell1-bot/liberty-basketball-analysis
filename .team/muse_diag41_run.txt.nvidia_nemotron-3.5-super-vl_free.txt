@@ -1,0 +1,57 @@
+Query: You are advising the Liberty basketball team on ONE decision. Read-only: 
+do not change files.
+
+Scott's free-throw rule (spec 41, coded and run once): players still AND exactly
+one player just behind the painted FT line, between the lane lines -> free 
+throw, that player is the shooter. Code: .team/shot_detectors/ft_half_circle.py 
+(band behind line = [-0.15, +1.2] player heights).
+
+Spec 41 result (Q1-Q3 Adrian, Q1 Notus): Adrian found 16/29 FTs, missed 13 (8 
+"line found but not exactly one player in band", 5 "players not still"), 2 false
+alarms. Notus found 7/9, missed 2 (line_not_one), 0 false. Hand-check: right 
+shooter 8/8 on real FTs.
+
+Claude Code's read-only diagnosis (see last entries of .team/drift_log.md):
+- Depth behind the FT line in player heights: true shooters 0.04-0.21 (n 25, 
+both gyms); extra players behind at the 3PT line 0.81-1.19 (one 0.37); extra 
+players on hoop side -0.14 to -0.04. Camera foreshortens floor depth, so 1.2 
+reaches the 3PT line.
+- Band [0, 0.35] would clear 9 of 10 line_not_one misses and fix one 
+wrong-shooter flag (899600). Not 1751920 (two players at the line, ball unseen).
+- 5 not-still misses: stillness 0.21-0.41 vs cutoff 0.15 (players moving).
+- 2 false alarms not fixed by depth: 20920 picked player at the top of the 
+half-circle arc (arc tangent looks like the FT line); 2223600 wide-view camera. 
+Ball-hold count does not separate them.
+- Any change chosen from this data must be tested on the held-out Adrian Q4 
+(3317100..3897037 ms), one try.
+
+Claude Code recommends: spec 42 = band [0, 0.35] + a "feet between the two lane 
+lines" check for the false alarms; leave the 5 moving misses to the orange coach
+review page; then run the Adrian Q4 blind test once.
+
+Give YOUR recommendation in at most 8 short lines: agree / change what / any 
+risk. End with one line: RECOMMEND: <one sentence>.
+
+────────────────────────────────────────
+☤ Hermes
+Agree with spec 42: band [0, 0.35] is well-supported — true shooters sit at 0.04-0.21, it clears 9/10 line_not_one misses, and fixes wrong-shooter flag 899600.
+
+Leave the 5 not-still misses (stillness 0.21-0.41 vs 0.15 cutoff) to the orange coach review page; that's a movement signal, not a band problem.
+
+1751920 stays a miss (two players at the line, ball unseen) — not fixable by depth, acceptable.
+
+Risk: the feet-between-lane-lines check for the 2 false alarms is untested; the arc-top player's feet may still fall between the lines, so 20920/2223600 may remain false alarms. Treat it as experimental, not a fix.
+
+Run Adrian Q4 (3317100..3897037 ms) once as the blind gate; if detections drop or false alarms rise, revert to spec 41.
+
+RECOMMEND: Adopt spec 42 (band [0, 0.35] plus experimental feet-between-lane-lines check), route moving-player misses to coach review, and let the single Adrian Q4 run decide keep vs. revert.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-dd258136e46e3b9f40eb76a4dc4bb29998d8159cce16d69f4842780cfc233cbd
+  hermes -c "Liberty basketball FT detector spec 41 band review"
+
+Session:        local-dd258136e46e3b9f40eb76a4dc4bb29998d8159cce16d69f4842780cfc233cbd
+Title:          Liberty basketball FT detector spec 41 band review
+Duration:       15s
+Messages:       2 (1 user, 0 tool calls)

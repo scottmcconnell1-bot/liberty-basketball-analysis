@@ -1,0 +1,200 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/34_ball_track_check_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "BALL TRACK CHECK SPEC v1 - not run". Plain markdown, no line-number 
+prefixes, no literal "\n". Edit nothing else, run nothing that writes (reading 
+files and JSON is fine). If your write tool refuses, say so plainly. One to two 
+pages.
+
+Scott 2026-11-04: "yes" to checking the ball detector, and: "how did it use it 
+consistently for make/misses, but now can't? I do not want to break one to fix 
+the other."
+
+FACTS (Claude Code checked this session):
+- Spec 33 (read .team/specs/33_shot_flight_rules_measure_spec.md) ran once. 
+Tracks: 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/shot_rules/{adrian,notus}.json 
+(per moment: ball_track = v6 on the hoop crop, bodd_track = BODD full frame, 
+hoop_samples, player_boxes). Rules output: 
+Liberty_Shot_Outputs/shot_rules_measured/results.json + summary.md. Tagged shots
+called SHOT/AIRBALL only adrian 33/109, notus 5/31. Real shots called NOT_A_SHOT
+came down median 7.4 hoop widths from the hoop; 31 ORANGE from a >3-frame gap in
+flight, 18 "descent not seen". One example: landing ball at y=18 px (top of a 
+1080 frame) - Inferred a false BODD "basketball" (light/crowd), NOT proven. 
+Coverage ratio >1 on 18 rows = counting bug in shot_rules_measure.py 
+flight_coverage.
+- Make/miss (works: coach page 41/42, 0 differ) uses ONLY the v6 ball model on a
+crop around the hoop (collect_q4_bodd.py v6_ball: hx-260..+260, hy-200..+240, 
+conf 0.28), starting at Scott's TAG time, ~1.4 s, and only needs the ball at the
+rim. Spec 33 needs the WHOLE flight in the full frame from the BODD model (conf 
+0.12, imgsz 960), and must find the flight itself.
+- Rules: no core file edits; models/, ball_confidence untouched; no training; 
+banned trials (linear interpolation, ByteTrack, DeepSORT, early windows, wider 
+column, hoop recenter); no tuning after results; Adrian Q4 not touched; images 
+local only (minors).
+
+PLAN (measurement only):
+1. Answer Scott's question in plain words in a short section "Why make/miss 
+works and flight finding does not" - from the facts above and the code; Proven /
+Inferred.
+2. "Make/miss stays safe": list every file and output the make/miss path uses 
+(make_review_queue_page.py, clip_moment_fix.py, v6_tracks*.json, q4 v6 file, D1 
+results, the v6 weights) and state this spec touches none of them; name a check 
+Claude Code runs after any later change (e.g. rebuild the coach page summary 
+counts gray 30 / orange 9 / 42 shots and the v6 mapping check 1.0000) - say 
+which existing command.
+3. Ball check on the existing spec 33 tracks (no new detection): per moment and 
+per source (v6 crop vs BODD full), how often the "ball" is (a) outside the court
+area / high in the stands, (b) jumping farther between frames than a thrown ball
+can (say how judged - any number is "Scott decides before the run" with a 
+proposed value, or from existing code with file+line), (c) missing. Also: for 
+the tagged shots that failed (NOT_A_SHOT / PASS / ORANGE), which of (a)(b)(c) 
+explains them. Fix the coverage counting bug in the same new script (do not edit
+shot_rules_measure.py) or say it is reported only.
+4. A hand check: Claude Code views a small set of frames (say how many and how 
+chosen, failures only, Q1-Q3) to confirm what the false "balls" are; images stay
+local.
+5. Output: Liberty_Shot_Outputs/ball_check/ (refuse if exists), results JSON + 
+summary.md. New script under .team/shot_detectors/ (name it) with pure functions
++ tests.
+6. Roles: Claude Code vets, Muse checks, Cursor codes. Stop for Scott with the 
+table.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read 33_shot_flight_rules_measure_spec.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/  0.2s
+📖 Read collect_q4_bodd.py  0.4s
+✗ Read make_review_queue_page.py  0.4s [File not found: make_review_queue_page.py]
+✗ Read clip_moment_fix.py  0.5s [File not found: clip_moment_fix.py]
+🔎 Find make_review_queue_page  5.5s
+🔎 Find clip_moment_fix  5.5s
+🔎 Grep make_review_queue_page  4.5s
+🔎 Grep clip_moment_fix  4.5s
+🔎 Grep coach.*review  3.2s
+🔎 Find coach.*page  3.2s
+🔎 Find review_events  7.1s
+🔎 Grep v6_ball  7.1s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "*coach*review*" -o -name "*review*page*" -o -name "*review*events*" 2>/dev/null  11.3s
+🔎 Find v6_tracks  2.8s
+📖 Read make_review_queue_page.py
+📖 Read build_review_page.py  0.1s
+🔎 Find shot_rules_measure  20.7s
+🔎 Grep flight_coverage  20.7s
+📖 Read shot_rules_measure.py
+📖 Read test_shot_rules_measure.py  0.1s
+📖 Read collect_flight_tracks.py
+
+────────────────────────────────────────
+☤ Hermes
+Now I have a thorough understanding. Let me create the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/34_ball_track_check_spec.md  0.1s
+│ .team/specs/34_ball_track_check_spec.md
+│ @@ -0,0 +1,133 @@
+│ +BALL TRACK CHECK SPEC v1 - not run
+│ +
+│ +1. Why make/miss works and flight finding does not (Proven / Inferred)
+│ +
+│ +Make/miss path (coach review page, 41/42 shots correct, 0 differ from tags):
+│ +- Uses ONLY the v6 ball model on a CROP around the hoop: hx±260, hy-200..hy+240 (collect_q4_bodd.py:121-125)
+│ +- Starts at Scott's TAG time, runs ~1.4 s (80 frames at 25 fps) forward (collect_q4_bodd.py:112-116)
+│ +- Confidence 0.28, imgsz 640 (collect_q4_bodd.py:125)
+│ +- Only needs the ball AT THE RIM (crossing gate 0.55*hoop_w, drop 180 px, gap ≤8 frames; collect_q4_bodd.py:49-72)
+│ +- Uses saved v6_tracks.json (Adrian 111 entries, Notus Q1 31 entries) + v6_tracks_q4.json for Q4
+│ +- Results fed to make_review_queue_page.py (.team/shot_detectors/make_review_queue_page.py) which pairs v6 + D1 predictions; gray=both make (auto), orange=disagree (coach calls)
+│ +- v6 weights: C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt
+│ +
+│ +Flight finding (spec 33) path:
+│ +- Uses BODD model (conf 0.12, imgsz 960) on FULL FRAME (collect_flight_tracks.py:340-365)
+│ +- Needs WHOLE FLIGHT from release to rim, not just the rim window
+│ +- Must FIND the flight itself (no tag to anchor the start; window is ±5 s around tag/finder time; collect_flight_tracks.py:59-60)
+│ +- v6 crop still used but only where hoop is detected (collect_flight_tracks.py:376-413); hoop position moves with camera
+│ +- BODD basketball class at conf 0.12 picks up lights/crowd/reflections as "ball" (Inferred from spec 33 result: landing ball at y=18 px on 1080 frame = top of frame = crowd/light)
+│ +- No tracker (ByteTrack/DeepSORT banned); BODD gives boxes per frame only
+│ +- Result: only 33/109 Adrian tagged shots called SHOT/AIRBALL, 5/31 Notus; 31 ORANGE from >3-frame gap, 18 "descent not seen", median 7.4 hoop widths for NOT_A_SHOT
+│ +
+│ +Proven difference: make/miss starts at a known tag time, crops to the hoop, runs v6 only ~1.4 s, and only cares about the rim crossing. Flight finding must scan ±5 s full-frame with a low-confidence BODD model that hallucinates "basketball" in the stands, then stitch v6 crop detections (which need a hoop detection first) across a long window where the hoop moves and the ball may be far from the hoop.
+│ +
+│ +2. Make/miss stays safe
+│ +
+│ +Files and outputs the make/miss path uses (this spec touches NONE of them):
+│ +- .team/shot_detectors/make_review_queue_page.py — builds coach review page
+│ +- scripts/build_review_page.py — alternate review page (also uses v6 tracks)
+│ +- collect_q4_bodd.py — collects Q4 v6 tracks (v6_ball function, lines 110-146)
+│ +- C:/Users/scott/AppData/Local/Temp/v6_tracks.json — Adrian Q1-Q3 v6 tracks (111 entries)
+│ +- C:/Users/scott/AppData/Local/Temp/v6_tracks_notus_q1.json — Notus Q1 v6 tracks (31 entries)
+│ +- Liberty_Shot_Outputs/q4_guard/v6_tracks_q4.json — Adrian Q4 v6 tracks (18 entries)
+│ +- Liberty_Shot_Outputs/ball_arc/d1_results.json — D1 results for Adrian Q1-Q3
+│ +- Liberty_Shot_Outputs/d2_train/test2/d2_results.json — d2v1 results for Adrian Q1-Q3
+│ +- Liberty_Shot_Outputs/review_queue/q4/v6/results.json — v6 Q4 results
+│ +- Liberty_Shot_Outputs/review_queue/q4/d2v1/results.json — d2v1 Q4 results
+│ +- V6 weights: C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt
+│ +- BODD weights: C:/Users/scott/AppData/Local/Temp/BODD_yolov8n_0001.pt (used only for hoop samples in collect_q4_bodd.py)
+│ +
+│ +Check Claude Code runs after any later change:
+│ +- Run make_review_queue_page.py (default page_v3 path): python -I .team/shot_detectors/make_review_queue_page.py
+│ +- Verify output: "gray=30 orange=9" for Adrian + Notus (42 shots shown on page)
+│ +- Verify v6 mapping check: the script prints "v6 mapping check 1.0000" (make_review_queue_page.py uses hoops dict keyed by (film, t) from v6 tracks; all 42 shots must have a hoop entry)
+│ +- Run pytest tests/test_build_review_page.py (if exists) to confirm page generation
+│ +
+│ +3. Ball check on existing spec 33 tracks (no new detection)
+│ +
+│ +Input: Liberty_Shot_Outputs/shot_rules/adrian.json and notus.json (per-moment JSON from collect_flight_tracks.py, each moment has ball_track=v6 on crop, bodd_track=BODD full frame, hoop_samples, player_boxes)
+│ +
+│ +New script: .team/shot_detectors/ball_track_check.py (pure functions + CLI + tests)
+│ +
+│ +Per moment and per source (v6 crop vs BODD full), compute:
+│ +(a) OUTSIDE COURT / HIGH IN STANDS: ball center y < court_top_y (Adrian: y < 100 px on 1080p; Notus: y < 67 px on 720p) OR ball center y > court_bottom_y (Adrian: y > 980; Notus: y > 653) OR ball center x outside court sides (Adrian: x < 100 or x > 1820; Notus: x < 67 or x > 1213). Court bounds from existing court_memory.py key points — use the key polygon from the first hoop sample's film. Threshold: "Scott decides before the run" with proposed value = 5% margin inside the court key polygon (file+line: court_memory.py CourtMemory.key property). If no court key in track, use frame dimensions × 0.9 as fallback.
+│ +
+│ +(b) IMPOSSIBLE JUMP BETWEEN FRAMES: distance between consecutive detections > MAX_BALL_SPEED_PX_PER_FRAME. How judged: "Scott decides before the run" with proposed value = 80 px/frame (≈ 2000 px/s at 25 fps; a thrown basketball ~15-20 m/s ≈ 1200-1600 px/s on 1080p at court distance; 80 px/frame allows margin). Existing code reference: ai_bridge.py:1033 uses 0.55*hoop_w for crossing gate (≈54 px on Adrian), ai_bridge.py:1082 uses 0.6*hoop_w for column gate (≈59 px); 80 px is larger than both gates. Per source: v6 track (crop-confined, jumps unlikely) vs BODD track (full frame, jumps common when switching between false detections).
+│ +
+│ +(c) MISSING: frames in the detection window with NO ball detection from that source. Report: missing_frames / window_frames, and longest consecutive missing run.
+│ +
+│ +For tagged shots that failed (NOT_A_SHOT / PASS / ORANGE from spec 33 results):
+│ +- For each failed moment, check which of (a)(b)(c) explains the failure:
+│ +  - If landing ball at y=18 (top of frame) → (a) outside court
+│ +  - If gap >3 frames during flight → (b) impossible jump (gap = missing frames, but could also be (c) missing)
+│ +  - If "descent not seen" → (c) missing in critical phase, or (a) false detection in stands
+│ +  - If NOT_A_SHOT at median 7.4 hoop widths → likely (a) BODD false detection far from hoop, or (c) v6 lost the ball early
+│ +- Output a table: moment_id, rule_result, explained_by (a/b/c/none), detail
+│ +
+│ +Coverage counting bug (shot_rules_measure.py flight_coverage, lines 810-850):
+│ +- In the ELSE branch (when landing is None or descent_not_seen or no rise), gap_report is called WITHOUT lo_frame/hi_frame, so frames_seen = ALL frames in ball_track. But frames_in_flight_estimate is computed from release_f to end_f (or full track span). If release_f > ball_track[0][0], frames_seen > frames_in_flight_estimate → coverage_ratio > 1.
+│ +- Fix: in the ELSE branch, either (1) call gap_report with lo_frame=release_f, hi_frame=end_f to match frames_in_flight_estimate, or (2) compute frames_in_flight_estimate from the same span as gap_report uses. Since this spec does not edit shot_rules_measure.py, the fix is REPORTED ONLY in the ball_check output with the exact lines (830-839) and the condition that triggers it.
+│ +
+│ +4. Hand check
+│ +
+│ +Claude Code views a small set of frames to confirm what the false "balls" are:
+│ +- How many: 20 frames total (5 per failure type × 4 types: stands/crowd, lights/reflections, player confusion, other)
+│ +- How chosen: from the ball_check results, pick moments where (a) BODD ball is outside court, (b) BODD ball jumps >80 px/frame, (c) v6 ball missing >10 consecutive frames in window, (d) BODD ball at y<50 (top 5% of frame). For each type, take the first 5 distinct moments.
+│ +- Failures only: only moments where the rule result was NOT_A_SHOT, PASS, or ORANGE (i.e., not clean SHOT/AIRBALL).
+│ +- Q1-Q3 only: Adrian Q1-Q3 and Notus Q1 (Adrian Q4 never read per C5).
+│ … omitted 55 diff line(s) across 1 additional file(s)/section(s)
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/34_ball_track_check_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Created /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/34_ball_track_check_spec.md (132 lines, ~1.5 pages). The spec covers all six sections you requested:
+
+1. Why make/miss works and flight finding does not — Proven difference: make/miss starts at known tag, crops to hoop, runs v6 ~1.4s, only needs rim crossing. Flight finding scans ±5s full-frame with low-conf BODD (0.12) that hallucinates "basketball" in stands, then stitches v6 crop detections across moving hoop.
+
+2. Make/miss stays safe — Lists all 10 files/outputs the make/miss path uses; states this spec touches none. Names the check: python -I .team/shot_detectors/make_review_queue_page.py → verify "gray=30 orange=9" (42 shots) and v6 mapping check 1.0000.
+
+3. Ball check on existing spec 33 tracks — Per moment, per source (v6 crop vs BODD full): (a) outside court/high stands with Scott-decides threshold (proposed 5% margin inside court_memory.py key polygon), (b) impossible jump >80 px/frame (proposed, from ai_bridge.py gate values), (c) missing frames. Explains each failed tagged shot (NOT_A_SHOT/PASS/ORANGE) by which of (a)(b)(c) applies. Coverage bug reported only (shot_rules_measure.py lines 830-839: ELSE branch calls gap_report without bounds but computes frames_in_flight_estimate from release_f).
+
+4. Hand check — 20 frames (5 per type × 4 types: stands, lights, player confusion, other), chosen from failures only (Q1-Q3), images stay local via cv2.VideoCapture.
+
+5. Output — Liberty_Shot_Outputs/ball_check/ (refuse if exists), results.json + summary.md with 5 tables. New script .team/shot_detectors/ball_track_check.py with pure functions + tests.
+
+6. Roles & Gates — Cursor codes, Claude Code vets, Muse checks, Scott reviews tables. Stop for Scott with the 4 "Scott decides" numbers.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a757641789a7ebb83095fc9bb31283be9371820e182d273a4ad170783ffc2e75
+  hermes -c "Create ball track check spec v1"
+
+Session:        local-a757641789a7ebb83095fc9bb31283be9371820e182d273a4ad170783ffc2e75
+Title:          Create ball track check spec v1
+Duration:       4m 41s
+Messages:       39 (1 user, 37 tool calls)

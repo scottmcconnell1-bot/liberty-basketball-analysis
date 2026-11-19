@@ -1,0 +1,3 @@
+Muse, you review the Architect. Read-only: do not change any file.
+Spec 49's blind film changed. Read AMENDMENT A1 at the top of .team/specs/49_hybrid_pull_spec.md and the last 4 entries of .team/drift_log.md. Riverstone has no scoreboard overlay (auto-panning camera), so game time could not run; it stopped before any make/miss step. Scott chose HSB (away gym, has the board overlay). Model, score script, threshold and pass bars stay frozen as they were.
+Is the test still pre-registered and fair after the swap (did anything about HSB influence a setting; can anything leak)? At most 5 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

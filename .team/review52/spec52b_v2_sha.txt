@@ -1,0 +1,1 @@
+4f5f7e94be0af8435c48e56db9cc718093c55b14afaad163019ea4e1f12a4ab4 *specs/52b_check_rule_prereg.md

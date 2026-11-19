@@ -1,0 +1,48 @@
+## Spec 52d v1 — Cursor buildability review (read-only)
+
+Overall plan (longer window, clips8, revert seq head, R4 train/gate, fail→stop) is buildable, but several pins are wrong or under-disclosed. Fix those in the prereg before code.
+
+### Gate facts (52c) — verified
+Matches `cursor_gate52c.txt` / hermes / muse and the numbers in the spec: OVERALL FAIL; same 3 silents; seq flag failed as a shot marker; 52b cut checks but left rimrock at 21.
+
+### G1 Memory / time — estimate too low; bs must be pinned with OOM stop
+**Proven:** `logo52a` **2357 s (~39.3 min)**, `logo52c` **2376 s (~39.6 min)** for 15 fits at N=32, bs 8, bf16. N=87/32 = **2.71875×**. Linear wall time ≈ **107 min**, not 60–75.
+
+**Inferred:** 3D-conv activations scale ~with T; 8 GiB (spec’s 8151 MiB) with headroom unknown — bs 8 may OOM. Predict path defaults **bs=16** (`train_clip.predict`), worse than train.
+
+**Pin now:** budget **~100–120 min**; train **bs=8**; on OOM **STOP for Scott** (no silent bs drop — that changes R4); pin predict bs (e.g. 8 or 4) or same STOP rule. Live `nvidia-smi` was blocked in this WSL session (**Unknown** free MiB).
+
+### G2 Pooling dilution — real; sampling already pinned without saying so
+r2plus1d ends in global avg pool (`avgpool` in checkpoints). Window is **6.88 s**; old dense shot window is **~2.48 s** (~36% of frames). Dilution of make/miss / ordinary-shot cues is a real risk.
+
+Spec already froze dense N=87 / STEP 0.08. That is fine only if the prereg **discloses** accepting dilution vs alternatives (STEP 0.16, or 32 dense + coarse tail). Do not leave those as post-result options.
+
+### G3 Confound — same failure mode as 52c F2; under-disclosed
+**Proven** from clips7a labels: class-0 counts **gvg 145 / rimrock 241**. Class-0 with a **shot (y∈{1,2}) within +6 s**: **gvg 17 (11.7%)**, **rimrock 18 (7.5%)**. Those class-0 clips will now **contain a later shot** in the crop → risk of teaching “shot later in clip → shot” and raising false shots — same structural confound as the noisy seq flag.
+
+Spec §1.7 covers first-shot→putback, not this reverse case. Disclose it; fail→stop still OK.
+
+### G4 Dropout — spec is wrong; R4 had Dropout
+**Proven:**
+- Pre-52c Cursor review: head was `Dropout(0.5) → Linear(512, 3)`.
+- 52c prereg: `nn.Dropout(0.5) before the head UNCHANGED`.
+- R4/ens51/final51 checkpoints: keys `fc.0`, `fc.1.weight` / `fc.1.bias` = `Sequential(Dropout, Linear(512,3))`.
+- Current code (52c): `pool_drop` + `Linear(513,3)`.
+
+52d’s “R4 has no dropout; 52c added Dropout for seq” is **false**. Pin head exactly as R4: **`Dropout(0.5) → Linear(512, 3)`** (no seq). Bare `Linear(512,3)` is a recipe change.
+
+### G5 Crop / `track_hoop` over 6.9 s — not a hard guarantee
+**Proven** (`extract_clips.py`): template match from trigger outward; match **&lt; 0.45 keeps previous (cx,cy)**; crop OOB uses **`BORDER_CONSTANT` (black)**. If the hoop leaves frame or match stays weak, the crop **freezes** and pads — it does not fail loudly. Disclose that; do not claim the hoop stays glued for 6.9 s.
+
+### G6 6.0 s disclosure — honest
+N = `int(round((6.0 - (-0.88))/0.08))+1` = **87** is correct. Spec discloses 6.0 as round upper bound above max observed gap **5233 ms**. Acceptable as a frozen pin with that disclosure.
+
+### Build order / sha / parity / tests / protocol
+Order (sha → code → tests → clips8 + t_ms parity vs clips7a → sha → logo52d E=5 seeds 0 1 2 → gate52 + postproc52b → fail STOP) is sound. `gate52.py` / postproc52b unchanged is correct. Tests must drop 513/seq assertions and assert the **R4 Dropout+Linear(512,3)** head. Spec sha already in `review52/spec52d_v1_sha.txt`.
+
+---
+
+**Proven / Inferred / Unknown:** Proven = clips7a shapes/labels, logo52a/c seconds, checkpoint `fc.0`/`fc.1`, extract/train/gate code, 52c gate reviews. Inferred = ~linear train time, OOM risk, pool dilution, reverse confound. Unknown = live free GPU MiB this session.
+
+CURSOR: AGREE WITH CHANGES: G4 pin Dropout(0.5)->Linear(512,3) as R4; G1 budget ~110min + OOM/predict-bs STOP (no silent bs drop); G2 disclose dilution / freeze dense-87 as accepted; G3 disclose class0→later-shot confound; G5 disclose track_hoop freeze + black padThe checkpoint scan finished: R4/ens51/final51 weights use `fc.0` + `fc.1.weight`/`fc.1.bias` — i.e. `Sequential(Dropout, Linear(512,3))`, which backs the G4 finding in the 52d review. Windows `.venv\Scripts\python.exe` is present for the GPU train path.
+[cursor_wsl] exit 0 at 18:37:53

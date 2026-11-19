@@ -1,0 +1,19 @@
+{
+ "written_by": "Claude Code",
+ "written_at": "2026-11-08, after viewing still frames (scratchpad hc41_sheet0-2, hc41_zoom), BEFORE reading measure41 ft numbers",
+ "sample": {"adrian": [20920, 124560, 514800, 1168360, 1183280, 1762120, 2223600, 2654760, 2671360], "notus": [327360]},
+ "note": "Pool after exclusions was only 9 Adrian / 1 Notus (most flagged FTs were already in the spec-38/39 samples or calibration).",
+ "verdicts": {
+  "notus 327360": "right shooter",
+  "adrian 20920": "not a free throw - wing jumper over a defender (score 0-0, no fouls); picked a player at top of the key",
+  "adrian 124560": "right shooter",
+  "adrian 514800": "right shooter",
+  "adrian 1168360": "right shooter (clock stopped 0:01 end of half, same navy player at the line as 1183280; boxes overlap a white player)",
+  "adrian 1183280": "right shooter (players boxing out after release)",
+  "adrian 1762120": "right shooter",
+  "adrian 2223600": "not a free throw - wide full-court camera view, #23 holding the ball in play; picked #22 standing near a line",
+  "adrian 2654760": "right shooter",
+  "adrian 2671360": "right shooter"
+ },
+ "totals": {"right_shooter": 8, "wrong_shooter": 0, "not_a_free_throw": 2, "unclear": 0}
+}

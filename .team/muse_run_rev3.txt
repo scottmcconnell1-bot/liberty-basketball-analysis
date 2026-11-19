@@ -1,0 +1,31 @@
+I'll read the supporting files the spec references before judging the verdict — the diff plus the actual `team_loop.ps1`, `ai_bridge.py` cutoff definitions, and `scripts/team_score.py` to verify the claims.
+The 170/80/8000 cutoffs live in `event_generator.py` and `manual_tag_teach.py`, both on the gate's protected list. Now let me check `ball_confidence`, the `run_saved_v6_rule` internals, and the loop's Claude-tool permissions and commit scope in `team_loop.ps1`.
+The loop's commit step (`Save-Round`) stages only plan files plus the log and `NEXT_TASK.md` — good. Now let me check what numeric cutoffs live *inside* `ai_bridge.py` itself, since check 3 only guards that file additively.
+The support files check out so far. Now I'll verify the Vetter's claims directly without editing anything: the test count (34), parse errors (0), and whether `tests/test_team_score.py` exists (the Claude code-vet prompt references it).
+34 tests pass — matches the claim exactly. Now the PowerShell parse check (read-only):
+That parse check was mangled by shell quoting — the result is not trustworthy. Retrying with proper quoting:
+Done. Here is my check of the Vetter's PASS on revision 3/3.1.
+
+## Claims verified (commands run, read-only, nothing edited)
+
+- **34 tests pass** — Proven: I ran `pytest tests/test_team_gate.py tests/test_team_score.py tests/test_ai_bridge.py tests/test_build_review_page.py -q` → `34 passed`.
+- **Parse 0 errors** — Proven: PowerShell `Parser::ParseFile` on `team_loop.ps1` → 0 errors.
+- **Fail closed on missing score data** — Proven: `check_scores` flags a missing film, `right`, or `misses_called_makes` (current or baseline) as failures; tests cover each.
+- **Notus misses_called_makes rising fails** — Proven: `test_notus_misses_called_makes_higher_fails`.
+- **Stray file vs Scott's pre-existing dirt** — Proven: a new path fails as new since round start; an already-dirty unchanged path passes; same path with new content fails.
+- **Dry-run contents** — Proven by code inspection: gate command printed (`Incoked-Gate`), `--model sonnet` on both Claude calls (team_loop.ps1:890, team_loop.ps1:948), both Muse calls at the VETTED and PASS branches (team_loop.ps1:1248, team_loop.ps1:1318).
+
+## Spec coverage checked
+
+Sections A–F and both rev3.1 fixes are all built and match: 6 gate checks with plain-input test functions, `--round-start`, protected list per spec, additive-only ai_bridge, `applied_to_core`, baseline written before each round, gate before Claude, Muse prompt/diff/verdict files per spec, model fallback orders and 8-hour wait, `Stop-ProcessTree` on stall and timeout, Hermes 40/45, `.gitattributes` line. Nothing in the spec was left unbuilt.
+
+## The four specific questions
+
+1. **Pass the gate while breaking a Golden Rule or a Scott gate?**粗 paths exist but all are backstopped before any commit: check 5 runs `test_ai_bridge.py` fixtures and check 6 recomputes both films' scores live from the current code each gate run, so a loosening that changes outcomes fails the gate itself before Claude is called. Residual risks I found (not enforced by the gate, only by the later Claude/Muse/Scott layers): (a) check 3 reads only the *unstaged* diff — a `git add`-staged ai_bridge.py edit escapes the no-removed-lines check (check 4 does use `--cached`; this is inconsistent); (b) an insert *inside`run_saved_v6_rule`'s body counts as "purely additive" yet could retune effective thresholds; (c) a new file inside an already-untracked directory (e.g., `gemini-upload/`) is collapsed by plain porcelain status and escapes check 1's "new since round start" test — use `-uall` in a later fix.
+2. **Protected file not protected?** The list matches the spec, MUSE.md's core files, and both cutoff homes (170/80 in `event_generator.py`, 8000 in `manual_tag_teach.py`), plus `schema.sql` and `models/ball_detector.pt`. `settings_store.py`'s `ball_confidence` default (0.25) is not on the list, but AUTHORITY's gate is enforced at plan-vet, and no rev3 file touches it.
+3. **Muse step skippable?** No. It runs after every `VERDICT: VETTED` and `VERDICT: PASS` (including the stand-in vetter path), and every Muse failure mode — timeout, non-zero, no parseable answer, DISAGREE — breaks the loop; no parseable answer counts as DISAGREE.
+4. **Committing files outside the plan?** `Save-Round` stages only plan files plus `TEAM_LOG.md` and `NEXT_TASK.md`. Residual: `git commit` takes the whole index, so files the coder pre-staged (even Scott's untouched round-start dirt, which passes check 1) would land in a team commit; Scott's push/merge review is the final catch.
+
+The Vetter's verdict holds: no loosened cutoff, no banned trial, no record inconsistency, claims all backed by commands.
+
+MUSE: AGREE

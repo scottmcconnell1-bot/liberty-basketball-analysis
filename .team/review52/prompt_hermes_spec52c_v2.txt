@@ -1,0 +1,10 @@
+You are HERMES, the architect. Revise .team/specs/52c_first_shot_sequence_prereg.md to v2 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Muse and Cursor both returned AGREE WITH CHANGES (review52/muse_spec52c.txt, review52/cursor_spec52c.txt). Apply ALL of:
+1. F1: postproc52b.json = postproc52a keys + "review": {"extras_require_seed_disagreement": true}; postproc52/52a key absent (flat band kept). Step 2 includes the 52b shot_list change (extras only if seed_disagreement(PM,i)) + 52b tests; delete "shot_list UNCHANGED".
+2. F3: seq_follower computed PER FILM over that film's full candidate T (incl. -1/0 rows), never across films; window (t, t+6000] inclusive end, and the test line matches.
+3. F4: Dropout(0.5) on 512-d pool only, then concat seq (never dropped); seq float32 0/1, no scaling; head Linear(513,3); old 512 checkpoints incompatible; seq=None -> zeros only for new models.
+4. F5: soften 6000 ms wording: round possession bound, happens to cover all 3 gaps (4000 would not cover rimrock 5233), not tuned from silent P or gate numbers.
+5. F2: disclose the confound (flag fires on 13-47% of candidates incl. scramble non-shots). Decide in-session-only YES or NO yourself, state one reason not from results.
+6. sha file: .team/review52/spec52c_v2_sha.txt.
+Mark v2 at top. End with "HERMES: PREREG V2 WRITTEN".

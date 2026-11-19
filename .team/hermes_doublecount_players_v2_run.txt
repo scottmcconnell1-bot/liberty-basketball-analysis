@@ -1,0 +1,151 @@
+﻿Query: Hermes, REWRITE .team/specs/25_doublecount_and_player_motion_spec.md as 
+v2 (line 1: "DOUBLE-COUNT FIX + PLAYER MOTION SPEC v2 - not run"). Plain 
+markdown. Edit nothing else, run nothing that writes. Claude Code REJECTED v1 
+(copy: 25_..._v1_REJECTED.md). Keep everything not listed below. Fix exactly 
+these:
+
+1. COUNT (1.6), Claude Code measured it (repo venv, load_build_shot_list + 
+load_shot_tags, 25 fps): 5 of 140 build shots have a next shot tag within 80 
+frames, ALL misses: notus_a1 693500 (70), adrian 39400 (62), adrian 1600900 
+(75), adrian 2417100 (52), adrian 2753100 (2). Adrian Q4: 0 of 18. Write these 
+in and delete the PENDING rows.
+2. BASELINES (1.7) were wrong. Real: build set v6 plain rule 28 makes right, 0 
+misses called makes (keep_ball_detections.py BASELINE_MAKES_RIGHT = 28); D1 (v6 
++ arc) 29 / 0 (ball_arc/d1_results.json); d2v1 + D1 29 / 5 
+(d2_train/test2/d2_results.json). Adrian Q4 v6 plain 2 of 5 makes, 1 miss called
+make (56:33.6) - q4_guard/q4_blind/q4_results.json.
+3. PASS (fixed now): build set, each model (v6+D1 and d2v1+D1): 
+misses_called_makes must not rise and makes_right must not fall vs its baseline 
+above; for d2v1, report whether the 39400 false make is gone. Q4: NOT run for 
+this fix, because 0 of 18 Q4 shots have a next shot within 80 frames, so the fix
+cannot change any Q4 call - say this plainly.
+4. PLUG-IN: no edit to pixel_miss/measure_net_moved.py. One helper 
+apply_double_count_cut(track, cut_offset) in the new double_count_fix.py drops 
+ball/bodd points with frame_offset >= cut_offset; keep_ball_detections.py gets 
+an additive flag --double-count-cut (default off) that applies it to the track 
+right after the result is stripped, in BOTH step_extract (before peak_from_track
+and frames_to_extract) and step_arc_rule_report / run_arc_and_rule_on_shot. 
+Because the anchor can move, the run re-extracts candidates with the flag ON (v6
+weights, and d2v1 best_basketball.pt), into new folders under 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/double_count/ - never over old 
+files. Mapping check: use --mapping-proof-json with D1's 
+ball_arc/candidates.json as before (state it). Also apply the cut in decide_shot
+only through the track passed in (no new decide_shot switch needed).
+5. PLAYER MOTION without tracking: players are NOT matched across frames (that 
+would be tracking; ByteTrack/DeepSORT are banned). Per frame only: distances of 
+all player boxes (class 2; referees class 3 excluded) to that frame's hoop, in 
+hoop widths. Hoop per frame = BODD hoop box nearest the previous frame's hoop, 
+starting from track["hoop"]; none within 2 hoop widths of the previous -> frame 
+skipped and counted. Measures, fixed now: (a) players within 3.0 hoop widths 
+(ZONE_HOOP_WIDTHS_H = 3.0, keep_ball_detections.py) - median over the first 1.0 
+s and over the last 1.0 s of the 3.0 s window, and the change last minus first; 
+(b) median player distance to hoop, first 1.0 s vs last 1.0 s, and the change. 
+No 2.0 number. Window: shot moment = D1 anchor_frame (ball_arc/d1_results.json) 
+to +3.0 s; BODD conf 0.12 imgsz 960 as collect_q4_bodd.collect_samples. Summary:
+makes vs misses median/min/max per measure; NO threshold, NO rule.
+6. WHO: Claude Code vets; Muse (OpenRouter free models via run_muse_or.sh) 
+checks; coder = Hermes (Scott had Hermes code spec 24); Hermes and Muse check 
+the diff; Claude Code runs tests and the one run.
+Every fact from a file or these lines.
+📖 Read 25_doublecount_and_player_motion_spec.md  0.2s
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/25_doublecount_and_player_motion_spec.md  0.1s
+│ .team/specs/25_doublecount_and_player_motion_spec.md
+│ @@ -1,4 +1,4 @@
+│ -DOUBLE-COUNT FIX + PLAYER MOTION SPEC v1 - not run
+│ +DOUBLE-COUNT FIX + PLAYER MOTION SPEC v2 - not run
+│
+│  # PART 1 — Double-count fix (test-copy only, default-OFF switch)
+│
+│ @@ -29,36 +29,49 @@
+│  ## 1.3 Where it plugs in (function names)
+│  | Location | Function | What changes |
+│  |---|---|---|
+│ -| `.team/shot_detectors/small_fixes_v6_copy.py` | `decide_shot(track, ..., switch_double_count=False)` | At line 193–194, after `ball = track.get("ball", [])` and `bodd = track.get("bodd", [])`, filter both lists by `pt[0] < cut_offset` if `switch_double_count` and `cut_offset` is not None. |
+│ -| `.team/shot_detectors/pixel_miss/measure_net_moved.py` | `peak_from_track(track, t_ms, fps)` | At line 162–163, after `ball = list(track.get("ball") or [])`, filter `ball` and `bodd` before building `combined`. |
+│ -| `.team/shot_detectors/keep_ball_detections.py` | `run_arc_and_rule_on_shot(...)` | At line 695, after `track_no_truth = {...}`, filter `track_no_truth["ball"]` and `track_no_truth["bodd"]` before `peak_from_track` and before `decide_shot`. |
+│ +| `.team/shot_detectors/double_count_fix.py` | `apply_double_count_cut(track, cut_offset)` | Drops ball/bodd points with `frame_offset >= cut_offset`. Called from `keep_ball_detections.py` right after the result is stripped, in BOTH `step_extract` (before `peak_from_track` and `frames_to_extract`) and `step_arc_rule_report` / `run_arc_and_rule_on_shot`. |
+│ +| `.team/shot_detectors/keep_ball_detections.py` | `run_arc_and_rule_on_shot(...)` | Additive flag `--double-count-cut` (default off) applies the cut to the track right after result strip. Uses v6 weights and d2v1 best_basketball.pt. Re-extracts candidates into new folders under `C:/Users/scott/Documents/Liberty_Shot_Outputs/double_count/` — never over old files. |
+│ +| `.team/shot_detectors/small_fixes_v6_copy.py` | `decide_shot(track, ...)` | The cut is applied through the track passed in (no new `decide_shot` switch needed). |
+│
+│ -The `cut_offset` is computed **once per shot** from the film's ordered shot list and passed in (or looked up by `(film, t)`).
+│ +**Mapping check**: use `--mapping-proof-json` with D1's `ball_arc/candidates.json` as before.
+│ +
+│ +No edit to `pixel_miss/measure_net_moved.py`.
+│
+│  ## 1.4 Switch / flag names
+│ -- `switch_double_count` (bool, default `False`) — added to `decide_shot` signature and to the `run_copy_on_shots` call chain in small_fixes_v6_copy.py
+│ -- `double_count_cut` (dict mapping `(film, t)` → `int` or `None`) — precomputed once per run, passed to the three functions above
+│ +- `--double-count-cut` (bool, default `False`) — added to `keep_ball_detections.py` command line; when ON, applies `apply_double_count_cut` to the track right after result strip in both step_extract and step_arc_rule_report.
+│
+│  ## 1.5 Tests (switch OFF = today's results exactly)
+│ -1. **Identity test**: `switch_double_count=False` on all 140 build shots + Adrian Q4 must produce byte-identical verdicts and reasons to today's runs (v6 plain, D1, fall-through guard).
+│ -2. **Hand-made pair**: synthetic two shots 2.5 s apart (62 frames at 25 fps) where the first is a miss with a long track that would reach the second's make frames. With `switch_double_count=True`, the first shot's track is cut at frame 62; verify the false make disappears.
+│ +1. **Identity test**: `--double-count-cut=False` on all 140 build shots + Adrian Q4 must produce byte-identical verdicts and reasons to today's runs (v6 plain, D1, fall-through guard).
+│ +2. **Hand-made pair**: synthetic two shots 2.5 s apart (62 frames at 25 fps) where the first is a miss with a long track that would reach the second's make frames. With `--double-count-cut=True`, the first shot's track is cut at frame 62; verify the false make disappears.
+│  3. **Shot with no next shot**: a shot at the end of a film; `cut_offset=None`; track unchanged; verdict unchanged.
+│
+│  ## 1.6 Count — how many of the 140 build shots have a next shot within 80 frames
+│ -**NOT FOUND - Claude Code to check**. Compute by: for each of the 140 build shots (from `net_moved_build_results.json`), find `t_next` in the same film's tag list; if `round((t_next - t)/1000*fps) < 80`, count it. Report the number in the spec after verification.
+│ +**5 of 140 build shots have a next shot tag within 80 frames, ALL misses:**
+│ +- `notus_a1` 693500 (70 frames)
+│ +- `adrian` 39400 (62 frames)
+│ +- `adrian` 1600900 (75 frames)
+│ +- `adrian` 2417100 (52 frames)
+│ +- `adrian` 2753100 (2 frames)
+│ +
+│ +Adrian Q4: **0 of 18** shots have a next shot within 80 frames.
+│
+│  ## 1.7 One run — 140 build shots + Adrian Q4, current model (v6, D1) and d2v1
+│ -- **Current model (v6 + D1)**: run with `switch_double_count=True` on the 140 build shots and Adrian Q4 (18 shots).
+│ +- **Current model (v6 + D1)**: run with `--double-count-cut=True` on the 140 build shots and Adrian Q4 (18 shots).
+│  - **d2v1**: when the d2 detector exists, same run.
+│  - **Pass criteria** (fixed now, no tuning after):
+│ -  - `misses_called_makes == 0` (hard gate)
+│ -  - `makes_right >= today's makes_right` for that model on that set
+│ -    - Build set today (v6 plain): 20 makes right (from q4_guard summary: v6_plain makes_right=2 on 18 Q4 shots; build set from small_fixes_v6_copy baseline: need to read — **NOT FOUND - Claude Code to check**; use the actual measured baseline from the identity run)
+│ -    - Adrian Q4 today (v6 plain): 1 make right (from q4_results.json)
+│ -    - Build set today (D1): **NOT FOUND - Claude Code to check** (run keep_ball_detections.py step arc-rule-report without fall-through guard)
+│ -    - Adrian Q4 today (D1): **NOT FOUND - Claude Code to check**
+│ +  - Build set, each model (v6+D1 and d2v1+D1): `misses_called_makes` must not rise and `makes_right` must not fall vs its baseline below.
+│ +  - For d2v1: report whether the 39400 false make is gone.
+│ +  - **Adrian Q4: NOT run for this fix**, because 0 of 18 Q4 shots have a next shot within 80 frames, so the fix cannot change any Q4 call.
+│
+│ -Record the exact baseline numbers here after the identity run; the pass line uses those fixed numbers.
+│ +**Baselines (measured):**
+│ +| Set | Model | makes_right | misses_called_makes |
+│ +|---|---|---|---|
+│ +| Build set | v6 plain rule | 28 | 0 |
+│ +| Build set | D1 (v6 + arc) | 29 | 0 |
+│ +| Build set | d2v1 + D1 | 29 | 5 |
+│ +| Adrian Q4 | v6 plain | 2 of 5 makes right | 1 (56:33.6) |
+│ +
+│ +Source files: `keep_ball_detections.py` BASELINE_MAKES_RIGHT = 28; `ball_arc/d1_results.json`; `d2_train/test2/d2_results.json`; `q4_guard/q4_blind/q4_results.json`.
+│
+│  ## 1.8 Untagged games (out of scope)
+│  An untagged game has no tag file, so `t_next` cannot be computed from tags. Later, when a detector runs on untagged video, the **next DETECTED shot** will play the role of `t_next`. This is out of scope for this spec.
+│ @@ -83,39 +96,43 @@
+│  For each frame `fr` in the window:
+│  1. Decode frame.
+│  2. Run BODD model (`BODD_yolov8n_0001.pt`) on full frame, `conf=0.12`, `imgsz=960` (same as `collect_samples` in collect_q4_bodd.py).
+│ -3. Extract **player boxes** (class 2) and **hoop box** (class 1).
+│ +3. Extract **player boxes** (class 2) and **hoop box** (class 1). Referees (class 3) excluded.
+│ … omitted 93 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The spec is rewritten as v2 with all six fixes applied:
+
+1. Line 1 → v2 header
+2. 1.6 Count → 5 of 140 build shots (all misses, listed by film/t/frames); Adrian Q4: 0 of 18
+3. 1.7 Baselines & Pass → Real numbers from prompt (v6 plain 28/0, D1 29/0, d2v1+D1 29/5, Q4 2/5 makes + 1 false make at 56:33.6); pass = misses_called_makes must not rise, makes_right must not fall per model; d2v1 must report if 39400 false make is gone; Q4 explicitly NOT run because 0/18 affected4. Plug-in → double_count_fix.py with apply_double_count_cut; keep_ball_detections.py --double-count-cut flag (default off) applied in both step_extract and step_arc_rule_report; re-extracts to new double_count/ folders; mapping check via D1's candidates.json; no edit to measure_net_moved.py; decide_shot gets cut via track only5. Player motion → No tracking (ByteTrack/DeepSORT banned); per-frame distances to that frame's hoop (nearest previous, 2-hoop-width gate); measures: (a) players within 3.0 hoop widths (ZONE_HOOP_WIDTHS_H) — median first 1s, last 1s, change; (b) median player distance — first 1s, last 1s, change; no 2.0, no threshold, no rule; window = D1 anchor_frame to +3.0s; BODD conf 0.12 imgsz 960
+6. Who → Claude Code vets; Muse (run_muse_or.sh) checks; coder = Hermes; Hermes + Muse check diff; Claude Code runs tests + the one run
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-44a78aa7197b5ce34c271a5dca9c36837c2ac20e5094f83422c20bd9db79a8c1
+  hermes -c "Rewrite doublecount spec v2 with measured counts"
+
+Session:        local-44a78aa7197b5ce34c271a5dca9c36837c2ac20e5094f83422c20bd9db79a8c1
+Title:          Rewrite doublecount spec v2 with measured counts
+Duration:       1m 6s
+Messages:       6 (1 user, 4 tool calls)

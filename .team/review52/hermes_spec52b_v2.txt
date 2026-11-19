@@ -1,0 +1,250 @@
+Query: You are HERMES, the architect. Update 
+.team/specs/52b_check_rule_prereg.md to v2 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Reviews: review52/muse_spec52b.txt and review52/cursor_spec52b.txt (both AGREE 
+WITH CHANGES). Apply exactly:
+1. corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate; 
+ball_near_rim / trajectory / referee_score cues
+   marked FUTURE (not built; referee = spec 53), not part of the rule.
+2. Disclosure: rule motivated by the observed gate52a check failure; values all 
+carried over unchanged (thr 0.5, dedup
+   800, floor 0.2, weak 0.65, mm 0.3, seed flag) - do not call it a clean 
+pre-registration unqualified.
+3. Silent definition unchanged (option i). State explicitly: 52b does NOT fix 
+the 3 silents; Scott confirmed all 3
+   labels correct (review52/silent3/silent3_answers.json: each is the first shot
+of a 2-shot sequence); no labels52b
+   for them; silent fix = separate model-side workstream, not in this prereg; no
+sequence cue here.
+4. Refresh the stale next-step section. Status v2. End with "HERMES: PREREG 
+WRITTEN".
+
+────────────────────────────────────────
+☤ Hermes
+I'll read the current spec and the review files before making changes.
+────────────────────────────────────────
+
+📖 Read 52b_check_rule_prereg.md  0.9s
+✗ Read muse_spec52b.txt  0.9s [File not found: muse_spec52b.txt]
+✗ Read cursor_spec52b.txt  0.9s [File not found: cursor_spec52b.txt]
+✗ Read silent3_answers.json  0.9s [error]
+
+────────────────────────────────────────
+☤ Hermes
+The review paths didn't resolve — let me locate them.
+────────────────────────────────────────
+
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -iname '*spec52b*' -o -iname '*review52*' -o -iname '*silent3*' 2>/dev/null  22.5s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/ 2>/dev/null  1.2s
+
+────────────────────────────────────────
+☤ Hermes
+The files live under .team/review52/. Reading the correct paths now.
+────────────────────────────────────────
+
+📖 Read muse_spec52b.txt
+📖 Read cursor_spec52b.txt
+📖 Read silent3_answers.json
+
+────────────────────────────────────────
+☤ Hermes
+Both reviews are located and read (the paths are under the repo's .team/review52/). Both reviewers ended with AGREE WITH CHANGES. Now I'll apply the v2 update to the spec file.
+
+Edit 1/8 — title → v2:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.2s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -1,4 +1,4 @@
+│ -# Spec 52B - First-Principles R7 Check Rule (PRE-REGISTERED) v1
+│ +# Spec 52B - First-Principles R7 Check Rule (PRE-REGISTERED) v2
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-14
+
+────────────────────────────────────────
+☤ Hermes
+Edit 2/8 — Status → v2:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.1s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -7,7 +7,7 @@
+│
+│  ## Status
+│
+│ -PRE-REGISTERED (v1) for proposal (b): the first-principles rule for which moments a coach must see
+│ +PRE-REGISTERED (v2) for proposal (b): the first-principles rule for which moments a coach must see
+│  (R7 review checks), pre-registered before any re-gate; Scott approves before any re-gate.
+│
+│  ## Binding decision (Scott, 2026-11-14)
+
+────────────────────────────────────────
+☤ Hermes
+Edit 3/8 — Decision heading + formulation → v2:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -63,9 +63,9 @@
+│  3. per-minute budget.
+│  4. others (raise floor; drop extras; retune thr).
+│
+│ -## Decision (v1): pick one - CORROBORATION; state why
+│ +## Decision (v2): pick one - CORROBORATION; state why
+│
+│ -DECISION: option 2 - corroboration, v1 formulation.
+│ +DECISION: option 2 - corroboration, v2 formulation.
+│
+│  Why: the check's purpose is evidence-driven (catch real shots lost or miscoded; minimal coach work;
+│  >= 90%). Rank-and-cap needs an undefined risk ordering and can drop uncertain real shots without a
+
+────────────────────────────────────────
+☤ Hermes
+Edit 4/8 — Pre-registered rule heading → v2:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.2s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -73,7 +73,7 @@
+│  the silent zone instead of fixing the predicate. Corroboration asks "is there independent shot evidence
+│  here?" and flags only then, keeping the >= 90% goal, minimal coach work and the fail surface coherent.
+│
+│ -## Pre-registered rule (v1)
+│ +## Pre-registered rule (v2)
+│
+│  Inputs carried over unchanged from postproc52 / postproc52a: shot_thr 0.5, dedup_ms 800, floor 0.2,
+│  weak 0.65, make/miss 0.3, seed disagreement true; session_filter true for the re-gate (postproc52a
+
+────────────────────────────────────────
+☤ Hermes
+Edit 5/8 — the core v2 rule change (corroborated cue → seed_disagreement only, others FUTURE):
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.1s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -84,8 +84,8 @@
+│    OR seed_disagreement(PM, i)).
+│  - corroborated_extra(i) := NOT auto called i AND in-session AND floor <= P_shot(i) < thr AND
+│    corroborated(i).
+│ -- corroborated(i) := seed_disagreement(PM, i) OR ball_near_rim_cue(i) OR ball_trajectory_cue(i) OR
+│ -  referee_score_cue(i).
+│ +- corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate; ball_near_rim / trajectory /
+│ +  referee_score cues marked FUTURE (not built; referee = spec 53), not part of the rule.
+│
+│  checks per game = #{i : check(i)}; HARD cap 20 (no truncation); >20 -> FAIL.
+│
+
+────────────────────────────────────────
+☤ Hermes
+Edit 6/8 — Validation disclosure → v2 wording:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.2s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -115,9 +115,11 @@
+│  ## Validation
+│
+│  - The same-5 re-gate stays binding (Scott 'A').
+│ -- DISCLOSURE: the rule was written AFTER seeing that checks failed (gate52a: checks 150 / rimrock 77 over
+│ -  the cap; band noise). It is derived from what a check is FOR and Scott's goal, NOT from logo52a numbers
+│ -  used to pick values.
+│ +- DISCLOSURE (v2): the rule is motivated by the observed gate52a check failure (checks 150 / rimrock 77 over
+│ +  the cap; band noise). Values all carried over unchanged from postproc52 / postproc52a (thr 0.5, dedup_ms 800,
+│ +  floor 0.2, weak 0.65, mm 0.3, seed flag true) - NOT picked from logo52a numbers. It must NOT be called a
+│ +  clean pre-registration unqualified: the motivation is post-hoc (observed failure), the values are
+│ +  carried over frozen / unpicked.
+│  - R10 blind films (NOTUS_A, IDAHO_CITY, RIVERSTONE) are the STRONGER test.
+│
+│  ## Code surface + tests (post-approval)
+
+────────────────────────────────────────
+☤ Hermes
+Edit 7/8 — silent-reject section: v2 status (52b does not fix the 3 silents; no sequence cue here):
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.2s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -100,6 +100,13 @@
+│  raising the floor, dropping extras, or truncating checks; the silent fail must remain reachable, and a
+│  real shot below every flag must still count as a fail.
+│
+│ +- v2 (Scott-confirmed labels; reviews muse + cursor AGREE WITH CHANGES): silent definition UNCHANGED
+│ +  (option i); 52b does NOT fix the 3 silents; Scott confirmed ALL 3 labels are CORRECT
+│ +  (review52/silent3/silent3_answers.json: each is the first shot of a 2-shot sequence; notus 252520 = 3PT miss
+│ +  then missed putback, rimrock 274807 = miss then make 5.2 s later, gvg 1158600 = miss then second miss 1.2 s
+│ +  later); no labels52b for them (labels are correct; labels52_v2.json untouched); silent fix = separate
+│ +  model-side workstream (2-shot/putback-aware sequence cue), NOT in this prereg; no sequence cue here.
+│ +
+│  ## Honest review scoring
+│
+│  Unchanged in meaning (R8): non-flagged auto calls stand; each flagged item answered once by simulated
+
+────────────────────────────────────────
+☤ Hermes
+Edit 8/8 — refresh the stale Next step section:
+────────────────────────────────────────
+
+✗ Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.2s [Could not find a match for old_string in the ...]
+
+────────────────────────────────────────
+☤ Hermes
+The old string had a line-wrap mismatch. Retrying with the exact text:
+────────────────────────────────────────
+
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52b_check_rule_prereg.md  0.1s
+│ .team/specs/52b_check_rule_prereg.md
+│ @@ -141,8 +141,8 @@
+│
+│  ## Next step (pending Scott)
+│
+│ -- Wait for Scott's 3-clip label check (notus 252520, rimrock 274807, gvg 1158600).
+│ -- Any label fix -> new labels52b file before the re-gate; how: new frozen labels file (new name;
+│ -  labels52_v2.json untouched), sha256 frozen into .team/pre52b_sha256.txt before the re-gate.
+│ +- The 3-clip silent-reject label check is RESOLVED: Scott's answers (review52/silent3/silent3_answers.json) confirm ALL 3 labels are CORRECT (each is the first shot of a 2-shot sequence); NO labels52b file needed; labels52_v2.json untouched.
+│ +- Silent fix = separate model-side workstream (2-shot/putback-aware sequence cue); NOT in this prereg; no sequence cue here.
+│ +- Next: Scott approves this v2 prereg; then run the SAME-5 re-gate (Scott 'A') with postproc52b.json.
+│
+│  HERMES: PREREG WRITTEN
+
+────────────────────────────────────────
+☤ Hermes
+All edits applied. Let me verify the final state of the file:
+────────────────────────────────────────
+
+📖 Read 52b_check_rule_prereg.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+The file now reads as v2. Let me run a final consistency check for any leftover v1 markers or stale text:
+────────────────────────────────────────
+
+💻 $ grep -n "v1\|Wait for Scott\|labels52b file before\|clean pre-registration" .team/specs/52b_check_rule_prereg.md
+💻 $ git status --porcelain + 1 command  35.5s
+
+────────────────────────────────────────
+☤ Hermes
+Done. .team/specs/52b_check_rule_prereg.md updated to v2 (only that file touched).
+
+Changes applied (per the two AGREE-with-changes reviews):
+1. Rule (v2): corroborated(i) := seed_disagreement(PM, i) ONLY for this re-gate; ball_near_rim / trajectory / referee_score cues marked FUTURE (not built; referee = spec 53), not part of the rule.
+2. Disclosure (v2): motivated by the observed gate52a check failure; all values carried over unchanged (thr 0.5, dedup_ms 800, floor 0.2, weak 0.65, mm 0.3, seed flag) — NOT picked from logo52a numbers; explicitly not a clean pre-registration unqualified.
+3. Silent (v2): definition unchanged (option i); 52b does NOT fix the 3 silents; Scott confirmed ALL 3 labels correct (silent3_answers.json: each first shot of a 2-shot sequence); no labels52b for them; silent fix = separate model-side workstream, not in this prereg; no sequence cue here.
+4. Next step refreshed: 3-clip check now RESOLVED (no labels52b needed); next step = Scott approves v2 prereg → same-5 re-gate (Scott 'A') with postproc52b.json.
+
+Also: Status bumped to PRE-REGISTERED (v2); headings/decision/formulation bumped to v2; file ends with HERMES: PREREG WRITTEN.
+
+Verified: re-read the full file — all v2 edits in place, no stale v1 markers or old next-step text remaining.
+
+Left for Scott: approval of this v2 prereg before the re-gate.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-a1cf722e3b150917efc7ca26c4db3d01650d62358d0825cd9c5630db11a37b68
+  hermes -c "You are HERMES, the architect. Update… #5"
+
+Session:        local-a1cf722e3b150917efc7ca26c4db3d01650d62358d0825cd9c5630db11a37b68
+Title:          You are HERMES, the architect. Update… #5
+Duration:       4m 0s
+Messages:       37 (1 user, 35 tool calls)
+[hermes] exit 0 at 10:19:05

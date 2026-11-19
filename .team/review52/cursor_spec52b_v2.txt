@@ -1,0 +1,24 @@
+## Spec 52b v2 audit (read-only)
+
+**Verdict:** v2 applies Cursor’s and Muse’s required changes. Predicate is codeable with today’s `seed_disagreement`.
+
+### Checklist vs reviews
+
+| Required change (cursor + muse) | In v2? |
+|---|---|
+| `corroborated(i) := seed_disagreement(PM, i)` only | Yes — lines 87–88 |
+| Other cues FUTURE / not part of rule | Yes — ball_near_rim / trajectory / referee_score FUTURE; referee = spec 53 |
+| Qualified disclosure (not clean pre-reg unqualified) | Yes — DISCLOSURE block lines 125–129 |
+| Silent unchanged; 52b does not fix the 3 | Yes — option (i); explicit “does NOT fix”; separate model-side workstream; no sequence cue |
+| Stale next-step refreshed | Yes — silent3 RESOLVED; no labels52b; next = Scott approve → SAME-5 with postproc52b |
+
+### Codeable as written?
+
+**Proven:** `seed_disagreement` already exists in `ensemble_predict.py` (thr default = `shot_thr` 0.5). Today extras are every in-session `floor ≤ P < thr` with no second cue. Gate: filter extras with `seed_disagreement(PM, i)`; leave flagged_auto and `silent_reject_count` alone; add `postproc52b.json`; extend `test_mm52.py` as named.
+
+**Inferred:** Builder adds a review key in `postproc52b.json` for the extras gate (name not fixed in the spec); predicate is enough to implement.
+
+**Unknown:** Whether seed-only brings gvg/rimrock checks ≤ 20 (not estimated; correct — do not peek at logo52a).
+
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 10:53:25

@@ -1,0 +1,7 @@
+Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. Read TEAM_RECOVERY.md first, then AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md, docs/agent_handoffs/ACTIVE.md, docs/agent_handoffs/HERMES.md, and the git log. You are the Architect. Choose the single smallest additive task that moves the goal in TEAM_RECOVERY.md section 1 forward, obeys the Golden Rules, and crosses no Scott gate. Write it, with the exact files to change and the tests to add, to NEXT_TASK.md. Quote numbers only from commands you ran. If no task fits, do not write NEXT_TASK.md; say why. Do not edit source files.
+
+Read the last 200 lines of docs/agent_handoffs/TEAM_LOG.md.
+
+Include a ## Files section listing every file to change.
+
+If the goal is reached or no task fits, write .team/STOP.md whose first line is exactly one of GOAL_REACHED, SCOTT_GATE, CANNOT_REACH, followed by the reason, instead of NEXT_TASK.md.

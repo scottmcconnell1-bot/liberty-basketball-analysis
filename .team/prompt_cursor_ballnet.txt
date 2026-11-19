@@ -1,0 +1,11 @@
+You are the Coder for the Liberty basketball project (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). You run inside a sandbox. FIRST read AUTHORITY.md and .team/specs/16_ball_in_net_plan.md in full (VETTED, Muse AGREE). Its first lines are the checker's stamp and BINDING NOTES a and b; they override the plan body:
+- a: do NOT call settings_store.load_all_settings (it opens the DB read-write). Read the one saved ball_confidence value with sqlite3.connect("file:<repo>/film_analysis.db?mode=ro", uri=True); if no saved row, use 0.25 from settings_store.py:13. Print the value used and where it came from. Never lower it.
+- b: Column A (640x640 native window) is NOT production scale; Column B (full frame, imgsz=640) is. Report both as measured.
+Build exactly that plan and nothing more:
+- Create ONLY .team/shot_detectors/pixel_miss/ball_in_net.py and update nothing else, except you may append a short section to .team/shot_detectors/pixel_miss/README.md (do not remove what is there). Never edit ai_bridge.py, net_detector.py, ai_analyzer.py, settings_store.py, models/ball_detector.pt or any protected file in AUTHORITY.md; import or read only.
+- Reuse the shot list, hoop values and peak frames exactly as .team/shot_detectors/pixel_miss/net_check.py does (read it first). Each (film, t) once. Expected 140 = 19 missed makes + 28 correct makes + 93 real misses; stop with an error if different. Frames peak+1..peak+6. No upscaling.
+- --out default C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_in_net; support Windows and /mnt/c paths (pathlib; pick the form that exists).
+- First check `python3 -c "import torch, ultralytics"` in the sandbox. If it fails, do NOT install anything: write the script, test everything you can without the model (shot selection, counts, frame reading, boxes), say clearly that the detector run was not done, and stop. The checker runs the real measurement with the Windows venv.
+- If the model does load in the sandbox, test with --out .team/shot_outputs_test/ball_in_net.
+- Nothing is applied to any detector; do not tune anything to the results. Do not commit or change git. STOP when done.
+Report: the exact commands you ran, their console output verbatim, the files you created or changed, and whether the detector actually ran. Never report a result you did not see.

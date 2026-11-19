@@ -1,0 +1,72 @@
+[muse] model recursive/flint-v1.0:free 19:28:42
+Query: You are MUSE, the REVIEWER. READ-ONLY, no file edits. Output = review 
+text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Final check of .team/specs/52d_context_clip_prereg.md v3 (sha in 
+review52/spec52d_v3_sha.txt). v3 applies your v1 changes (G1-G6, v2) and the 
+coordinator GPU probe (review52/gpu_probe52d.txt: N=87 bs8 does not fit 8 GB, 
+spills at 21 s/step; N=44 bs8 5176 MiB 0.53 s/step). v3 pins STEP 0.16 / N=44 / 
+bs 8, K_TRIG 6, time-shift +-1 frame, speed guard replacing OOM stop. Verify: 
+arithmetic (N, K_TRIG with python round), extract_clips/train_clip 
+parameterisation, that the speed guard is implementable, honesty of the 
+make/miss trade-off text (frame rate on the shot halves), anything left stale 
+from v1/v2 (e.g. ~107 min budget, N=87 text, tests). Short answer.
+End with ONE line starting exactly: MUSE: AGREE | MUSE: AGREE WITH CHANGES: 
+<list> | MUSE: DISAGREE: <why>
+📖 Read 52d_context_clip_prereg.md  0.3s
+✗ Read spec52d_v3_sha.txt  0.4s [File not found: spec52d_v3_sha.txt]
+✗ Read gpu_probe52d.txt  0.4s [File not found: gpu_probe52d.txt]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ + 2 commands  2.1s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -iname '*52d*' -o -iname '*gpu_probe*' 2>/dev/null | grep -v node_modules  14.0s
+📖 Read spec52d_v3_sha.txt
+📖 Read gpu_probe52d.txt
+📖 Read spec52d_v1_sha.txt
+📖 Read spec52d_v2_sha.txt
+💻 $ sha256sum /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md + 2 commands  31.3s
+📖 Read hermes_spec52d_v3.txt
+📖 Read muse_spec52d_v3.txt
+📖 Read cursor_spec52d_v3.txt
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/*.py + 1 command  0.3s
+📖 Read hermes_spec52d_v2.txt
+📖 Read cursor_spec52d.txt
+📖 Read extract_clips.py
+📖 Read train_clip.py
+✗ $ python3 -c " import round " 2>/dev/null + 1 command [BLOCKED: Command flagged as dangerous (script...]
+💻 $ grep -n -E 'PREREG V|kept glued|N = 87|N=87|STEP.?= ?0\.08|STEP.?= ?0\.16|K_TRIG|87 frames|~107|min budget|~100-120|100-120|5\.5 s|6\.9 s|8 frames|31 frames|16 frames|107 min|60-75' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md  0.1s
+✗ Exec T0=-0.88; STEP=0.16; WINDOW_END_S=6.0 [This code is not allowed in an unattended session — it did not run.]
+💻 $ grep -n -E 'PREREG V|kept glued|kept-glued|GLUED|glued' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md + 1 command
+✗ $ python3 - <<'EOF' T0=-0.88 + 2 commands  0.1s [BLOCKED: Command flagged as dangerous (script...]
+📖 Read test_mm52.py
+📖 Read 52d_context_clip_prereg.md
+💻 $ grep -n -E 'N = |N=|K_TRIG|WINDOW|STEP|T0|873|513|Linear|Dropout|seq|44|32|82|86|87|11' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/test_mm52.py | grep -n -i -E '52d|window|seq|513|linear|drop|87|44|k_trig|test_'  0.1s
+💻 $ grep -n -E 'seq|def predict_all|def predict|bs|model' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ensemble_predict.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Final check of Spec 52D v3 — read-only, review text only.
+
+What verified clean:
+- SHA freeze: computed sha256 of .team/specs/52d_context_clip_prereg.md = 052fd15a0f78c1da74b698b9267c8e504406f8cce78a0b47edc1f12308824ae4 — matches .team/review52/spec52d_v3_sha.txt ✓ (format <sha> *specs/... ✓).
+- GPU probe (review52/gpu_probe52d.txt): content matches your summary; internally consistent (T=32 bs8 3938 MiB/0.461 s/step; T=87 bs8 9621 MiB, spill, 21.148 s/step, no OOM; T=44 bs8 5176 MiB/0.534 s/step; T=87 bs4 5239 MiB/0.547). v2 pin (N=87/bs8) correctly ruled NOT buildable; v3 pin T=44 bs8 buildable ✓.
+- Arithmetic: N = int(round((6.0 −(−0.88))/0.16))+1 = int(round(43.0))+1 = 44 ✓; K_TRIG = int(round(−T0/STEP)) = int(round(5.5)) = 6 ✓; window [t_trig−0.88, t_trig+6.0] ✓; frame res 160 ms ✓; shot ~2.5 s → ~16 frames (STEP 0.16) vs ~31 (STEP 0.08) ✓; aug ±1 frame = ±0.16 s ✓; tail at 160 ms ✓.
+- Speed guard (G8): implementable — measured s/step > 2× probe (0.53 → 1.06 s/step) or spill → STOP; bs stays 8 PINNED ✓.
+- Make/miss trade-off text: honest — mechanism-only effect, accuracy delta unmeasured, no accuracy claim from the pin, frame-rate numbers check out ✓.
+- Staleness: v1/v2 numbers remaining are only in the historical amendment blocks (correct); pinned sections are v3-clean.
+
+Defects found in v3:
+1. Item 2.1 budget arithmetic wrong: "2376 s x 44/32 ~ 68 min" → actual is 2376×44/32 = 3267 s ≈ 54 min, not ~68 min.
+2. Item 1.5 G2: "v3 pin N=44, ~5.5 s" contradicts the derivation/span (~6.9 s window, [t_trig−0.88, t_trig+6.0]).
+3. Tests stale: test_mm52.py still targets the superseded 52c seq + Linear(513,3) design; lacks the required v3-pin coverage (N=44/K_TRIG=6, single-input Dropout(0.5)+Linear(512,3), no seq/concat, train/predict seq=None, R4 recipe).
+
+MUSE: AGREE WITH CHANGES: budget arithmetic fix (~68→~54 min), N=44 window duration fix (~5.5 s→~6.9 s), and test_mm52.py must be brought up to the v3 pin before the re-gate.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-46c7dd4d74824d2e40ac53c3dbd16b0e393927bdad56cd8be53c768683ad1245
+  hermes -c "You are MUSE, the REVIEWER. READ-ONLY, no file… #4"
+
+Session:        local-46c7dd4d74824d2e40ac53c3dbd16b0e393927bdad56cd8be53c768683ad1245
+Title:          You are MUSE, the REVIEWER. READ-ONLY, no file… #4
+Duration:       7m 56s
+Messages:       40 (1 user, 38 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE WITH CHANGES: budget arithmetic fix (~68→~54 min), N=44 window duration fix (~5.5 s→~6.9 s), and test_mm52.py must be brought up to the v3 pin before the re-gate.

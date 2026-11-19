@@ -1,0 +1,13 @@
+Hermes, you are the Architect. EDIT ONE file: .team/specs/19_d1_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Change line 1 to "D1 JOB SPEC v3 - nothing built". Keep the VETTED stamp and the REJECTED v1 line at the top exactly as they are. Plain markdown, no line-number prefixes, no literal "\n". Create nothing else. If your write tool refuses, say so plainly.
+
+Muse disagreed with v2 (Scott said yes to fixing it, 2026-10-30). Make ONLY these four changes; leave everything else as written:
+
+1. BINDING NOTE f into the body. In the "Films and loaders" section, replace the "Frame range per shot" bullet so it says: the frames to extract for each shot are the saved track's span (tag frame + every ball/bodd offset) UNION the frames anchor-15 .. anchor+12, where anchor is from peak_from_track(track, t, fps). Say in one line that this is why the after-anchor window and the add-if-missing rule have frames to work on. Make the Step 1 description in the "Run split" section say the same.
+
+2. BINDING NOTE g into the body. Add a section "Mapping check (runs first)" right after the frame-mapping section: step 1 reports, for every saved ball point, whether a raw v6 'basketball' detection (confidence >= 0.25, BEFORE the zone filter) lies within 3 px of it in the mapped absolute frame. It writes the match rate per film and overall to candidates.json and prints it. If fewer than 90% of saved ball points match, step 1 stops with a clear message for Scott and nothing else runs. Add this stop to the "Pass/stop rules" section and to the Step 1 description.
+
+3. Weights citation. In the "Model, ball class, confidence" section: ai_bridge.py:614 holds the WSL path /mnt/c/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt. Say that; then say the Windows run (step 1) uses the same file at C:\Users\scott\AppData\Local\Temp\ball_net_runs\v6\weights\best.pt.
+
+4. Ball-class citation. The class filter d['class_name'] == 'basketball' at ai_bridge.py:706 is in track_ball_through_rim, not detect_frame. Fix the wording (open ai_bridge.py around 690-710 to confirm the function name).
+
+Every fact you add must come from a file you read; otherwise write "NOT FOUND - Claude Code to check".

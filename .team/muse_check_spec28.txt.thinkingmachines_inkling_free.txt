@@ -1,0 +1,26 @@
+Query: Muse, check Claude Code's VETTED stamp (line 2, corrections 1-4) on 
+.team/specs/28_wide_view_combined_cards_spec.md. Facts to check against the spec
+text: groups (39400 tag 985 anchor 1045 + 41900 anchor 1048), (2417100 tag 60428
+anchor 60501 + 2419200 anchor 60483), (2753100 tag 68828 anchor 68836 + 2753200 
+anchor 68836); BEFORE 8, AFTER 14. Today's page (page_v3): gray 31 includes 
+41900; orange 9 = 7 model-disagreement cards (incl. 39400) + 2417100 + 2753100; 
+2419200 and 2753200 are auto misses. Check correction 1 (end = max anchor + 14) 
+and the counts in correction 2, and that nothing breaks the Golden Rules. 
+Reasons, then exactly one line: "MUSE: AGREE" or "MUSE: DISAGREE".
+📖 Read 28_wide_view_combined_cards_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+The spec verifies: groups match (985/1045+1048, 60428/60501+60483, 68828/68836+68836); BEFORE 8/AFTER 14 used; correction 1 end = max anchor + 14 (1062/60515/68850, not 60497 — consistent with fix); correction 2 counts align (41900 gray, 2419200/2753200 misses → gray 30→31 with flag, orange 9 = 7 model-disagreement + 2417100 + 2753100). No Golden Rules broken. Section E says orange=10/41 cards (pre-correction), but correction 2 supersedes it; the arithmetic rules hold.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-5ad33f05dd762b2141947063bb80fdfb87493d5a84607a83e0ce55bf43318ec3
+  hermes -c "Check Claude Code vetted stamp in spec"
+
+Session:        local-5ad33f05dd762b2141947063bb80fdfb87493d5a84607a83e0ce55bf43318ec3
+Title:          Check Claude Code vetted stamp in spec
+Duration:       11s
+Messages:       4 (1 user, 2 tool calls)

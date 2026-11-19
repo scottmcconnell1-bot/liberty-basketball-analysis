@@ -1,0 +1,16 @@
+You are Cursor, the builder/code reviewer on the Liberty basketball film project. Scott asked for your input because Claude Code's last round failed. REVIEW ONLY - do not edit any file. Write nothing except your report to stdout.
+
+Code to review (all in .team/mm_clip/, written by Claude Code since 2026-11-12, never reviewed):
+  trigger2.py, candidates.py, moving_ball.py, extract_clips.py, train_clip.py, postproc.py, eval_e2e.py, ensemble_predict.py, contact_sheet.py, new_film.sh, postproc_locked51.json
+Context: .team/review52/evidence.txt and the last 40 lines of .team/drift_log.md.
+
+Symptom to explain: the same training data and settings with different seeds give 65%-94% on a held-out game (HSB1); two of five models confidently call real misses 'not a shot' (P(shot) < 0.1) while others get them right. Makes are stable.
+
+Look specifically for:
+1. Bugs that could make training unstable or seed-dependent: augmentation (augment() in train_clip.py: crop/scale/shift, colour jitter, flip, time shift), the LR schedule, class weights, bf16 autocast/GradScaler use, label_smoothing, eval vs train mode, BatchNorm with batch size 8, the flip TTA in predict().
+2. Label/clip misalignment: extract_clips.py label sources (gvfmt, tags|, tagmatch, inherit, none) - could a label be attached to the wrong clip, or a clip's frames be off in time (seek accuracy with cv2 CAP_PROP_POS_FRAMES/MSEC)? Do the t_ms in clips match the moments?
+3. Leakage or mismatches between how training clips and HSB1/Rimrock clips are produced (same crop, same resize, same colour order BGR->RGB, same normalisation).
+4. ensemble_predict.py / postproc logic errors (thresholds, dedup, the coach-check list, the scoring/matching).
+5. Anything else that would make a result wrong.
+
+Report: a numbered list of findings, each with file:line, what is wrong, and why it matters, most severe first. Mark each CONFIRMED (you traced it) or SUSPECTED. Then 3 concrete recommendations to make training stable. End with one line starting "CURSOR: FINDINGS n" (n = number of CONFIRMED bugs).

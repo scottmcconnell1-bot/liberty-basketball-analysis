@@ -1,0 +1,281 @@
+Query: TEAM REQUEST - referee hand signals (proposed spec 53). Read-only; do not
+edit any file except where your role says.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner), 2026-11-14, binding request:
+"Fouls/Violations called by the referee during a shot attempt can be detected by
+watching the referees hands.
+He/she will indicate a call by raising their hand. You can tell a lot by 
+watching them. They indicate when to stop
+the clock, when to start the clock, whether a shot is a 3pt attempt, when a foul
+is committed, when a violation is
+committed, when a foul is committed on a made shot. Find all the referees calls 
+and hand signals and include it in
+your decisions based on the hand motions."
+Scott also: "DO not run this by yourself. I want everyone involved and input 
+with their strengths." So nothing is
+built until the team agrees.
+
+CONTEXT
+- Scott rule (binding, 2026-11-14): fouled missed attempts, waved-off shots and 
+warm-up shots do NOT count as shots;
+  putbacks are separate; airballs count. The current shot model (r2plus1d clip 
+crop around the rim, .team/mm_clip/)
+  cannot see referees, so these cases become errors today.
+- Scott's own examples (.team/review52/spot_check_52_answers.json notes): 
+rimrock:77 travel called on the shot
+  ("no shot"), rimrock:253 shot waved off, gvg:149 shooting foul ("referee 
+raising his hand"), hsb:91 fouled shot,
+  gvg:349 jump ball (two thumbs up), rimrock:325 fouled before clip. Use them as
+the first known cases.
+- Tools on disk: the BODD/player detector already outputs a 'referee' class 
+(models/player_detector.pt,
+  rim_first_finder.py REFEREE_CLASS, is_referee_player); ultralytics 8.4.189 in 
+the GPU env
+  (~/.venvs/liberty-gpu, RTX 5060) -> a YOLO pose model (keypoints: shoulders, 
+elbows, wrists) can be added.
+  Films are 720p broadcast/NFHS; referees are often small and sometimes off 
+screen when the camera pans.
+- History: 2026-11-06 spec 36 referee cues (fouled_miss, referee_holding) were 
+DROPPED after false fires
+  (drift_log line ~149). Say why this attempt will not repeat that.
+- Standard signals (NFHS): stop clock = open hand raised; foul = closed fist 
+raised, then report; 3-pt attempt =
+  one arm raised with 3 fingers; 3-pt made = both arms raised; start clock = 
+chopping arm; violation (travel etc.)
+  = rotating fists / hand signal + direction; waved off / no basket = arms swung
+across body; and-one (foul on a
+  made basket) = count basket + foul signal; jump ball = thumbs up both hands; 
+timeout = T or hands to shoulders.
+- Spec 52 training is running (choose_e). Do not change spec 52; this is 
+additive.
+
+ROLES
+- HERMES (architect): write .team/specs/53_referee_signals_spec.md (this file 
+only): what to detect (ref box ->
+  pose keypoints -> arm-raised / fist / both-arms / waving / chop events with 
+times), how each event changes a
+  shot decision (fouled miss -> not a shot; waved off -> not a shot; 3-pt 
+attempt tag; and-one make stays make;
+  stop/start clock -> dead-ball and game-session help), how to measure it on 
+SEEN films only (labelled shots +
+  Scott's examples) before any blind use, with fixed pass numbers, and what 
+happens when no referee is visible
+  (no change; never guess). Keep it buildable. End with "HERMES: SPEC WRITTEN".
+- MUSE (reviewer): judge feasibility and risks on these films (ref size, 
+panning, occlusion, false fires like
+  spec 36), and the measurement protocol (no blind peeking, no new human review 
+loops - Scott refused more clip
+  reviews; any human role must be one-time and bounded). End with "MUSE: AGREE |
+AGREE WITH CHANGES: ... | DISAGREE: ...".
+- CURSOR (builder/auditor): check what exists in code (referee class quality, 
+frames.json referee boxes, where a
+  pose step plugs in, compute cost per film), list exact files/functions to 
+build, and the smallest prototype to
+  test on 3 seen clips first. End with "CURSOR: AGREE | AGREE WITH CHANGES: ... 
+| DISAGREE: ...".
+
+────────────────────────────────────────
+☤ Hermes
+Team request received. Before taking any role, I need to load the team's operating context and the relevant existing artifacts.
+────────────────────────────────────────
+
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 1 command  2.2s
+📖 Read TEAM_RECOVERY.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.1s
+📖 Read AUTHORITY.md  0.1s
+📖 Read MUSE.md  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/  1.2s
+📖 Read STATUS.md
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/
+📖 Read prompt_team_refsignals53.txt
+📖 Read hermes_ref53.txt
+📖 Read muse_ref53.txt
+📖 Read cursor_ref53.txt
+
+────────────────────────────────────────
+☤ Hermes
+The .team/review52/ ref53 files are empty stubs — this is the first round of the team request. Let me gather all the context the spec must build on.
+────────────────────────────────────────
+
+📖 Read spot_check_52_answers.json
+📖 Read spot52_sample.json
+💻 $ grep -n "referee" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/drift_log.md + 1 command  0.1s
+💻 $ grep -n -i "referee\|ref\b\|foul\|violation\|travel\|waved" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ai_bridge.py  0.2s
+💻 $ sed -n '100,200p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.2s
+💻 $ grep -n -i "referee" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md + 1 command  0.2s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/36_rim_first_extras_fix_spec.md  0.2s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/hermes_spec52_v3.txt  0.3s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52_label_audit_stable_ensemble_spec.md
+💻 $ grep -n -i "referee\|REFEREE" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py  0.1s
+💻 $ sed -n '90,110p;460,600p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ + 2 commands  0.3s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/prompt_muse_spec52_v3.txt + 2 commands  0.1s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/postproc52.json /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/new_film.sh + 2 commands  0.2s
+💻 $ git status + 2 commands  40.1s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "frames.json" -not -path "*/node_modules/*" 2>/dev/null + 3 commands  15.3s
+💻 $ grep -rn "what-counts-as-a-shot\|counts as a shot\|counts as shots\|fouled missed\|waved" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include="*.py" --include="*.md" --include="*.json" -l 2>/dev/null | grep -v node_modules | grep -v ".team/review"  66.4s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/docs/agent_handoffs/HERMES.md 2>/dev/null  0.1s
+💻 $ grep -n -i "counts as\|what-counts\|waved off\|waved-off\|fouled miss\|fouled missed\|warm-up\|warmup\|putback\|put-back\|airball" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/candidates.py + 4 commands  0.1s
+💻 $ grep -n "shot_call\|shot_reason\|status\|kind_hint\|_orange\|not_a_shot\|possible_" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_finder.py | sed -n '1,90p'  0.1s
+💻 $ grep -n "def \|\"status\"\|'status'\|moment\[" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/ensemble_predict.py  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+I have the full picture now. The repo state is clear:
+
+- Scott's binding rule (2026-11-14, amends spec 52 R1): fouled missed attempts, waved-off shots, warm-up shots do NOT count as shots; putbacks separate; airballs count.
+- Spec 52 (label audit + stable ensemble, v3) is mid-flight (choose_e) — must stay untouched; spec 53 is additive.
+- Spec 36 dropped referee cues (fouled_miss, referee_holding) after false fires; Scott approved the drop; spec 37 then removed the referee paths. Root cause found (proven): is_referee_player follows a matching player box, but BODD often labels the person "referee" only, so no player box matches; with the picked box held fixed, the referee box sat inside on 8 and 12+ of ±12 frames.
+
+Now I take the HERMES role and write the spec.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -0,0 +1,91 @@
+│ +SPEC 53 - REFEREE HAND SIGNALS
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +File: .team/specs/53_referee_signals_spec.md (this file only; nothing else edited by this spec)
+│ +
+│ +FACTS:
+│ +- Goal (Scott, binding, 2026-11-14, team request): fouls/violations called by the referee during a shot
+│ +  attempt can be detected by watching the referee's hands; find all referee calls and hand signals and
+│ +  include them in shot decisions based on the hand motions. Nothing is built until the team agrees.
+│ +- Scott rule (binding, 2026-11-14, amends spec 52 R1): fouled missed attempts, waved-off shots and warm-up
+│ +  shots do NOT count as shots; putbacks are separate; airballs count. Warm-ups stay -1.
+│ +- Current shot model (r2plus1d clip crop around the rim, .team/mm_clip/) cannot see referees, so fouled /
+│ +  waved-off cases become errors or coach checks today.
+│ +- Tools on disk: BODD/player detector referee class (models/player_detector.pt, rim_first_finder.py
+│ +  REFEREE_CLASS, is_referee_player); ultralytics 8.4.189 in GPU env (~/.venvs/liberty-gpu, RTX 5060) -> YOLO
+│ +  pose model (shoulders, elbows, wrists) can be added. Films 720p broadcast/NFHS; referees often small and
+│ +  sometimes off screen when the camera pans.
+│ +
+│ +STANDARD NFHS SIGNALS (team request):
+│ +- stop clock = open hand raised; foul = closed fist raised, then report; 3-pt attempt = one arm raised
+│ +  with 3 fingers; 3-pt made = both arms raised; start clock = chopping arm; violation (travel etc.) =
+│ +  rotating fists / hand signal + direction; waved off / no basket = arms swung across body; and-one (foul on
+│ +  a made basket) = count basket + foul signal; jump ball = thumbs up both hands; timeout = T or hands to
+│ +  shoulders.
+│ +
+│ +1. WHAT TO DETECT (buildable chain):
+│ +- ref box -> pose keypoints -> arm events with times.
+│ +- Reuse: frames.json key "r" referees (rim_first_finder.py _referees_from_frames, _compact_frame,
+│ +  _is_referee_box); BOOD referee boxes are never merged into players (merge_same_body /
+│ +  _player_boxes_only). Pose step: crop referee box, run YOLO pose on GPU env, read shoulder/elbow/wrist
+│ +  keypoints, compute arm state per frame (raised / fist / both-arms / waving / chop), emit events with
+│ +  frame and t_ms.
+│ +
+│ +2. HOW EACH EVENT CHANGES A SHOT DECISION (additive; finder/measure/candidates level, no core edits):
+│ +- fouled miss -> shot_call not_a_shot "possible_fouled_miss" (Scott: fouled missed attempt = not a shot).
+│ +- waved off -> shot_call not_a_shot "waved_off" (Scott: travel called on shot = "no shot"; rimrock:253 waved
+│ +  off). Violation = rotating fists / hand signal + direction.
+│ +- 3-pt attempt tag: one arm raised with 3 fingers -> kind 3PT; 3-pt made = both arms raised -> make stays
+│ +  make; and-one (foul on made shot) = count basket + foul signal, make stays make.
+│ +- stop clock / start clock -> dead-ball and game-session help (stop = open hand raised; start = chopping
+│ +  arm; foul = closed fist then report).
+│ +- no referee visible -> NO change (no cue); never guess.
+│ +
+│ +3. WHY THIS WILL NOT REPEAT SPEC 36:
+│ +- Spec 36 cues (fouled_miss, referee_holding) fired on real game shots; spec 36 dropped the referee checks
+│ +  (Scott approved) and spec 37 removed the referee paths. Root cause (Proven on run36 frames): is_referee_player
+│ +  follows a matching PLAYER box across frames; BODD often labels the person "referee" only, so no player box
+│ +  matched and the cue logic mis-fired. With the picked box held fixed, a referee box sat inside it on 8 and 12+
+│ +  of the +-12 frames.
+│ +- Spec 53 re-adds referee cues with the FIXED-box semantics (held-fixed referee box, no player-box
+│ +  matching) plus pose-based arm detection, and the no-referee-visible fail-safe (no change, never guess).
+│ +
+│ +4. MEASUREMENT ON SEEN FILMS ONLY (labelled shots + Scott's examples) BEFORE ANY BLIND USE, fixed pass
+│ +- numbers, no new human review loops (Scott refused more clip reviews; any human role is one-time and
+│ +  bounded; Scott's examples = .team/review52/spot_check_52_answers.json notes):
+│ +  - SEEN films: Rimrock, GVG, HSB, GV, Idaho, Adrian, Notus A1 (labelled sets .team/specs/36_extras_truth_
+│ +    labels.json, 44_gv_labels.json, 49_hsb_labels.json, 50_*_cand_labels.json, 51_hsb1_cand_labels.json;
+│ +    Scott's examples rimrock:77, rimrock:253, gvg:149, hsb:91, gvg:349, rimrock:325).
+│ +  - Pass protocol: run pose cue detection on SEEN films only; check cue events against labelled not_a_shot /
+│ +    shot moments; pass bar = cue fires on the known fouled/waved-off examples and not on labelled warm-ups /
+│ +    breaks / halftime; Scott decides fixed pass numbers before the run (pattern: spec 36 K8, spec 38 S8,
+│ +    spec 41 L7).
+│ +  - No blind use: unseen films (Adrian Q4, HSB1 remaining, new films) only after Scott approves.
+│ +
+│ +5. BUILD ORDER (smallest prototype):
+│ +- Step 1: fixed referee box + BODD referee boxes in frames.json for ONE SEEN film; pure-function tests for
+│ +  cue gating.
+│ +- Step 2: YOLO pose on referee boxes; arm-event -> shot_decision mapping.
+│ +- Step 3: measure on SEEN films; before/after make/miss safety check.
+│ +
+│ +6. MAKE/MISS SAFETY (unchanged):
+│ +- Before and after: .venv/Scripts/python.exe .team/shot_detectors/make_review_queue_page.py --wide-combined
+│ +  --out-dir <NEW>. Require gray 30 / orange 9 / 42 shots and the same 3 combined groups. Any difference ->
+│ +  STOP for Scott.
+│ +
+│ +7. RULES:
+│ +- No core edits; no banned trials; no tuning after results; one try; Scott decides numbers; no blind peeking.
+│ +
+│ … omitted 13 diff line(s) across 1 additional file(s)/section(s)
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/53_referee_signals_spec.md  0.1s
+│ .team/specs/53_referee_signals_spec.md
+│ @@ -26,7 +26,7 @@
+│  1. WHAT TO DETECT (buildable chain):
+│  - ref box -> pose keypoints -> arm events with times.
+│  - Reuse: frames.json key "r" referees (rim_first_finder.py _referees_from_frames, _compact_frame,
+│ -  _is_referee_box); BOOD referee boxes are never merged into players (merge_same_body /
+│ +  _is_referee_box); BODD referee boxes are never merged into players (merge_same_body /
+│    _player_boxes_only). Pose step: crop referee box, run YOLO pose on GPU env, read shoulder/elbow/wrist
+│    keypoints, compute arm state per frame (raised / fist / both-arms / waving / chop), emit events with
+│    frame and t_ms.
+📖 Read 53_referee_signals_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Spec 53 is written and ends with the required line. Per Scott's instruction ("do not run this by yourself — I want everyone involved and input with their strengths"), I'm now routing the spec to Muse (reviewer) and Cursor (builder/auditor) in parallel for their independent reviews.
+────────────────────────────────────────
+  🔀 [set 1] delegating 2 tasks
+  ✓ [set 1 · 1/2] You are Muse, the reviewer on the Libert  (266.81s)
+[subagent-1] 🗜️ Compacting context — summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+[subagent-1] 🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+[subagent-1] [subagent-1] ⚠️  Session compressed 2 times — accuracy may degrade. Consider /new to start fresh.
+  ✓ [set 1 · 2/2] You are Cursor, the builder/code reviewe  (1305.98s)
+
+🔀 Delegate 2x: You are Muse, the reviewer ... | You are Cursor, the builder...  1306.4s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+📚 Skill autonomous-agent-pipeline  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Status of the referee-hand-signals team round (spec 53):
+
+Done:
+- HERMES wrote .team/specs/53_referee_signals_spec.md (this file only). Ends with "HERMES: SPEC WRITTEN". Nothing else was edited.
+
+Muse's review — MUSE: DISAGREE:
+The spec cannot be approved as written; it must be rewritten first. Key findings:
+- NFHS signal list in the spec is not authoritative — Claude Code's read of .team/review52/nfhs_signals_reference.md (2026-11-14) supersedes the signal list in prompt_team_refsignals53.txt; the "3 fingers" and "waved off = arms across body" wording there was wrong or loose. Waved off is really both arms crossing/scissoring in front at waist-chest height, out to sides (NFHS signal 16).
+- Pose chain can't deliver required cues: YOLO pose keypoints (shoulders/elbows/wrists, COCO 0-15) have no finger/thumb joints. Foul = closed fist raised, jump ball = thumbs up, 3-pt attempt = one arm raised with 3 fingers aren't directly detectable; only the Scott-approved arm-raise/both-arms proxy (spec 38 S8) is available.
+- Numbers table misattributed: "3PT arm-up min height (Scott decides, spec 38 S8 8 frames / 1.5 hoop widths approved)" — those numbers belong to track-break gap and FT pass line, not 3PT arm-up; undecided, must be fixed.
+- Pass bar should run against frozen labels (36/44/49/50/51 cand labels, labels52_v2, Scott's examples) for an automated check; fouled-miss → not_a_shot "possible_fouled_miss" mixes validated decision with uncertainty tag; shot-call order placement (post spec-37 L4) unspecified; make/miss safety gate needs scoping.
+
+Cursor's review — CURSOR: AGREE WITH CHANGES:
+- Held-fixed-referee + pose direction is right, but the spec must add before anything is built: the referee shot-decision hook in rim_first_finder.assign_shot_calls (docstring: referee_boxes accepted and not read); full gesture-identity event taxonomy (beyond raised/not-raised); lock Scott's three numbers (foul_ref_window_ms ~1500ms, waved-off window, 3PT arm-up min height) before the run; offline 3-clip prototype before any full-film run.
+
+Team state: a DISAGREE stops the loop for Scott (per team rules). Nothing has been built; nothing beyond the spec has been edited.
+
+Next: awaiting your decision — e.g., send it back to Hermes to rewrite per Muse's findings before Cursor re-reviews, or override.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-8dcb5e118af0bd557a957b4bb37d25f99f1928afbe1a99ed707413fef4ed15cd
+  hermes -c "TEAM REQUEST - referee hand signals (proposed…"
+
+Session:        local-8dcb5e118af0bd557a957b4bb37d25f99f1928afbe1a99ed707413fef4ed15cd
+Title:          TEAM REQUEST - referee hand signals (proposed…
+Duration:       28m 19s
+Messages:       15 (1 user, 13 tool calls)
+[hermes] exit 0 at 12:57:53

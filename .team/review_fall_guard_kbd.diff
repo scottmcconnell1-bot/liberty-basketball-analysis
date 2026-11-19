@@ -1,0 +1,100 @@
+diff --git a/.team/shot_detectors/keep_ball_detections.py b/.team/shot_detectors/keep_ball_detections.py
+index 3991063..708a2ee 100644
+--- a/.team/shot_detectors/keep_ball_detections.py
++++ b/.team/shot_detectors/keep_ball_detections.py
+@@ -688,6 +688,7 @@ def run_arc_and_rule_on_shot(
+     fps: float,
+     cands_by_frame: Dict[int, List[Dict[str, Any]]],
+     seed: int = RANSAC_SEED,
++    fall_through: bool = False,
+ ) -> Dict[str, Any]:
+     """Arc + rule for one shot. Track may contain result; arc path never sees it."""
+     track_no_truth = {k: copy.deepcopy(v) for k, v in track.items() if k != "result"}
+@@ -719,6 +720,7 @@ def run_arc_and_rule_on_shot(
+         switch_a8=False,
+         switch_a4=False,
+         switch_c4=False,
++        switch_fall_through=fall_through,
+     )
+     new_reason = reason_of(new_details)
+ 
+@@ -1101,6 +1103,8 @@ def step_arc_rule_report(
+     tracks_dir: Optional[Path],
+     out_json: Path,
+     out_md: Path,
++    mapping_proof_json: Optional[Path] = None,
++    fall_through_guard: bool = False,
+ ) -> int:
+     cand_path = resolve_path(str(candidates_json))
+     if not cand_path.exists():
+@@ -1109,6 +1113,31 @@ def step_arc_rule_report(
+     payload = json.loads(cand_path.read_text(encoding="utf-8"))
+     mapping = payload.get("mapping_check") or {}
+     rate = float(mapping.get("rate") or 0.0)
++    agreement_with_v6: Optional[float] = None
++    if mapping_proof_json is not None:
++        # Spec 23 v3: frame mapping proven by v6's own candidates.json on this unchanged code;
++        # this file's rate is then agreement with the saved v6 ball points, not a gate.
++        proof_path = resolve_path(str(mapping_proof_json))
++        if not proof_path.exists():
++            raise SystemExit(f"ERROR: mapping proof json not found: {proof_path}")
++        proof = json.loads(proof_path.read_text(encoding="utf-8"))
++        same = (
++            proof.get("constants") == payload.get("constants")
++            and proof.get("n_shots") == payload.get("n_shots")
++            and {(s["film"], int(s["t"])) for s in proof.get("shots") or []}
++            == {(s["film"], int(s["t"])) for s in payload.get("shots") or []}
++        )
++        if not same:
++            msg = (
++                "MAPPING PROOF MISMATCH: proof file and candidates.json differ in constants, "
++                "n_shots or shot set. Stopping for Scott."
++            )
++            print(msg)
++            raise SystemExit(msg)
++        agreement_with_v6 = rate
++        rate = float((proof.get("mapping_check") or {}).get("rate") or 0.0)
++        print(f"mapping proven by {proof_path}: rate {rate:.4f}")
++        print(f"agreement_with_v6 (not a gate): {agreement_with_v6:.4f}")
+     if rate < MAPPING_MIN_MATCH_RATE:
+         msg = (
+             f"MAPPING CHECK GATE FAILED (from candidates.json): rate {rate:.4f} "
+@@ -1142,7 +1171,7 @@ def step_arc_rule_report(
+             fps = float(cand_shot.get("fps") or FPS_FALLBACK)
+ 
+         outcome = run_arc_and_rule_on_shot(
+-            track, t_ms=t, fps=fps, cands_by_frame=cands_by_frame
++            track, t_ms=t, fps=fps, cands_by_frame=cands_by_frame, fall_through=fall_through_guard
+         )
+         hoop = track["hoop"]
+         hoop_x, hoop_y, hoop_w = float(hoop[0]), float(hoop[1]), float(hoop[2])
+@@ -1206,6 +1235,10 @@ def step_arc_rule_report(
+         },
+         "applied_to_core": False,
+     }
++    if agreement_with_v6 is not None:
++        out_payload["agreement_with_v6"] = agreement_with_v6
++    if fall_through_guard:
++        out_payload["fall_through_guard"] = True
+     out_json = Path(out_json)
+     out_md = Path(out_md)
+     out_json.parent.mkdir(parents=True, exist_ok=True)
+@@ -1351,7 +1384,9 @@ def main(argv: Optional[List[str]] = None) -> int:
+     parser.add_argument("--out-md", type=Path, default=None)
+     parser.add_argument("--candidates-json", type=Path, default=None)
+     parser.add_argument("--results-json", type=Path, default=None)
++    parser.add_argument("--mapping-proof-json", type=Path, default=None)
+     parser.add_argument("--overlay-dir", type=Path, default=None)
++    parser.add_argument("--fall-through-guard", action="store_true", default=False)
+     args = parser.parse_args(argv)
+ 
+     tracks_dir = Path(args.tracks_dir) if args.tracks_dir else None
+@@ -1379,6 +1414,8 @@ def main(argv: Optional[List[str]] = None) -> int:
+             tracks_dir=tracks_dir,
+             out_json=out_json,
+             out_md=out_md,
++            mapping_proof_json=args.mapping_proof_json,
++            fall_through_guard=args.fall_through_guard,
+         )
+ 
+     if args.step == "overlays":

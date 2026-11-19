@@ -1,0 +1,27 @@
+Query: Muse, check Claude Code's VETTED stamp on 
+.team/specs/29_bigger_wide_view_spec.md (display-only change to the coach review
+page after Scott said the wide view is too small). Check: nothing changes a 
+call; close-ups stay byte-identical; Golden Rules intact. Reasons, then exactly 
+one line: "MUSE: AGREE" or "MUSE: DISAGREE".
+📖 Read 29_bigger_wide_view_spec.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+VETTED stamp present; plan is display-only in one file (make_review_queue_page.py); close-ups declared byte-identical; no call/detection number change; Golden Rules referenced (Muse check, Claude vet, no source edit by wrong role). Disk correction noted by Claude. MUSE: AGREE
+────────────────────────────────────────
+
+🌐 Browser Confirm: no other spec changes a call; close-up byte-identical claim present; g…  2.3s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE: AGREE — VETTED stamp present; display-only in make_review_queue_page.py; close-ups byte-identical; no call/detection change; Golden Rules (Muse/Claude/Scott gate) intact.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-008d26a9c5b1b1adc0ae84c51ad829a6961bc8565a505878a0c791e0f10d32f1
+  hermes -c "Verify Claude Code vetted stamp on wide view spec"
+
+Session:        local-008d26a9c5b1b1adc0ae84c51ad829a6961bc8565a505878a0c791e0f10d32f1
+Title:          Verify Claude Code vetted stamp on wide view spec
+Duration:       12s
+Messages:       6 (1 user, 4 tool calls)

@@ -1,0 +1,10 @@
+You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/53_referee_signals_spec.md v4 (Hermes). Your v3 DISAGREE (review52/muse_spec53_v3.txt): Scott's
+"book with wiggle room / several factors" cue fusion was compressed. Check v4 against .team/review52/
+addendum_ref53_scott.txt: per-shot cue fusion (arm-event type + timing vs release/rim, nearest ref, play stops,
+next restart FT vs throw-in, score overlay change) -> one category (fouled_miss, waved_off, violation, and_one,
+none, unknown) with evidence; unknown -> coach flag <=20; no ref visible -> no change; feeds spec 52 scoring
+(excluded from auto e2e denominator); no dangling section refs; SCOTT DECIDES numbers kept. Also protocol: seen
+films only, no blind peeking, no new human review loops.
+End with one line: MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...

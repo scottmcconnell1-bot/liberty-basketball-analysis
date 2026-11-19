@@ -1,0 +1,21 @@
+You are HERMES, the architect. Rewrite .team/specs/52a_class0_restore_prereg.md as v2 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v1 reviews: CURSOR DISAGREE (review52/cursor_prereg52a.txt), MUSE DISAGREE -> AGREE WITH CHANGES once fixed
+(review52/muse_prereg52a.txt). Scott binding: proposal (a); same-5 LOGO re-gate (R6 unchanged) is binding.
+Apply ALL of:
+1. Paths: every path /mnt/c/Users/scott/Documents/... (v1 dropped "scott").
+2. Class-0 rule, pinned now, no logo52 predictions used: (i) 48b out-of-session candidates -> 0, AND (ii) in-session
+   y=-1 candidates on adrian and notus whose distance to the nearest coach-tagged shot is >= a gap you FIX NOW
+   (Cursor computed: >=8 s -> adrian ~26, notus ~6; >=15 s -> 18/4). Pick the gap with a stated reason (risk: coach
+   misses some real shots/scrambles; Scott: putbacks are separate shots). gvg/rimrock labels52_v2 unchanged; hsb
+   unchanged unless the same rules apply (state). Write the exact post-restore class counts per film computed from
+   the rule (Cursor: adrian 6 / notus 0 / hsb 4 under rule (i) alone) and the t_ms list source.
+3. Clips: say whether every class-0 row already has a clip in clips7 (same t_ms); if not, pin the extract step.
+4. New frozen labels file review52/labels52a_class0_restore.json + sha in .team/pre52a_sha256.txt BEFORE training.
+5. Session filter: pin exactly how it is enabled in the path gate52 actually scores (ensemble_predict / postproc52
+   flag, tests), and scoring: a filtered candidate is omitted from the shot list; a filtered real shot = recall miss.
+   Call out HSB miss t=2631233 (out of session -> expected recall loss) and accept it in writing.
+6. Be honest: state whether the training change is expected to fix D1, and that Item 2 (filter) is the main lever
+   on gvg checks; a fail stops for Scott.
+7. Keep: R4 recipe, E=5, seeds 0 1 2, R6 thresholds, floor 0.2, checks cap 20; flip intent note; runs/logo52a.
+End with "HERMES: PREREG WRITTEN".

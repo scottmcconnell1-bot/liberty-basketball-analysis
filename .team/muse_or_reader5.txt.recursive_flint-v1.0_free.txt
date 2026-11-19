@@ -1,0 +1,42 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code).
+The plan is NEXT_TASK.md (Notus score reader fix v4); its first line is the 
+Vetter v5 VETTED stamp (step 0 done; hue measured; lit pixels = brighter half 
+inside ON segments because the digits are LED dots; report-only off-segment 
+check). Also read .team/specs/09_VETTER_FINDING_hue.md and 
+.team/notus_fit_crops/eye_read_values.json, and look at a few 
+.team/notus_fit_crops/*_cell_*.png to check the eye-read values. Earlier 
+versions and their rejection reasons are on the first line of 
+.team/specs/09_notus_reader_fix_v1_REJECTED.md, _v2_REJECTED.md and 
+_v3_REJECTED.md. The failed gate run is .team/opencode_reader_run.txt; the 
+reader is scoreboard_clock_720p.py; the fit script is 
+scripts/fit_notus_segments.py; scoreboard_clock.py is protected. Do NOT open 
+.team/specs/04_notus_holdout_truth.json or any holdout_*.png. Check whether the 
+Vetter missed anything: any way gate or holdout information can leak into a 
+threshold, box, or geometry; any cutoff chosen to make the gate pass; a 
+protected-file edit; a file outside ## Files; a remaining contradiction; whether
+the Vetter's own edit is correct and acceptable. Do not edit or create any file.
+End with exactly one line: MUSE: AGREE  or  MUSE: DISAGREE: <reason>
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 2.7s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.5s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-96679083ed746f9b702832b4863b70887f1fd7a88d5281b2b3b6da5fa184c5ff
+  hermes -c "Check Vetter reader findings"
+
+Session:        local-96679083ed746f9b702832b4863b70887f1fd7a88d5281b2b3b6da5fa184c5ff
+Title:          Check Vetter reader findings
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

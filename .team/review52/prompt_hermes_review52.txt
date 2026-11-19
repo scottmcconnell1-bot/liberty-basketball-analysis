@@ -1,0 +1,22 @@
+You are Hermes, the ARCHITECT on the Liberty basketball film project (team: Hermes = architect, Muse = reviewer, Cursor = builder, Claude Code = coordinator/verifier). Scott (owner) wants your input on the next plan after a failed round.
+
+GOAL (Scott, binding): >= 90% of ALL shots in a game found AND called right (make/miss), with minimal coach work.
+
+Read these files (repo root = /mnt/c/Users/scott/Documents/liberty-basketball-analysis):
+- .team/review52/prompt_muse_review52.txt  (the situation, results, and Claude Code's first plan)
+- .team/review52/evidence.txt              (training label counts; per-seed P(shot) on HSB1 misses)
+- .team/review52/muse_review52.txt         (Muse's review; read from the line '☤ Hermes' on)
+- .team/review52/cursor_review52.txt       (Cursor's code review: 7 confirmed findings)
+- last 30 lines of .team/drift_log.md
+- code: .team/mm_clip/train_clip.py, extract_clips.py, ensemble_predict.py, postproc_locked51.json
+
+Claude Code's REVISED plan after both reviews:
+1. Labels: written miss / not-a-shot rule; stop auto-labelling untagged candidates as not-a-shot (use unknown/-1 unless confirmed); re-audit every Claude-labelled not-a-shot and miss in rimrock, hsb, gvg, hsb1.
+2. Training fixes: remove GradScaler under bf16; class-balanced batches; softer augmentation; best-epoch selection on a held-out game instead of last epoch.
+3. Gate: leave-one-game-out with 3 seeds per fold; lock only if the ensemble reaches >= 90% auto AND seeds agree (low spread).
+4. Review rule: add flags for seed disagreement and a wider grey band (not 'check every candidate', which would be ~140 checks/game); fix the double-count in review scoring; Cursor reviews code changes.
+5. Blind test once on new unseen films Scott supplies; labels made before any model output; a human checks a random 20% of labels.
+
+YOUR TASK: as architect, write the spec for this round to the file .team/specs/52_label_audit_stable_ensemble_spec.md. It must contain: numbered requirements; the exact written rule for 'shot' / 'miss' / 'not a shot' / 'unclear' that labels must follow; the training changes with concrete values; the gate with concrete numbers (what blocks locking); the coach-check rule with concrete thresholds and a target max checks per game; what is frozen (sha256) before the blind test; the pass bar for the blind test fixed in advance. Where you disagree with Claude Code's revised plan or with Muse/Cursor, say so in a 'Disagreements' section with reasons. Keep it under 150 lines. Do not edit any other file.
+
+When done, print one final line starting exactly with "HERMES: SPEC WRITTEN" or "HERMES: NO SPEC:" and the reason.

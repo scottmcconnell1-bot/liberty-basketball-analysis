@@ -1,0 +1,5 @@
+{
+ "frozen_by": "Claude Code",
+ "frozen_at": "2026-11-06, before spec 39 code or run",
+ "rule": "Same as .team/specs/38_handcheck_rule.json but random.Random(39) and measure39/run39 files. Per film 20 tag-matched found (round-robin 2PT/3PT/FT, shuffled by seed 39) + 5 tag-matched orange (sampled by seed 39). Verdicts written to .team/specs/39_handcheck_results.json BEFORE reading measure39 shooter numbers. Moments also in the spec-38 sample are allowed but reported separately."
+}

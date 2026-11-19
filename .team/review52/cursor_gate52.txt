@@ -1,0 +1,74 @@
+**Q1 — numbers and FAIL reading are correct.** Re-ran `gate52.py` on a `/tmp` copy of `logo_preds.npz` with coach tags (adrian/notus) and `truth52_{gvg,hsb,rimrock}.json`. Exit 1; every line matches `gate52_report.json`. OVERALL FAIL stands: notus silent, gvg checks 200, rimrock spread+checks+silent. Auto ≥90% on all five and false-shot counts 40/4/299/5/23 are Proven.
+
+**Q2 — D1 agree; D2 facts agree, same-cause only partial.**
+- D1 Proven: gvg label-0 called shot 113/7/137 of 145; hold-out gvg leaves class-0 = rimrock 241 + hsb 4 (adrian/notus class-0 = 0). Claude’s flag split 73+72+37+18=200 is a partition (seed_disagree-only 73); seed_disagree actually fires on 160 flagged autos.
+- D2 Proven: 70/97 rimrock checks are below-thr on label-0; seed2 make_recall 0.657 → spread 6.5. When rimrock is held out, class-0 train is mostly gvg — so D2 is not the same monoculture failure as D1. Also: `session_filter: false` leaves -1/warm-up rows in the check band.
+- D3/D4/D5 Proven as stated (silent t=252520 / 274807; pooled recalls; STOP FOR SCOTT).
+
+**Q3 — propose (a), not (b)/(c).** Pre-register: restore multi-gym class-0 for train + enable session filter at predict time (bounds fixed before the run). Do not retune floor/checks/thr or add seeds/epochs on these fail counts. Validation: these five LOGO games are now seen — a re-gate on them is diagnostic only unless Scott accepts that; binding lock stays R10 blind (≥2 new films, one new gym).
+
+Full write-up: `.team/review52/cursor_gate52.txt`
+
+CURSOR: AGREE FAIL READING | propose (a) multi-gym class-0 + session_filter pre-registered; LOGO re-score = seen diagnostic only; lock via R10 blind
+ cause ===
+
+D1 gvg — AGREE (Proven):
+  label-0 n=145; seeds call shot 113 / 7 / 137 of 145. Matches Claude.
+  Check-flag partition of the 200 checks: seed_disagree-only 73 + weak 72 +
+  below_thr 37 + makemiss 18 = 200. (Note: seed_disagree appears on 160 flagged
+  autos total; "73" is the exclusive remainder after weak/makemiss — Claude's
+  partition is right, not "only 73 seed disagrees.")
+  makemiss: 12 of 18 on Y==-1 (warm-up/-1 rows).
+  Class-0 in preds: adrian 0, notus 0, hsb 4, rimrock 241, gvg 145.
+  Hold-out gvg => train class-0 = rimrock 241 + hsb 4 only. Likely cause stands:
+  not-a-shot learned almost only from one gym/camera; seed 1 vs 0/2 instability
+  fits that.
+
+D2 rimrock — AGREE on facts; PARTIAL on same cause:
+  Proven: 70 of 97 checks are below-thr (0.2<=P(shot)<0.5) on label-0; seed2
+  make_recall 0.657 (8 makes→miss, 4 makes→0); spread 6.5. Facts match.
+  When rimrock is held out, class-0 train = gvg 145 + hsb 4 (not monoculture
+  rimrock). So D2 spread / seed2 make-miss collapse is NOT the same mechanism
+  as D1's single-gym negatives. Extra: session_filter false leaves -1/warm-up
+  candidates in the check band; floor 0.2 creates a wide below-thr surface on
+  rimrock label-0.
+
+D3 — PROVEN: notus t=252520 P(shot)=0.080 seeds [0.121, 0.050, 0.070];
+  rimrock t=274807 P(shot)=0.103 seeds [0.205, 0.068, 0.036]; both Y=1.
+
+D4 — PROVEN from logo_report.json pooled (rounded): miss_recall 0.991,
+  make_recall 0.952, make_precision 0.971, nonshot_rejected 0.690.
+
+D5 — AGREE: R6 STOP FOR SCOTT; no retune on these numbers without a
+  pre-registered change.
+
+Also: gvg auto_false 299 ≠ only the 113 label-0→shot; e2e unmatched autos also
+cover -1/warm-up and other unmatched finder rows.
+
+=== Q3: Smallest next step (propose; Scott decides) ===
+
+Propose (a), not (b)/(c):
+  Pre-register BEFORE any retrain:
+  1) Restore multi-gym class-0 for training: use already-labelled not-a-shot
+     rows (gvg/rimrock/hsb y=0) plus a fixed, written rule for adrian/notus
+     non-shots (e.g. Scott-bounded warm-up / out-of-session candidates → 0),
+     without changing labels52_v2 shot 1/2 encodings or the e2e denominator.
+  2) Turn on game-session filter at predict time (postproc52 session_filter)
+     with session bounds fixed from tags/clock before the run — drops warm-up
+     -1 rows from auto/check surface; not a thr/floor retune.
+  Do NOT propose (b) floor/check retune or (c) more seeds/epochs as the first
+  fix — those chase these exact fail numbers.
+
+Validation (must say so):
+  - This LOGO five-game set is now SEEN. A re-run of gate52 on the same five
+    after (a) is a diagnostic re-score only, not a clean R6 lock, unless Scott
+    explicitly accepts "seen LOGO re-score" as the next checkpoint.
+  - Binding pass path remains R10 blind: >=2 new unseen films (one new gym),
+    labels before model output; do not judge the change solely by clearing
+    these same five fails without that disclosure.
+  - No thr / floor / WEAK / MM / CHECKS_MAX change without a separate
+    pre-registered amendment that does not cite these exact counts as the
+    tuning target.
+
+No train, no code change, no core/adapter edit in this reply.
+[cursor_wsl] exit 0 at 14:41:13

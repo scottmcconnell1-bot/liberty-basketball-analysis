@@ -1,0 +1,87 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY.
+TEAM REVIEW - .team/specs/52b_check_rule_prereg.md v1 (Hermes). READ-ONLY: do 
+not edit or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided: team writes a first-principles R7 check rule, pre-registered; 
+Scott approves before re-gate.
+NEW FACT - Scott's one-time 3-clip check 
+(review52/silent3/silent3_answers.json): ALL 3 silent-reject labels are
+CORRECT real misses. notus 252520 = 3PT miss then a missed putback (both 
+labelled: 252520 y1, 255120 y1);
+rimrock 274807 = miss then make 5.2 s later (280040 y2); gvg 1158600 = miss, 
+second miss 1.2 s later (1159760 y1).
+Every silent reject is the FIRST shot of a 2-shot sequence; the model catches 
+the second shot (P 0.94-0.995) but
+gives the first P 0.08-0.18 (all seeds < 0.5). Not label errors -> model blind 
+spot.
+CLAUDE CODE OBSERVATIONS (verify):
+O1 corroborated(i) names ball_near_rim_cue, ball_trajectory_cue, 
+referee_score_cue: none exists in the mm_clip
+   predict path today (referee = spec 53, not built). Only seed_disagreement is 
+available. Which cues are real
+   for the re-gate? If only seed_disagreement, say so and what the rule then 
+reduces to.
+O2 The spec says it read logo52a preds/report although the prompt said not to 
+use them to pick values. Is the rule
+   still a clean pre-registration (Muse)?
+O3 silent_reject_count ignores flags (P-only). So no check rule can clear the 3 
+silents; with labels confirmed,
+   notus/gvg/rimrock fail on silent regardless. Options: (i) keep silent as is 
+-> needs a model change (e.g. a
+   2-shot-sequence cue / putback-aware context); (ii) redefine silent from first
+principles as "real shot neither
+   auto-called nor flagged" (coach never sees it) and add a sequence 
+corroboration cue (candidate shortly BEFORE a
+   confident auto shot). Note (ii) would be designed after seeing these 3 cases 
+-> disclosure / peeking risk.
+   Which is honest and smallest?
+O4 dedup_ms is written 800 - check postproc52/52a actual value.
+Roles: MUSE protocol (pre-reg honesty, peeking), CURSOR audit (cues that exist, 
+values, code surface; estimate
+nothing from logo52a numbers). End with one line: MUSE:/CURSOR: AGREE | AGREE 
+WITH CHANGES: ... | DISAGREE: ...
+
+────────────────────────────────────────
+☤ Hermes
+I'll review the spec and verify claims O1–O4 read-only. Let me gather the relevant files first.
+────────────────────────────────────────
+
+📖 Read 52b_check_rule_prereg.md  30.0s
+🔎 Grep dedup_ms  30.0s
+🔎 Grep ball_near_rim_cue|ball_trajectory_cue|referee_score_cue|seed_disagreement  30.0s
+🔎 Grep silent_reject_count  30.0s
+
+────────────────────────────────────────
+☤ Hermes
+The spec read fine. The .team/ dir is hidden/gitignored so search_files skips it by default, but I can read files directly. Let me pull the code and postproc files to verify O1 and O4, plus the test file.
+────────────────────────────────────────
+
+📖 Read ensemble_predict.py
+📖 Read gate52.py
+📖 Read postproc52.json  0.1s
+📖 Read postproc52a.json  0.1s
+📖 Read test_mm52.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+READ-ONLY review complete. Verification findings:
+
+O1 — cues (CONFIRMED): ensemble_predict.py:83-95 defines seed_disagreement; ball_near_rim_cue, ball_trajectory_cue, referee_score_cue do NOT exist in ensemble_predict.py or gate52.py. Referee is spec 53, not built, as the spec notes. So today corroborated(i) reduces to seed_disagreement(PM, i) alone — the spec references three unimplemented cues. Either state that reduction explicitly or the rule is unimplementable as written.
+
+O2 — pre-reg honesty: The disclosure at spec lines 118-120 is honest (rule written after seeing gate52a failures: checks 150/77 over cap, band noise). But strictly it is NOT a clean pre-registration — the design was motivated by observed failures. Values were NOT picked from logo52a numbers: all carried over unchanged (thr 0.5, dedup 800, floor 0.2, weak 0.65, mm 0.3, seed flag true; verified against postproc52.json and postproc52a.json). So: clean values, post-hoc motivation, disclosure present. Don't claim "clean pre-registration" unqualified.
+
+O3 — silent (CONFIRMED): silent_reject_count at ensemble_predict.py:263-273 is P-only (P, PM, Y); flags are never consulted. With all 3 silent labels confirmed as real misses (notus 252520, rimrock 274807, gvg 1158600 — each first shot of a 2-shot sequence, model catches the 2nd at P 0.94-0.995, 1st at P 0.08-0.18), those three games fail silent under 52b regardless of any check rule; 52b leaves silent untouched as the fail-backstop. Option (ii) — redefining silent post-hoc after seeing these exact 3 cases plus adding a sequence cue — is peeking; dishonest without full disclosure and blind R10 validation. Honest/smallest: keep silent as-is (option i); fixing it needs a model change (2-shot/putback context cue), outside this spec.
+
+O4 — dedup_ms (CONFIRMED): dedup_ms = 800 in postproc52.json:3 and postproc52a.json:3; spec line 78 matches actual. No change.
+
+MUSE:/CURSOR: AGREE WITH CHANGES: (1) state explicitly the rule reduces to seed_disagreement only (the other 3 cues don't exist in code; referee = spec 53); (2) keep the post-hoc-motivation disclosure, do not claim clean pre-registration unqualified (values untouched, verified); (3) keep silent as-is (option i), reject option (ii) as post-hoc peeking unless re-validated on blind R10 films with full disclosure — silent remains the fail-backstop, so notus/gvg/rimrock still fail silent under 52b regardless of checks; (4) dedup_ms 800 verified, no change.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2b5c8e09ca6cde9128bb145f754b0dc3a3137241d286fc6cfeb9357894d33a59
+  hermes -c "Review silent reject misses in check rule"
+
+Session:        local-2b5c8e09ca6cde9128bb145f754b0dc3a3137241d286fc6cfeb9357894d33a59
+Title:          Review silent reject misses in check rule
+Duration:       2m 42s
+Messages:       13 (1 user, 11 tool calls)

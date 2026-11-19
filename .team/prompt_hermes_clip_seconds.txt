@@ -1,0 +1,13 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/30_clip_seconds_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "CLIP SECONDS SPEC v1 - not run". Plain markdown, no line-number prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your write tool refuses, say so plainly. Half a page, with your own arithmetic.
+
+Scott 2026-11-03 on page_v5 (specs 28, 29): every clip is too short - he needs "the start of the shot. When a player sets up. Then all the way to a rebound, ball hits the floor, or its at the bottom of the net." Claude Code proposed 4 s before / 3 s after; Scott: "too much time... Cut it in half and see how that goes." SCOTT-DECIDED NUMBERS (before the run): CLIP_BEFORE_S = 2.0, CLIP_AFTER_S = 1.5.
+
+FACTS: make_review_queue_page.py uses BEFORE = 8, AFTER = 14 frames (25 fps) for every clip; combined groups (clip_moment_fix.group_clip_extent) = first shot's tag frame - before .. max anchor + after; normal cards = anchor - BEFORE .. anchor + AFTER. Today: gray 30, orange 9, 42 shots, combined groups 86 / 96 / 31 frames (spec 28 stamp).
+
+PLAN (display only, changes no call):
+1. Under --wide-combined, before/after in frames = round(CLIP_BEFORE_S * fps), round(CLIP_AFTER_S * fps) per film fps (25 -> 50 and 38). Applies to every card (close-up and wide) and to group_clip_extent's before/after. The "program's moment" frame label stays at index = before frames. Flag off: unchanged.
+2. Arithmetic: normal card length; the three groups (39400 tag 985, anchors 1045/1048; 2417100 tag 60428, anchors 60501/60483; 2753100 tag 68828, anchors 68836/68836): first frame, last frame, length. Disk cost estimate vs page_v5 (296 MB).
+3. Where: make_review_queue_page.py (and pass before/after to group_clip_extent; no change to its maths). Constants named CLIP_BEFORE_S / CLIP_AFTER_S with a comment "Scott 2026-11-03".
+4. Tests: a pure helper seconds_to_frames(seconds, fps) if added; group_clip_extent with before=50, after=38.
+5. One run to a NEW out dir: pass = same cards and counts (gray 30, orange 9, 42 shots); every clip length matches the arithmetic; page JS node --check.
+6. Roles: Claude Code vets, Muse checks, Cursor codes.

@@ -1,0 +1,136 @@
+{
+  "note": "Thresholds were fixed on these frames and then frozen in the YAML before measurement.",
+  "calibration_frames": {
+    "adrian": [
+      2436,
+      17055,
+      31674,
+      46293,
+      60912,
+      80404
+    ],
+    "notus_a1": [
+      2523,
+      17664,
+      32805,
+      47946,
+      63087,
+      83275
+    ],
+    "notus_a": [
+      2341,
+      16387,
+      30433,
+      44479,
+      58525,
+      77253
+    ]
+  },
+  "results": [
+    {
+      "game": "adrian",
+      "video_path": "uploads/nfhs_gam0a66d85e12.mp4",
+      "total_frames": 97475,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2436,
+        17055,
+        31674,
+        46293,
+        60912,
+        80404
+      ],
+      "success_count": 0,
+      "failure_count": 6,
+      "success_rate": 0.0,
+      "lines_found_per_frame": {
+        "mean": 0.0,
+        "median": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p90": 0.0
+      },
+      "reprojection_error_px": null,
+      "half_court_y_ft": null,
+      "court_length_ft": null,
+      "court_half_width_ft": null,
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 0,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 6
+      }
+    },
+    {
+      "game": "notus_a1",
+      "video_path": "uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4",
+      "total_frames": 100950,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2523,
+        17664,
+        32805,
+        47946,
+        63087,
+        83275
+      ],
+      "success_count": 0,
+      "failure_count": 6,
+      "success_rate": 0.0,
+      "lines_found_per_frame": {
+        "mean": 0.0,
+        "median": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p90": 0.0
+      },
+      "reprojection_error_px": null,
+      "half_court_y_ft": null,
+      "court_length_ft": null,
+      "court_half_width_ft": null,
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 0,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 6
+      }
+    },
+    {
+      "game": "notus_a",
+      "video_path": "uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4",
+      "total_frames": 93650,
+      "frames_analyzed": 6,
+      "frame_indices": [
+        2341,
+        16387,
+        30433,
+        44479,
+        58525,
+        77253
+      ],
+      "success_count": 0,
+      "failure_count": 6,
+      "success_rate": 0.0,
+      "lines_found_per_frame": {
+        "mean": 0.0,
+        "median": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p90": 0.0
+      },
+      "reprojection_error_px": null,
+      "half_court_y_ft": null,
+      "court_length_ft": null,
+      "court_half_width_ft": null,
+      "keypoint_model_comparison": {
+        "frames_both_succeed": 0,
+        "lines_succeeds_keypoints_fails": 0,
+        "keypoints_succeeds_lines_fails": 0,
+        "both_fail": 6
+      }
+    }
+  ]
+}

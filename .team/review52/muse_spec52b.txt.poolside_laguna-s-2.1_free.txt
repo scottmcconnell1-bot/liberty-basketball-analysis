@@ -1,0 +1,65 @@
+Query: You are MUSE, the REVIEWER (not Hermes). READ-ONLY.
+TEAM REVIEW - .team/specs/52b_check_rule_prereg.md v1 (Hermes). READ-ONLY: do 
+not edit or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott decided: team writes a first-principles R7 check rule, pre-registered; 
+Scott approves before re-gate.
+NEW FACT - Scott's one-time 3-clip check 
+(review52/silent3/silent3_answers.json): ALL 3 silent-reject labels are
+CORRECT real misses. notus 252520 = 3PT miss then a missed putback (both 
+labelled: 252520 y1, 255120 y1);
+rimrock 274807 = miss then make 5.2 s later (280040 y2); gvg 1158600 = miss, 
+second miss 1.2 s later (1159760 y1).
+Every silent reject is the FIRST shot of a 2-shot sequence; the model catches 
+the second shot (P 0.94-0.995) but
+gives the first P 0.08-0.18 (all seeds < 0.5). Not label errors -> model blind 
+spot.
+CLAUDE CODE OBSERVATIONS (verify):
+O1 corroborated(i) names ball_near_rim_cue, ball_trajectory_cue, 
+referee_score_cue: none exists in the mm_clip
+   predict path today (referee = spec 53, not built). Only seed_disagreement is 
+available. Which cues are real
+   for the re-gate? If only seed_disagreement, say so and what the rule then 
+reduces to.
+O2 The spec says it read logo52a preds/report although the prompt said not to 
+use them to pick values. Is the rule
+   still a clean pre-registration (Muse)?
+O3 silent_reject_count ignores flags (P-only). So no check rule can clear the 3 
+silents; with labels confirmed,
+   notus/gvg/rimrock fail on silent regardless. Options: (i) keep silent as is 
+-> needs a model change (e.g. a
+   2-shot-sequence cue / putback-aware context); (ii) redefine silent from first
+principles as "real shot neither
+   auto-called nor flagged" (coach never sees it) and add a sequence 
+corroboration cue (candidate shortly BEFORE a
+   confident auto shot). Note (ii) would be designed after seeing these 3 cases 
+-> disclosure / peeking risk.
+   Which is honest and smallest?
+O4 dedup_ms is written 800 - check postproc52/52a actual value.
+Roles: MUSE protocol (pre-reg honesty, peeking), CURSOR audit (cues that exist, 
+values, code surface; estimate
+nothing from logo52a numbers). End with one line: MUSE:/CURSOR: AGREE | AGREE 
+WITH CHANGES: ... | DISAGREE: ...
+⚠️  Attempt 1/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+⏳ Retrying in 2.9s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+⏳ Retrying in 4.6s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+❌ API failed after 3 retries — HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+   💀 Final error: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter didn't answer after 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2ec47ee7e9fc938193cd39d3d77ef0fc8ba0e6713ba396f83a4c4f3869155873
+  hermes -c "You are MUSE, the REVIEWER (not Hermes)… #25"
+
+Session:        local-2ec47ee7e9fc938193cd39d3d77ef0fc8ba0e6713ba396f83a4c4f3869155873
+Title:          You are MUSE, the REVIEWER (not Hermes)… #25
+Duration:       11s
+Messages:       2 (1 user, 0 tool calls)

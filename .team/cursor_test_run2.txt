@@ -1,0 +1,41 @@
+### 1) Windows venv OpenCV VideoCapture
+**Failed** (exit 1). Output:
+
+```
+sandbox: warning: compute_glob_deny_actions recursive walk of /mnt/c/Users/scott/Documents/liberty-basketball-analysis with 23 pattern(s) [**/.cursor/*.json, **/.cursor/**/*.json, **/.cursor/.workspace-trusted, **/.claude/*.json, +19 more] took 10234ms (6067 entries); this makes sandbox setup slow
+sandbox: warning: scanning /mnt/c/Users/scott/Documents/liberty-basketball-analysis for sandbox setup took 20s; the sandbox will be slow to start on this workspace (set SBX_DEBUG=1 for a breakdown)
+<3>WSL (902 - ) ERROR: UtilGetPpid:1330: Failed to parse: /proc/1/stat, content: 1 (systemd) S 0 1 1 0 -1 4194560 5979 369592 14 385 12 25 696 620 20 0 1 0 285 25149440 3870 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+<3>WSL (902 - ) ERROR: UtilConnectUnix:535: connect failed 2
+```
+
+No `frames` / `read` print. Likely sandbox blocked or broke launching the Windows `.exe` via WSL.
+
+### 2) python3 OpenCV version
+**Succeeded** (exit 0). Output:
+
+```
+5.0.0
+```
+
+(Plus the same sandbox setup warnings before that.)
+
+### 3) Write/read Liberty_Shot_Outputs
+**Failed** (exit 1). Output:
+
+```
+--: line 1: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/cursor_sandbox_test.txt: Permission denied
+```
+
+Sandbox write limit: even though that path is a workspace root, the write was denied.
+
+### 4) Write outside workspace
+**Failed** (exit 1). Output:
+
+```
+--: line 1: /mnt/c/Users/scott/Documents/sandbox_should_block.txt: Permission denied
+```
+
+Expected sandbox block: path is outside the workspace write area.
+
+**Summary:** Only #2 worked. #1 failed (WSL/sandbox launching Windows Python). #3 and #4 failed with `Permission denied` from the sandbox.
+[cursor_wsl] exit 0 at 19:42:33

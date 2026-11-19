@@ -1,0 +1,9 @@
+Muse, you check the Vetter. Read-only: do not change any file.
+Read: .team/specs/46_scaled_crop_spec.md (Claude Code's VETTED WITH CONDITIONS V1-V8 block at the top, then Hermes's spec), collect_q4_bodd.py v6_ball (~110-146), .team/shot_detectors/rim_first_make_miss.py (tracks/d1/vote, spec 45 --film-scale, cmd_d1), .team/shot_detectors/keep_ball_detections.py lines 23-45 and 165-200 and every use of CROP_LEFT_RIGHT/CROP_ABOVE/CROP_BELOW/ZONE_BELOW_PX, last 4 entries of .team/drift_log.md.
+Check that Claude Code did not miss or approve anything wrong:
+- Does overriding the four kbd module constants really change the crop in extract and the zone in arc/report for v6 AND d2v1? Any other fixed-pixel number in that path left unscaled that matters?
+- Can G1 (v6_ball_scaled s=1.0 == v6_ball) and G2 (Adrian byte-match at s=1.0) truly prove Adrian is unchanged? Any float/int difference at s=1.0?
+- Does the d2v1 mapping check (candidates vs v6 proof) still work when both crops are scaled?
+- Any tag, label, scoreboard or truth read in the scaled path? Any tuning after a number? Any edit outside the two wrapper files? Any unseen film touched?
+- Is the Notus control (rebuild without scaled crop) enough to separate the crop effect from BODD rebuild noise?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

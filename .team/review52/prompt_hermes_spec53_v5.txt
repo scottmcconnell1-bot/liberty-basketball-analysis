@@ -1,0 +1,18 @@
+You are HERMES, the architect. Update .team/specs/53_referee_signals_spec.md to v5 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+v4 reviews: MUSE AGREE (review52/muse_spec53_v4.txt); CURSOR AGREE WITH CHANGES (review52/cursor_spec53_v4.txt).
+Apply exactly:
+A. Cursor's 4 changes: (1) 48b game_session = clock/session/FT windows only, NOT a score reader; score-change cue
+   uses scoreboard_clock.py / scoreboard_pair_rises.py only where a readable score track exists, else the cue is
+   omitted (never inferred); (2) drop/defer "ball handed to ref" (spec-36 false-fire proxy) and "throw-in restart"
+   (no detector) until a safe source exists; (3) #22 travel / fist / thumbs / 3 fingers never claimed from pose;
+   (4) add a cue -> source file table (Cursor's table).
+B. Scott's numbers (review52/scott_numbers53.txt, binding) into the NUMBERS TABLE, replacing every "Scott decides":
+   - waved_off: Scott "pretty immediate and short lasting" -> state concrete ms: wave must start within 1000 ms
+     after the ball reaches the rim (or release if rim time unknown) and last <= 1500 ms; mark as Scott's rule.
+   - 3PT arm-up: Scott "his hand over his head" -> wrist keypoint above the head (above nose/eye keypoints).
+   - small-ref keypoint-found share: 80% of referee-visible moments (Scott), else referee step stays OFF.
+   - false fires on labelled true shots: 0 (Scott: "Never") -> any labelled real shot cancelled/changed = step OFF.
+   - foul_ref_window_ms 1500 stands.
+C. Muse non-blocking: turn the v1 combination prose into a small written combination table.
+Update the status line to v5. End with "HERMES: SPEC WRITTEN".

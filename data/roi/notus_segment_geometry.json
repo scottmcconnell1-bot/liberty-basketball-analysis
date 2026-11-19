@@ -1,0 +1,54 @@
+{
+  "generated_by": "scripts/fit_notus_segments.py",
+  "method": "Mean red-mask occupancy of non-gate tens/ones slots, resized to 100x120; the two dark holes locate the central column band and the upper/lower stroke bands; each segment is a core rectangle inside its measured band. Fitting frames stay at least 60 s from every answer-key timestamp.",
+  "gate_gap_s": 60.0,
+  "core_scale": 0.46,
+  "fit_masks": {
+    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": 365,
+    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": 154
+  },
+  "segments": {
+    "a": [
+      0.2856,
+      0.0627,
+      0.6444,
+      0.1623
+    ],
+    "b": [
+      0.67,
+      0.1783,
+      0.9,
+      0.4467
+    ],
+    "c": [
+      0.67,
+      0.5783,
+      0.9,
+      0.8467
+    ],
+    "d": [
+      0.2856,
+      0.864,
+      0.6444,
+      0.9943
+    ],
+    "e": [
+      0.0588,
+      0.5783,
+      0.2612,
+      0.8467
+    ],
+    "f": [
+      0.0588,
+      0.1783,
+      0.2612,
+      0.4467
+    ],
+    "g": [
+      0.2856,
+      0.4627,
+      0.6444,
+      0.5623
+    ]
+  }
+}

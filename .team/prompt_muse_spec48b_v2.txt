@@ -1,0 +1,5 @@
+Muse, you review the Architect. Read-only: do not change any file. Checked BEFORE code exists; "not coded yet" is normal.
+This round Claude Code is the architect (Hermes's model failed). Scott's route: Claude Code writes, Muse and Cursor review, Cursor builds.
+Read .team/specs/48b_game_session_v2_spec.md (whole file), then the design code it cites in .team/design48b/ (session_v3.py, stopstart48.py, knn48.py, adrian_read48.py, reference/session_v2.py) and the last 10 entries of .team/drift_log.md.
+Questions: (1) Does any S-rule silently drop a real game shot (a quarter called a timer, a quarter cut short)? (2) Does any S-rule let warm-ups, halftime or between-game time back in? (3) Does the spec match the design code (numbers, order of rules)? (4) Is anything tuned to the 4 seen films that will not hold on an unseen home game (Riverstone)?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

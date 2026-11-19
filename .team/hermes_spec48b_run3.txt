@@ -1,0 +1,92 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/48b_game_session_v2_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "GAME SESSION
+SPEC v2 - not run". Plain markdown, no "\n", no "||". Edit nothing else, run 
+nothing that writes. Two pages at most.
+
+Read first: last 12 entries of .team/drift_log.md; 
+.team/specs/48_game_session_spec.md (V1-V11 still apply unless replaced below); 
+.team/shot_detectors/game_session.py; the design prototype in .team/design48b/ 
+(digits48.py, knn48.py, adrian48.py, adrian_read48.py, stopstart48.py, 
+session_v2.py zero_ends, session_v3.py build/resets/bridge_excursions/norm_read,
+eval_v3.py).
+
+SCOTT (binding, 2026-11-10): "Use the scoreboard to determine when the game is 
+in session. No starts can be counted when the game is not in session." Then: no 
+coach clicks - "It should be obvious when the game is in session and when it is 
+not." Claude Code picks every setting.
+
+FACTS (Claude Code, Proven; spec 48 v1 failed its reader check):
+- v1 failed: yellow board finder caught the hardwood; 7-segment reader read 0-1 
+of 12; EasyOCR 0-5 of 30 (colon mangled).
+- Board = static dark rectangle (dark in >85% of 30 frames, bottom-right). Clock
+= top strip of the board.
+- Template digit reader (hand-marked SEEN frames): home board (Notus, GV, Idaho;
+likely Riverstone) 29/26/28 of 30 on held-out frames. Adrian board: minutes 
+digit unreadable (dead LEDs / net in front); seconds + format reader 30/30.
+- Design v3 on the 4 seen films (design data, not proof): Adrian 127/127 tagged 
+shots in session, Notus 31/31, GV 184/184 (2 games, all between-game warm-ups 
+dropped), Idaho 2/2; 4/4/8/4 periods found.
+
+SETTINGS FIXED BY CLAUDE CODE (copy into a SETTINGS FIXED block; do not change):
+- S1 Board: static dark rectangle as above. Board type matched to a stored 
+template set (home board; Adrian board); an unknown board -> stop with "new 
+board: mark ~20 seen frames" (no make/miss info in that marking).
+- S2 Reader: per-board digit templates from hand-marked frames (files copied 
+from .team/design48b labels/meta into a new data folder). Full boards give clock
+seconds; partial boards give format (M:SS / SS.t) + seconds or tenths. A second 
+read 0.5 s after each 1 s sample (running test). 'DD:D' = SS.t. Score digits 
+never read (V5 stays).
+- S3 Clock state per second: run (ticks down 0.5-2 s; partial: seconds down 1-2 
+mod 60, SS.t: half read differs), stop (same reading), else unknown; unknown 
+carried up to 130 s on full boards, 5 s on partial.
+- S4 Timeout/break timers: clock leaves value P by >20 s and returns within 3 s 
+of P inside 130 s -> those samples bridged (not a reset).
+- S5 Segments split at a held zero (0.0 still at the half read, >=3 samples, <=2
+stray reads) or a reset (full: jump up >=30 s over the last known value, holding
+3 samples; partial: SS.t -> M:SS holding 3).
+- S6 Stoppage = run then same reading >=5 s. Segment with >=3 stoppages = 
+period; 0 = timer; 1-2 = halftime if it comes right after a game's 2nd period, 
+else a period if its start value is within 2 s of L (L = most common start of 
+confirmed periods, nearest 30 s); partial boards (no L): a period only right 
+after the 3rd. New game after 8 min with no period.
+- S7 Session per period: first run tick -2 s to held zero +3 s (or last run tick
++3 s if the film/segment ends otherwise); V10 FT window (90 s, FT-flagged only) 
+after a held zero.
+- S8 Code: game_session.py may be EDITED (it is spec-48's own new file) plus new
+data files and tests; no edit to any other existing file. Tests: synthetic 
+sequences for every S-rule (timeout excursion, halftime at L with 2 misread 
+stops, running-clock Q4 with 1 stop after period 3, pre-game timer with a pause,
+two games in one film, partial board).
+- S9 Seen-film regression (not proof): re-run the 4 seen films; must reproduce 
+the design numbers exactly (127/127, 31/31, 184/184, 2/2; GV between-game 
+warm-ups 0 in session except moments inside game time). Proof = the blind 
+spec-49 Riverstone run (session checked there against the frozen labels: every 
+labelled real shot in session).
+
+WRITE: A steps in plain words; B code plan; C gates; D how spec 49 uses 
+session.json; E numbers table (unknowns "NOT FOUND - Claude Code to check").
+Rules: no score digits; nothing to the coach page; Riverstone/HSB/HSB1/Rimrock 
+untouched; no banned trials (linear interpolation, ByteTrack, DeepSORT, early 
+windows OLLAMA.md:31-39, wider column, hoop recenter). Every fact from a file 
+you read or above; otherwise "NOT FOUND - Claude Code to check".
+↻ Thinking-only response — prefilling to continue (1/2)
+↻ Thinking-only response — prefilling to continue (2/2)
+⚠️ Empty response from model — retrying (1/3) in 6s
+⚠️ Empty response from model — retrying (2/3) in 15s
+⚠️ Empty response from model — retrying (3/3) in 30s
+⚠️ Model produced reasoning but no visible response after all retries. Returning empty.
+
+────────────────────────────────────────
+☤ Hermes
+⚠️ No reply: nvidia/nemotron-3-ultra-550b-a55b:free didn't produce a reply this time, even after retries. Send continue to try again, or switch models with /model.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4595f0b40c6811a5e2b83ca5e3cd1a667fd45938fa111c6be17e8aa513c3189c
+  hermes -c "Hermes, you are the Architect. WRITE ONE new… #3"
+
+Session:        local-4595f0b40c6811a5e2b83ca5e3cd1a667fd45938fa111c6be17e8aa513c3189c
+Title:          Hermes, you are the Architect. WRITE ONE new… #3
+Duration:       1m 6s
+Messages:       3 (1 user, 0 tool calls)

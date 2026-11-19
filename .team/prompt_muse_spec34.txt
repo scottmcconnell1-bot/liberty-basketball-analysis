@@ -1,0 +1,9 @@
+You are Muse, the checker of Claude Code's verdicts. Read .team/specs/34_ball_track_check_spec.md (line 1 = Claude Code's VETTED WITH CONDITIONS stamp D1-D6; below it Hermes's v1). Context: spec 33 (.team/specs/33_shot_flight_rules_measure_spec.md, line 1 stamp) ran once; its results are in C:/Users/scott/Documents/Liberty_Shot_Outputs/shot_rules_measured/summary.md. You may read court_memory.py (CourtMemory.key), ai_bridge.py ~1030-1085, collect_q4_bodd.py, .team/shot_detectors/make_review_queue_page.py, collect_flight_tracks.py, shot_rules_measure.py. Edit nothing, run nothing that writes.
+
+Scott 2026-11-04: check why the ball detector fails on whole flights, and "I do not want to break one to fix the other" (make/miss must stay as it is).
+
+Check:
+1. Are D1-D6 correct? In particular: is CourtMemory.key the paint/key area rather than the whole court (D3)? Does replacing cutoffs with distributions keep the spec measurement-only and free of new numbers?
+2. Is the make/miss safety check (D1 + section 2) enough to catch a break?
+3. Anything breaking the Golden Rules (core edits, banned trials, tuning after results, Adrian Q4, new numbers)?
+Reply under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE: DISAGREE: <reason>".

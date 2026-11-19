@@ -1,0 +1,33 @@
+## Spec 53 v5 — Cursor re-review (read-only)
+
+**Proven** from `.team/specs/53_referee_signals_spec.md`, `.team/review52/cursor_spec53_v4.txt`, `.team/review52/scott_numbers53.txt`, and grep/reads of the named modules.
+
+### 1) Four v4 changes — applied correctly
+| # | v4 ask | v5 |
+|---|---|---|
+| 1 | 48b = clock/session/FT only; score via `scoreboard_clock` / `scoreboard_pair_rises` or omit | In status, §2, cue table |
+| 2 | Defer ball-to-ref + throw-in | Deferred in §2 + cue table |
+| 3 | `#22` / fist / thumbs / 3-finger never from pose | POSE LIMIT, DETECTABLE EVENTS, cue row |
+| 4 | Cue → source table | Present; matches Cursor v4 table |
+
+### 2) Scott’s numbers — concrete enough to code
+- **waved_off:** start ≤ **1000 ms** after rim (or release), duration ≤ **1500 ms**
+- **3PT:** wrist above head via nose/eye keypoints (Scott’s “margin” not carried; strict above is still codeable)
+- **small-ref gate:** ≥ **80%** keypoint-found on ref-visible moments, else OFF
+- **false fires:** **0** labelled true-shot cancels/changes, else OFF
+- **foul window 1500 ms:** stands, but §9 names it `fouled_ref_window_ms` while the combo row / Scott file use `foul_ref_window_ms`
+
+### 3) Cue → source table — mostly real
+| Named source | Check |
+|---|---|
+| `ft.stillness` in `ft_half_circle.py` | Real function |
+| `scoreboard_clock.py` | Real (repo root) |
+| `scoreboard_pair_rises.py` | Real (`.team/shot_detectors/`) |
+| `free_throw_line` / `maybe_free_throw` | Real **`ft_reason` strings** from `decide_ft`, not function names |
+| `ref_signals.py` | Proposed new module (OK) |
+
+### 4) Combination table — not yet pure-function codeable
+The table still treats pose-undetectable NFHS IDs as inputs (`#4` fist, `#22` travel, `#18` fingers) while the rest of the spec forbids claiming them from pose. Fusion predicates (`arm_raised + play_stopped + ft_next…`) are not written as booleans. Extra blockers: violation’s **“etc.”**; **waved_off** needs “score overlay not changed” with no rule when that cue is omitted (Rimrock prototype has no score track); no category precedence; window name mismatch above.
+
+**CURSOR: AGREE WITH CHANGES: rewrite combo rows as boolean fusion predicates (no #4/#22/#18 pose primitives); define waved_off when score cue omitted; fix foul_ref_window_ms name; drop violation “etc.” / set precedence.**
+[cursor_wsl] exit 0 at 16:26:58

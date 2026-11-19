@@ -1,0 +1,33 @@
+Query: Muse, check Cursor's code for .team/specs/27_flagged_clip_length_spec.md 
+(VETTED, you AGREEd the plan). Files: .team/shot_detectors/clip_moment_fix.py, 
+make_review_queue_page.py, test_clip_moment_fix.py (compare with spec 26 
+version: git is untracked, so read the files and the spec). Claude Code ran this
+session: pytest .team/shot_detectors -q -> 96 passed; one run to 
+Liberty_Shot_Outputs/review_queue/page_v3: flagged 39400 71 frames, 2417100 63, 
+2753100 16 with the 'same shot tagged twice' note; 0 other jpgs changed vs 
+page_v2; gray 31 orange 9; storage key coach_review_page_v3. Check code matches 
+spec, no dead code, nothing else touched. Reasons, then exactly one line: "MUSE:
+AGREE" or "MUSE: DISAGREE".
+⚠️  Attempt 1/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+⏳ Retrying in 2.4s (attempt 1/3)...
+⚠️  Attempt 2/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+⏳ Retrying in 4.5s (attempt 2/3)...
+⚠️  Attempt 3/3 failed: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+❌ API failed after 3 retries — HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+   💀 Final error: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter didn't answer after 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 404: poolside/laguna-s-2.1:free is no longer available on OpenRouter: no provider serves this model anymore. See available models at https://openrouter.ai/models
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-56cca4c2ed01c3bb874eb9f0981981b8279be7893ea5ca5ff183d4f791017c1f
+  hermes -c "Muse, check Cursor's code for… #5"
+
+Session:        local-56cca4c2ed01c3bb874eb9f0981981b8279be7893ea5ca5ff183d4f791017c1f
+Title:          Muse, check Cursor's code for… #5
+Duration:       11s
+Messages:       2 (1 user, 0 tool calls)

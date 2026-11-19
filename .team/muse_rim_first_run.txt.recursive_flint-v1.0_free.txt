@@ -1,0 +1,94 @@
+Query: You are Muse, the checker. Scott 2026-11-04: "Throw that at Hermes and 
+Muse and see what you all agree on as next steps and fixes." Read: 
+.team/specs/35_rim_first_shot_finder_spec.md (Hermes's opinion + plan), 
+.team/prompt_hermes_rim_first.txt (Claude Code's proposal and what we learned), 
+and for checking: docs/agent_handoffs/HERMES.md line ~27, 
+.team/specs/17_missed_makes_options_REVIEWED.md line ~49, collect_q4_bodd.py, 
+event_generator.py ~1071, court_memory.py ~150-195, 
+.team/shot_detectors/make_review_queue_page.py. Edit nothing, run nothing that 
+writes.
+
+Claude Code's objections to Hermes's plan (check each: AGREE / DISAGREE with 
+reason):
+V1 "Hoop recenter" worry is unfounded: the banned trial was shifting the saved 
+hoop position inside the MAKE rule (HERMES.md:27 "each one called at least one 
+miss a make"; spec 17 C5 "saved hoop below the real rim"). Centring the v6 crop 
+on the hoop BODD detects in that frame is what make/miss already does 
+(collect_q4_bodd.py). So running the v6 crop over the whole span is allowed.
+V2 Hermes triggers candidates from the BODD full-frame ball - the very source 
+that failed in spec 34 - and requires a rise >= 170 px and a peak, i.e. the top 
+of the arc, which left the picture in 5 of 20 hand-checked failures. That 
+defeats rim-first. Trigger should be the v6 crop seeing the ball descend into 
+the rim zone; no arc-top requirement.
+V3 Fixed px (170, 280, +40) on a 1920 and a 1280 film - must be hoop widths 
+(spec 33 C3).
+V4 Section 4 measures "277 moments incl. fakes"; a whole-game finder is measured
+against the tags over the Q1-Q3 / Notus Q1 span: found, extra, timing 
+(find_shots_measure.match_shots, 8000 ms).
+V5 The page prints no "v6 mapping check 1.0000" (you said so on spec 34); the 
+make/miss check is gray 30 / orange 9 / 42 shots / same combined groups.
+V6 Most of spec 33's seven numbers do not apply; list only numbers this plan 
+uses.
+
+Then answer:
+1. Where do you agree with Hermes, with Claude Code, or neither? Any better 
+idea?
+2. The agreed next step and fixes, in 5 bullets max.
+3. Any Golden Rule risk (core edits, banned trials, tuning after results, new 
+numbers without Scott, Adrian Q4, training).
+Under 350 words. Last line must START with exactly "MUSE: AGREE" (with Claude 
+Code's V1-V6) or "MUSE: DISAGREE: <which and why>".
+📖 Read 35_rim_first_shot_finder_spec.md  0.2s
+📖 Read prompt_hermes_rim_first.txt  0.2s
+📖 Read HERMES.md  0.2s
+📖 Read 17_missed_makes_options_REVIEWED.md  0.2s
+📖 Read collect_q4_bodd.py
+📖 Read event_generator.py  0.1s
+📖 Read court_memory.py  0.1s
+📖 Read make_review_queue_page.py  0.2s
+💻 $ ls /mnt/c/Users/scott/Documents/liberty-basketball-analysis + 1 command
+💻 $ grep -rn "hoop recenter" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py --include=*.md --include=*.txt -l 2>/dev/null  42.8s
+💻 $ grep -n -B3 -A6 "hoop recenter" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/OLLAMA.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/DETECTOR_PROPOSAL_REJECTION.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/AGENT_OPERATIONAL_PROTOCOL.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/CLAUDE.md /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/muse_rim_first_run.txt 2>/dev/null
+💻 $ grep -rn "def match_shots" /mnt/c/Users/scott/Documents/liberty-basketball-analysis --include=*.py  40.2s
+📖 Read find_shots_measure.py
+💻 $ grep -n -i -B2 -A8 "banned\|recenter\|interpolation" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/OLLAMA.md
+💻 $ cat /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/muse_rim_first_run.txt
+💻 $ grep -n -i -B4 -A12 "banned" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/OLLAMA.md  0.1s
+✗ $ grep -rn -l "v6 mapping check" /mnt/c/Users/scott/Documents/liberty-basketball-analysis 2>/dev/null  180.3s [exit 124]
+💻 $ grep -n -B5 -A25 "Scott decides\|Scott-approved\|Scott approved\|numbers" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/33_shot_flight_rules_measure_spec.md | sed -n '1,160p'
+📖 Read OLLAMA.md
+💻 $ grep -n -i -B5 -A10 "v6 mapping check\|mapping check\|1.0000" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/34_ball_track_check_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Muse check of Claude Code's objections to Hermes's spec 35 rim-first plan:
+
+V1: AGREE with Claude Code — the worry is unfounded. The banned trial was shifting the saved hoop position inside the MAKE rule (HERMES.md:27; spec 17 C5). Centring the v6 crop on the BODD-detected hoop in that frame is what collect_q4_bodd.py v6_ball already does (conf 0.28, imgsz 640, hx±260, hy-200..240) and what spec 33 VETTED did per frame; the plan keeps the single-frame hoop with no candidate fallback, so whole-span v6 is allowed.
+
+V2: AGREE with Claude Code — this is the substantive fix. Triggering from the BODD full-frame ball plus rise >=170 and a peak was the wrong gate (spec 34: full-frame source failed; arc-top frames were among the misses). Fix: trigger = v6 crop sees the ball descend into the rim zone; no arc-top requirement.
+
+V3: AGREE. Fixed px (170, 280, +40) must be hoop widths (spec 33 C3). Convert with per-frame hoop_w.
+
+V4: AGREE. Measure via find_shots_measure.match_shots, 8000 ms window, over the Q1-Q3 Adrian + Notus Q1 tag span, per kind; the 277-moment incl-fakes framing should not be the measurement basis.
+
+V5: AGREE. The page prints no "v6 mapping check 1.0000"; Claude Code corrected that on spec 34 (it was the run_d1_q4 proof). The page check is --wide-combined --out-dir <new>, gray=30 orange=9, 42 shots, combined groups vs page_v6.
+
+V6: AGREE. List only what the plan uses: rim_contact_dist in hoop widths, fall-through gate, v6_confirm_window_ms (Scott decides; proposed 500). Spec 33's seven numbers do not all carry over.
+
+Where I agree: with Claude Code on all six, with Hermes on the rim-first direction. Better idea: make the candidate predicate the proven v6 crossing itself (is_make half 0.55, drop 180, gap 8 at the crossing) rather than new rise/peak logic — reuse over invention.
+
+Agreed next step and fixes: 1) trigger = v6 rim-zone descent, hoop-width units; 2) make/miss files untouched; 3) Scott-decides numbers before run; 4) Q1-Q3 measure via match_shots, Q4 blind after Scott sees numbers; 5) stop conditions per spec 35 section 5.
+
+Golden Rule risks: no core edits, no training, no banned trials, no post-result tuning, no new numbers without Scott, Adrian Q4 unread, no training.
+
+MUSE: AGREE V1, V2, V3, V4, V5, V6 — fold fixes in before the run.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-0edfa4dea03d9783b65dce47d7464f4f4de90077e6b82e095e8dea1d7d03a7e9
+  hermes -c "You are Muse, the checker. Scott 2026-11-04…"
+
+Session:        local-0edfa4dea03d9783b65dce47d7464f4f4de90077e6b82e095e8dea1d7d03a7e9
+Title:          You are Muse, the checker. Scott 2026-11-04…
+Duration:       6m 18s
+Messages:       29 (1 user, 27 tool calls)

@@ -1,0 +1,18 @@
+## Pre-TRAIN GO — spec 52c v2 (independent re-check)
+
+**Proven**
+- Spec sha on disk matches freeze file: `f5b4d5df…` = `.team/review52/spec52c_v2_sha.txt`.
+- Build artifact sha256s match the build report: `train_clip.py` `4a29f4a4…`, `ensemble_predict.py` `6814edbf…`, `test_mm52.py` `0a086829…`, `postproc52b.json` `3a950337…` (and postproc sha file `cd8d1a6b…`).
+- `postproc52.json` `150ff7e6…` / `postproc52a.json` `ec70b330…` unchanged; both lack `extras_require_seed_disagreement`. `postproc52b.json` matches the pinned JSON (incl. that key `true`).
+- `seq_follower`: `(t, t+6000]` via `searchsorted(..., side="right")`; `seq_follower_per_film` blocks cross-film; logo mode computes once on full `T`/`Fm` (incl. Y&lt;0), then `train(..., seq=seq_all[tr])` and `predict(..., seq=seq_all[te])` → `logo_preds.npz` (what `gate52.py` reads).
+- `SeqClipModel`: Dropout(0.5) on 512 pool → concat seq → `Linear(513,3)`.
+- R4 defaults intact: lr `2e-4`, bs `8`, WeightedRandomSampler, CE+ls `0.05`, soft aug, bf16 no GradScaler; logo defaults seeds `0 1 2`; E pinned by CLI `--epochs 5` (no `choose_e` in planned run).
+- `shot_list`: extras need `seed_disagreement` only when `extras_require_seed_disagreement`; auto flags / `silent_reject_count` (miss ∧ ens P&lt;0.2 ∧ all seeds P&lt;0.5) unchanged. `gate52.py` mtime predates this build.
+- Nothing trained/gated: `runs/logo52c` absent. logo52/logo52a byte-identical tests: **2 passed** here. GPU-free 52b/52c/postproc/silent slice: **13 passed**. Coordinator Windows result (324 pass / 2 skip) is consistent with a green suite.
+
+**Inferred:** Planned train → gate with `--postproc postproc52b.json`, fail→stop, matches Item 4 steps 6–8.
+
+**Unknown:** Did not re-run the full Windows `.venv` suite in this session.
+
+CURSOR: GO
+[cursor_wsl] exit 0 at 14:41:49

@@ -1,0 +1,13 @@
+You are HERMES, the architect. Update .team/specs/53_referee_signals_spec.md to v8 (THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Scott binding fact (review52/scott_numbers53.txt item 5): rimrock:77 - "The travel was on a shot attempt and put back.
+You can see the referee raise his hand and then spin his hands. It is there, I saw it."
+Apply:
+1. Add DETECTABLE event rotate_hands (NFHS #22 travel): both wrists near chest height (between shoulder and hip
+   keypoints), close together (< ~1 shoulder width apart), moving in opposite-phase circular paths for >= 1 full
+   cycle within ~2 s. It is a wrist-trajectory pattern, not a finger/fist cue - so it IS claimable from pose.
+2. violation_travel predicate = arm_raised (stop clock) followed within ~2 s by rotate_hands, near the shot/putback
+   time window, + play_stopped. Output category 'violation' -> that shot (and the putback it covers) is not a shot
+   (Scott rule: waved-off/violation attempts do not count).
+3. Pass bar: rimrock:77 must output 'violation' (no longer 'unknown is OK' for 77). rimrock:253 rule from v7 stays.
+4. Fist (#4), thumbs, fingers remain not claimable from pose. Status line v8. End with "HERMES: SPEC WRITTEN".

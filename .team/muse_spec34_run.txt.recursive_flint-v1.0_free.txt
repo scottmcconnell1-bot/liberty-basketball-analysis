@@ -1,0 +1,65 @@
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/34_ball_track_check_spec.md (line 1 = Claude Code's VETTED WITH 
+CONDITIONS stamp D1-D6; below it Hermes's v1). Context: spec 33 
+(.team/specs/33_shot_flight_rules_measure_spec.md, line 1 stamp) ran once; its 
+results are in 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/shot_rules_measured/summary.md. 
+You may read court_memory.py (CourtMemory.key), ai_bridge.py ~1030-1085, 
+collect_q4_bodd.py, .team/shot_detectors/make_review_queue_page.py, 
+collect_flight_tracks.py, shot_rules_measure.py. Edit nothing, run nothing that 
+writes.
+
+Scott 2026-11-04: check why the ball detector fails on whole flights, and "I do 
+not want to break one to fix the other" (make/miss must stay as it is).
+
+Check:
+1. Are D1-D6 correct? In particular: is CourtMemory.key the paint/key area 
+rather than the whole court (D3)? Does replacing cutoffs with distributions keep
+the spec measurement-only and free of new numbers?
+2. Is the make/miss safety check (D1 + section 2) enough to catch a break?
+3. Anything breaking the Golden Rules (core edits, banned trials, tuning after 
+results, Adrian Q4, new numbers)?
+Reply under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE:
+DISAGREE: <reason>".
+📖 Read 34_ball_track_check_spec.md  0.1s
+📖 Read 33_shot_flight_rules_measure_spec.md  0.2s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis -name "court_memory.py" -o -name "ai_bridge.py" -o -name "collect_q4_bodd.py" -o -name "make_review_queue_page.py" -o -name "collect_flight_tracks.py" -o -name "shot_rules_measure.py" 2>/dev/null  12.3s
+📖 Read 34_ball_track_check_spec.md  0.1s
+💻 $ wc -l /mnt/c/Users/scott/Documents/liberty-basketball-analysis/court_memory.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ai_bridge.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/collect_q4_bodd.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/make_review_queue_page.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/collect_flight_tracks.py /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/shot_rules_measure.py  0.1s
+💻 $ grep -n "CourtMemory\|def key\|court_top_y\|court_bottom_y\|court_left\|court_right\|def near_basket\|def close_to_rim\|def ball_through_rim\|rim_r\|key" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/court_memory.py
+📖 Read court_memory.py
+📖 Read ai_bridge.py
+📖 Read ai_bridge.py  0.1s
+📖 Read collect_q4_bodd.py  0.1s
+📖 Read make_review_queue_page.py  0.2s
+📖 Read collect_flight_tracks.py  0.2s
+📖 Read shot_rules_measure.py  0.1s
+💻 $ grep -n "mapping\|1.0000\|v6" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/make_review_queue_page.py + 2 commands  40.6s
+
+────────────────────────────────────────
+☤ Hermes
+MUSE CHECK — spec 34, VETED WITH CONDITIONS (binding).
+
+D1: AGREE it was corrected rightly. Check = .venv python .team/shot_detectors/make_review_queue_page.py --wide-combined --out-dir <NEW dir>, compare printed gray=30 orange=9 / 42 shots and combined groups to page_v6; v6 mapping 1.0000 is the run_d1_q4 proof, not the page. Code confirms --wide-combined, --out-dir (refuse-if-exists), and the printed gray/orange/combined lines exist; the old 'python -I ... default page_v3' was wrong (-I drops the script dir from sys.path, breaking the clip_moment_fix sibling import; page_v3 stale). Nit: no literal 'v6 mapping check 1.0000' print exists, which is fine since D1 reassigns that proof to run_d1_q4.
+
+D2: AGREE. Spec 33 window is 3000 ms before / 2000 ms after (Scott-approved 2026-11-04), not ±5 s.
+
+D3: AGREE on the key point: CourtMemory.key is the paint/key, not the whole court (KeyPolygon docstring 'key in image pixels (lane)'; near_basket 'at the hoop, not merely high in the frame'). Replacing fixed px bounds (100/980/1820, 80 px/frame) with distributions in hoop widths (median/90th/max; failing-frame rise/peak/landing) keeps the spec measurement-only and free of new Scott gate numbers.
+
+D4-D6: D5 confirmed in code (coverage ELSE branch omits lo/hi to gap_report → frames_seen over-counts → coverage_ratio > 1; reported only, file untouched). D6 OK.
+
+Make/miss safety check: sufficient as a page-level regression gate. D1-corrected command is right; underlying decision proven by run_d1_q4; spec touches no make/miss logic (D6). No break needed to protect the other.
+
+Golden Rules: clean — no core edits, no training/tuning, measurement-only, no new gate numbers post-D3, Adrian Q4 excluded (C5), no banned trials.
+
+MUSE: AGREE: D1-D6 conditions hold; retire the stale stop-list numbers and stop expecting a 'v6 mapping check' print before running.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-46f76fa8796f1e84a9aa0ddd6ea13792e8b293121a99898cb309a1c98c6c8dc6
+  hermes -c "You are Muse, the checker of Claude Code's… #2"
+
+Session:        local-46f76fa8796f1e84a9aa0ddd6ea13792e8b293121a99898cb309a1c98c6c8dc6
+Title:          You are Muse, the checker of Claude Code's… #2
+Duration:       3m 7s
+Messages:       24 (1 user, 22 tool calls)

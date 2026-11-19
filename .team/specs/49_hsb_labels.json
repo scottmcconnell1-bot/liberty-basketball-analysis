@@ -1,0 +1,1045 @@
+{
+ "moments": {
+  "154000": {
+   "idx": 0,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "159200": {
+   "idx": 1,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "188767": {
+   "idx": 2,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "197167": {
+   "idx": 3,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "208000": {
+   "idx": 4,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "218700": {
+   "idx": 5,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "224433": {
+   "idx": 6,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "241433": {
+   "idx": 7,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "256367": {
+   "idx": 8,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "267533": {
+   "idx": 9,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "273400": {
+   "idx": 10,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "288067": {
+   "idx": 11,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "334867": {
+   "idx": 12,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "348167": {
+   "idx": 13,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "367167": {
+   "idx": 14,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "461933": {
+   "idx": 15,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "470667": {
+   "idx": 16,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "514067": {
+   "idx": 17,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "537867": {
+   "idx": 18,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "556967": {
+   "idx": 19,
+   "shot": "unclear",
+   "result": "unclear",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "612733": {
+   "idx": 20,
+   "shot": "no",
+   "result": null,
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "633100": {
+   "idx": 21,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "648633": {
+   "idx": 22,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "662367": {
+   "idx": 23,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "677100": {
+   "idx": 24,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "695567": {
+   "idx": 25,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "709033": {
+   "idx": 26,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "715600": {
+   "idx": 27,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "813400": {
+   "idx": 28,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "817067": {
+   "idx": 29,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "841967": {
+   "idx": 30,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "864200": {
+   "idx": 31,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "885867": {
+   "idx": 32,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "900200": {
+   "idx": 33,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "947833": {
+   "idx": 34,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "955533": {
+   "idx": 35,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1037800": {
+   "idx": 36,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1146567": {
+   "idx": 37,
+   "shot": "no",
+   "result": null,
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1159600": {
+   "idx": 38,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1189667": {
+   "idx": 39,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1211533": {
+   "idx": 40,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1226233": {
+   "idx": 41,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1298800": {
+   "idx": 42,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1326300": {
+   "idx": 43,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1333800": {
+   "idx": 44,
+   "shot": "no",
+   "result": null,
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1368967": {
+   "idx": 45,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1380300": {
+   "idx": 46,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1398300": {
+   "idx": 47,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1441667": {
+   "idx": 48,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1462300": {
+   "idx": 49,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1474400": {
+   "idx": 50,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1487300": {
+   "idx": 51,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1498433": {
+   "idx": 52,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1556633": {
+   "idx": 53,
+   "shot": "no",
+   "result": null,
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1576700": {
+   "idx": 54,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1603767": {
+   "idx": 55,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1628333": {
+   "idx": 56,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1650433": {
+   "idx": 57,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1703500": {
+   "idx": 58,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1720367": {
+   "idx": 59,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1742233": {
+   "idx": 60,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1757433": {
+   "idx": 61,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1788800": {
+   "idx": 62,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1794300": {
+   "idx": 63,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1808633": {
+   "idx": 64,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1810067": {
+   "idx": 65,
+   "shot": "yes",
+   "result": "unclear",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1833533": {
+   "idx": 66,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1897267": {
+   "idx": 67,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1938300": {
+   "idx": 68,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1944633": {
+   "idx": 69,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "1954933": {
+   "idx": 70,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2006167": {
+   "idx": 71,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2016633": {
+   "idx": 72,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2035367": {
+   "idx": 73,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2050333": {
+   "idx": 74,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2059833": {
+   "idx": 75,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2098467": {
+   "idx": 76,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2100867": {
+   "idx": 77,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2115967": {
+   "idx": 78,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2123167": {
+   "idx": 79,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2125700": {
+   "idx": 80,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2146433": {
+   "idx": 81,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2167900": {
+   "idx": 82,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2184233": {
+   "idx": 83,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2185200": {
+   "idx": 84,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2195133": {
+   "idx": 85,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2221100": {
+   "idx": 86,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2236233": {
+   "idx": 87,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2251000": {
+   "idx": 88,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2261467": {
+   "idx": 89,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2272633": {
+   "idx": 90,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2304167": {
+   "idx": 91,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2333667": {
+   "idx": 92,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2334700": {
+   "idx": 93,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2348933": {
+   "idx": 94,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2463667": {
+   "idx": 95,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2502467": {
+   "idx": 96,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2516433": {
+   "idx": 97,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2535633": {
+   "idx": 98,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2551133": {
+   "idx": 99,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2562000": {
+   "idx": 100,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2631233": {
+   "idx": 101,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2769033": {
+   "idx": 102,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2780333": {
+   "idx": 103,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2799867": {
+   "idx": 104,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2811333": {
+   "idx": 105,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2826100": {
+   "idx": 106,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2832433": {
+   "idx": 107,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2834467": {
+   "idx": 108,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2859867": {
+   "idx": 109,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2890000": {
+   "idx": 110,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2922900": {
+   "idx": 111,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2945033": {
+   "idx": 112,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2966033": {
+   "idx": 113,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "2979867": {
+   "idx": 114,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3012667": {
+   "idx": 115,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3131067": {
+   "idx": 116,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3154833": {
+   "idx": 117,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3171900": {
+   "idx": 118,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3245900": {
+   "idx": 119,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3247700": {
+   "idx": 120,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3253267": {
+   "idx": 121,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3259233": {
+   "idx": 122,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3296367": {
+   "idx": 123,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3308233": {
+   "idx": 124,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3323667": {
+   "idx": 125,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3601533": {
+   "idx": 126,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3614700": {
+   "idx": 127,
+   "shot": "yes",
+   "result": "make",
+   "ft": "yes",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3700933": {
+   "idx": 128,
+   "shot": "yes",
+   "result": "miss",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  },
+  "3705633": {
+   "idx": 129,
+   "shot": "yes",
+   "result": "make",
+   "ft": "no",
+   "shooter_feet": null,
+   "note": ""
+  }
+ },
+ "meta": "HSB labels, Claude Code 2026-11-11, from frames only (scratchpad rows_hsb.py sheets: wide -1.6/-0.6 s, hoop crops -0.32..+0.96 s, board -2/+8 s). No rules/features/pull existed for HSB. Spec 49 H7 step 3."
+}

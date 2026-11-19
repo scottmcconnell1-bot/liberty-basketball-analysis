@@ -1,0 +1,10 @@
+You are HERMES, the architect. Revise .team/specs/52d_context_clip_prereg.md to v2 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Muse and Cursor both AGREE WITH CHANGES (review52/muse_spec52d.txt, review52/cursor_spec52d.txt). Apply ALL:
+G4 (blocking): your "R4 has no dropout" is wrong. R4/ens51/final51 checkpoints use fc = Sequential(Dropout(0.5), Linear(512,3)). Pin head exactly that, no seq, no concat; fix 1.5 and Item 4 step 2/3 text and tests.
+G1: budget ~100-120 min (linear 2376 s x 87/32 ~ 107 min). Train bs 8 pinned; predict bs pinned to 8; on CUDA OOM -> STOP for Scott, no silent bs change. Coordinator is running a random-input memory probe; cite its result if present in review52/gpu_probe52d.txt.
+G2: disclose pooling dilution (shot ~2.5 s of 6.9 s under global avg pool) and that dense N=87 STEP 0.08 is accepted now, not switched after results.
+G3: disclose reverse confound: class-0 rows with a shot within +6 s (gvg 17/145, rimrock 18/241) now contain a later shot -> false-shot risk; fail -> stop covers it.
+G5: disclose track_hoop keeps previous position when match < 0.45 and pads black out of frame (crop can freeze); remove the "kept glued" claim.
+G6: keep. Fix sha filename to .team/review52/spec52d_v2_sha.txt.
+Mark v2. End with "HERMES: PREREG V2 WRITTEN".

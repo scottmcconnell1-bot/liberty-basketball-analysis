@@ -1,0 +1,7 @@
+You are CURSOR, builder/auditor. READ-ONLY: do not edit or create files except your reply.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Re-review .team/specs/53_referee_signals_spec.md v4 (you AGREED on v3, review52/cursor_spec53_v3.txt). v4 adds a
+per-shot cue-fusion section (Scott addendum review52/addendum_ref53_scott.txt). Check it is buildable with what
+exists (BODD 'r' boxes in frames.json, score overlay reader from 48b, game_session outputs, hook at
+rim_first_finder.assign_shot_calls / postproc), that every cue named has a concrete source, and list the files.
+End with one line: CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...

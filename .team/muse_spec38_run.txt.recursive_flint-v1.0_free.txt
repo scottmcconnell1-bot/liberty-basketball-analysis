@@ -1,0 +1,57 @@
+Query: You are Muse, the checker of Claude Code's verdicts. Read 
+.team/specs/38_shooter_finder_spec.md (Claude Code's VETTED WITH CONDITIONS 
+block S1-S8 on top, then Hermes v1), OLLAMA.md lines 25-60, 
+AGENT_OPERATIONAL_PROTOCOL.md around line 45, 
+.team/shot_detectors/rim_first_finder.py (trace_shooter), 
+.team/shot_detectors/shot_rules_measure.py (release_estimate_frame, 
+ball_inside_player, combine_ball_track). Read only; write nothing.
+Check, 1-3 lines each:
+1. Is S1 right that the backward walk is not the banned "early window" 
+(OLLAMA.md) and not interpolation?
+2. Does the plan stay video-only (finder/retrace reads no tags, scoreboard, DB) 
+and keep Scott's rule that he does not hand-tag for checking (S5 is Claude 
+Code's own fixed sample)?
+3. Is S6's equality gate (walk OFF reproduces run37 trace exactly) enough to 
+show retrace from saved files is faithful?
+4. Golden Rules: no new numbers without Scott (S8), no looser cutoff (0.6 and 
+3000 ms unchanged), shot calls and make/miss untouched, one try, Q4 blind last.
+Last line exactly "MUSE: AGREE" or "MUSE: DISAGREE <reason>".
+
+────────────────────────────────────────
+☤ Hermes
+I'll read all the specified files in parallel.
+────────────────────────────────────────
+
+📖 Read 38_shooter_finder_spec.md  0.1s
+📖 Read OLLAMA.md  0.1s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.1s
+📖 Read rim_first_finder.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me read the shot rules measurement file.
+────────────────────────────────────────
+
+📖 Read shot_rules_measure.py
+
+────────────────────────────────────────
+☤ Hermes
+Check 1 — S1 (early window / interpolation): AGREE. The backward walk is a trace on already-detected ball points inside the Scott-approved 3000 ms TRACE_BEFORE_MS window, not a shifted make-detection window (the banned early window was the 2 s-earlier trial, 0 of 7). It does not interpolate — it stops at track breaks and missing frames.
+
+Check 2 — video-only / S5 / Scott's no-hand-tag rule: AGREE. Finder and retrace read no tags, scoreboard, or DB (S7); retrace consumes saved moments/frames detections only. S5 is Claude Code's own fixed sample (seed 38, 20 found + 5 orange, stills local, agree/disagree/unclear JSON, Scott decides count) — Scott does not hand-tag for checking.
+
+Check 3 — S6 equality gate: AGREE. The walk-off gate (retrace reproduces run37 status/reason/release_frame for every moment; rebuilt series count/ref_x must match saved rows; any diff → STOP for Scott) is sufficient to establish the saved-file retrace is faithful — it regression-tests the no-video path directly against run37.
+
+Check 4 — Golden Rules: AGREE. S8's Scott-decides numbers (gap keep 8, FT pass 1.5 hoop widths, hand-check 20+5) respected; 0.6 and 3000 ms unchanged; shot calls and make/miss untouched; one try; Q4 blind last.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-22d9f9f766a0daffb14973fb0e59c083451148f8a40f8b06ad83757cfeb7af6e
+  hermes -c "You are Muse, the checker of Claude Code's… #7"
+
+Session:        local-22d9f9f766a0daffb14973fb0e59c083451148f8a40f8b06ad83757cfeb7af6e
+Title:          You are Muse, the checker of Claude Code's… #7
+Duration:       2m 58s
+Messages:       9 (1 user, 7 tool calls)

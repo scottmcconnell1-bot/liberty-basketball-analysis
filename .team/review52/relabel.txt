@@ -1,0 +1,245 @@
+hsb 20 -1 scramble under rim after earlier shot, attempt not clear
+hsb 21 1 jump shot near basket -0.5, ball off rim, floor +1.0
+hsb 22 -1 same shot as #21 (1 s apart)
+hsb 32 1 ball high above rim +0.5, rebound scramble +1.0
+hsb 34 1 #24 jump shot -0.5, ball off backboard, rebound
+hsb 42 1 long shot arcs in -0.5..0.0, ball falls right of rim +1.0
+hsb 43 0 end of period, ref holds ball, clock 0:00
+hsb 47 2 rim zoom: ball through net +0.6
+hsb 52 1 tip/putback attempt under rim 0.0, ball falls off
+hsb 53 0 ball tossed toward ref after whistle, dead ball
+hsb 73 1 shot arrives at rim, ball falls to floor left
+hsb 75 2 rim zoom: ball through net +0.6
+hsb 83 1 rim zoom: ball bounces high off rim, rebound
+hsb 91 0 Scott: fouled shot + goofing off
+hsb 100 1 rim zoom: ball bounces on rim, falls outside right +0.6
+hsb 106 1 rim zoom: putback scramble, ball never through net
+hsb 110 2 Scott: make
+hsb 111 2 Scott: make
+hsb 124 1 rim zoom: FT rattles on rim, falls outside +1.2
+hsb 143 2 rim zoom: ball through net +0.6
+rimrock 4 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 80 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 84 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 95 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 138 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 164 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 190 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 208 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 217 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 260 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 322 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 330 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 336 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 362 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 371 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 375 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 383 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 386 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 70 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 154 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 215 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 307 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 318 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 335 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 337 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 464 -1 AUTO duplicate: labelled shot within 2.5 s
+gvg 549 -1 AUTO duplicate: labelled shot within 2.5 s
+rimrock 0 -1 warm-up (multiple balls, coaches on floor) - excluded per Scott rule
+rimrock 1 -1 warm-up (multiple balls, coaches on floor) - excluded per Scott rule
+rimrock 2 -1 warm-up (multiple balls, coaches on floor) - excluded per Scott rule
+rimrock 8 0 transition, camera panning, no shot
+rimrock 12 -1 camera on far court; score 4->5 (FT) not visible
+rimrock 24 1 #15 jump shot 0.0, off rim, score unchanged
+rimrock 26 0 transition, no shot
+rimrock 30 0 transition, no shot
+rimrock 35 -1 transition; #53 shot starts only at window end (+1.0..2.5)
+rimrock 44 1 rim zoom: layup bounces above rim, rebounded
+rimrock 45 0 transition, no shot
+rimrock 46 0 no shot, ball away from rim
+rimrock 47 1 Scott: shot + putback both missed
+rimrock 49 1 #53 shot ~+0.5 from wing, off rim, score unchanged
+rimrock 59 -1 only the rebound of an earlier shot at -1.5; no attempt in window
+rimrock 60 -1 #53 throws ball near rim 0.0: pass or short attempt unclear
+rimrock 62 1 rim zoom: ball comes off rim, never through net
+rimrock 64 0 far court dribbling, no shot
+rimrock 71 0 rim zoom: ball tossed to the referee (dead ball)
+rimrock 73 1 Scott: airball miss
+rimrock 74 0 no attempt in window (shot only at +2.5)
+rimrock 82 1 shot +0.5, bounces off rim +1.5
+rimrock 85 0 transition dribble
+rimrock 86 0 transition dribble
+rimrock 87 0 transition dribble
+rimrock 88 0 no ball near rim
+rimrock 89 0 referee gets ball, dead ball
+rimrock 90 1 shot arrives at rim -0.5, scramble; score unchanged (separate from #91 putback)
+rimrock 91 1 putback attempt +0.5..1.0, score unchanged
+rimrock 92 0 player holds ball, no attempt in window
+rimrock 94 0 transition
+rimrock 104 -1 ball passed near rim 0.0; #40 jump shot only at +1.5 (window end)
+rimrock 108 0 transition
+rimrock 110 0 Scott: no shot (lost dribble)
+rimrock 118 1 rim zoom: ball bounces high off rim, falls outside +1.2
+rimrock 119 2 rim zoom: putback, ball drops through net -0.3; score changes
+rimrock 122 0 transition
+rimrock 123 1 Scott: airball miss
+rimrock 125 0 transition
+rimrock 126 0 inbound / held ball near baseline
+rimrock 127 0 inbound / held ball near baseline
+rimrock 130 0 ref carrying ball, dead ball
+rimrock 138 0 transition
+rimrock 128 0 rim zoom: inbound pass lobbed over defender, not at rim
+rimrock 141 1 rim zoom: FT hits rim +0.6, bounces away
+rimrock 149 1 shot +0.5 near rim, scramble, score unchanged
+rimrock 150 0 transition
+rimrock 154 0 period start, no ball near rim
+rimrock 159 -1 ball high over rim +0.5 then scramble; origin not visible
+rimrock 182 0 transition
+rimrock 184 1 drive layup +0.5..1.0, score unchanged
+rimrock 175 1 rim zoom: ball on rim then off to left, score unchanged
+rimrock 177 -1 rim zoom: ball rises left of rim, never reaches it; tip vs loose ball unclear
+rimrock 189 0 transition
+rimrock 192 0 ref holds ball, dead ball
+rimrock 199 1 shot -0.5, off rim, score unchanged
+rimrock 209 1 jump shot -1.5, off rim +0.5, score unchanged
+rimrock 216 0 no ball at rim
+rimrock 188 -1 rim zoom: tail of a make ~1.2 s before the trigger, outside clip window
+rimrock 203 -1 rim zoom: ball falls right of rim -0.3, origin unclear
+rimrock 223 1 long shot -1.0, off rim +0.5, score unchanged
+rimrock 228 1 shot -0.5, off rim, score unchanged
+rimrock 240 -1 tail of a shot before the window
+rimrock 241 1 jump shot +0.5, off rim, rebound
+rimrock 252 1 shot +0.5, off rim +1.0, scramble
+rimrock 253 0 Scott: shot waved off by referee
+rimrock 221 2 rim zoom: jump shot drops through net +0.4
+rimrock 230 -1 rim zoom: ball passes right of rim, shot vs loose ball unclear
+rimrock 233 0 rim zoom: #15 catches pass overhead, no shot
+rimrock 256 0 ref holds ball, dead ball
+rimrock 257 1 drive layup 0.0, off rim +1.0, score unchanged
+rimrock 259 1 putback attempts at rim, score unchanged
+rimrock 263 1 shot -0.5, off rim, score unchanged
+rimrock 274 -1 action at far basket, not this hoop
+rimrock 279 1 shot 0.0..0.5 off rim, rebound
+rimrock 284 0 empty rim
+rimrock 287 0 transition, no ball near rim
+rimrock 262 1 rim zoom: shot from right hits rim 0.0, bounces away
+rimrock 288 0 Scott: dribbling, no shot
+rimrock 292 1 long shot 0.0..0.5, off rim, score unchanged
+rimrock 295 0 empty rim
+rimrock 308 0 transition
+rimrock 314 -1 same shot as #315 (1.3 s apart; Scott confirmed #315)
+rimrock 315 1 Scott: shot and putback both missed
+rimrock 316 0 dead ball, ref takes ball
+rimrock 320 0 no ball near rim
+rimrock 323 0 dead ball after #321 make, ref takes ball
+rimrock 328 0 camera panning, no ball at rim
+rimrock 329 1 long shot +0.5, off rim +1.5, score unchanged
+rimrock 335 1 jump shot 0.0, off rim, score unchanged
+rimrock 336 2 Scott: make
+rimrock 340 1 long shot +0.5 (ball high left), off rim
+rimrock 343 1 fast-break layup +0.5, off rim +1.5, score unchanged
+rimrock 348 0 transition
+rimrock 349 0 no ball near rim
+rimrock 350 1 Scott: miss (drive shot +0.5..1.0)
+rimrock 357 0 transition
+rimrock 365 -1 ball near rim -0.5..0.0 in a jump-ball/tie-up; attempt unclear
+rimrock 368 0 dead ball, ref takes ball
+rimrock 372 0 transition
+rimrock 379 0 transition
+rimrock 382 1 long shot -0.5, off rim, rebound
+rimrock 375 -1 rim zoom: ball below the rim at -0.6 = tail of the #374 make (already in AUTO duplicate list)
+rimrock 389 0 Scott: inbound
+rimrock 390 0 Scott: baseline inbound
+rimrock 393 0 game over, no shot
+gvg 8 1 shot near rim -1.5..-1.0, scramble/rebound +1.0
+gvg 9 0 transition, no ball at rim
+gvg 19 1 rim zoom: #23 drive layup -0.3, ball off rim right +0.2, falls
+gvg 24 0 transition
+gvg 31 0 transition
+gvg 38 0 no ball near rim
+gvg 42 0 transition
+gvg 46 1 rim zoom: shot 0.2, ball bounces on rim +0.6..1.5, falls out
+gvg 59 0 rim zoom: long pass passes in front of the rim, never at it
+gvg 62 -1 same shot as #61 (1 s apart)
+gvg 64 0 transition
+gvg 65 0 transition
+gvg 72 1 Scott: miss
+gvg 76 1 Scott: miss
+gvg 78 0 transition
+gvg 61 1 rim zoom: high shot hits rim +0.8, falls out
+gvg 81 1 Scott: airball miss
+gvg 82 2 Scott: make
+gvg 87 0 transition
+gvg 133 0 scramble at half court, no shot
+gvg 143 0 transition
+gvg 144 0 transition
+gvg 152 1 Scott: miss
+gvg 90 1 rim zoom: shot hits rim +0.2, bounces high, comes off
+gvg 163 1 rim zoom: shot on rim -0.6, bounces off left -0.3
+gvg 166 1 Scott: miss
+gvg 171 0 ref carrying ball, dead ball
+gvg 190 0 transition
+gvg 200 0 transition
+gvg 207 0 transition
+gvg 209 0 transition
+gvg 187 1 rim zoom: putback rolls on rim, falls out left +0.8
+gvg 210 0 rim zoom: empty rim; ball away
+gvg 211 1 rim zoom: shot on rim +0.2..0.4, falls out
+gvg 215 -1 shot comes off rim at -1.5..-0.5, before clip window
+gvg 225 -1 halftime warm-up (one team, several balls) - excluded per Scott rule
+gvg 226 -1 halftime warm-up - excluded
+gvg 227 -1 halftime warm-up - excluded
+gvg 228 -1 halftime warm-up - excluded
+gvg 310 0 transition
+gvg 320 1 drive layup -0.5..+0.5, falls off
+gvg 322 -1 drive shot +0.5, ref raises arm +1.0 (possible shooting foul) - unclear under Scott rule
+gvg 327 0 transition
+gvg 328 1 Scott: miss
+gvg 339 -1 start of the #340 shot (1 s apart)
+gvg 344 0 Scott: no shot (deflected pass)
+gvg 346 -1 shot starts only at +1.5 (window end)
+gvg 360 -1 tail of an earlier shot at -1.5
+gvg 340 1 rim zoom: long shot hits rim +0.8, bounces out, rebound
+gvg 354 1 rim zoom: shot 0.0 off backboard/rim, putback attempts +0.8..1.8
+gvg 355 1 rim zoom: shot +0.6, hits rim, comes off
+gvg 362 1 Scott: miss
+gvg 363 -1 same shot as #362 (1.3 s apart)
+gvg 366 2 Scott: make
+gvg 377 0 transition
+gvg 380 0 loose ball scramble at mid court
+gvg 370 1 rim zoom: shot bounces high off rim -0.6, rebounded by #53
+gvg 386 1 rim zoom: high shot hits rim +1.0..1.2, bounces out
+gvg 388 1 rim zoom: shot +0.4, hits rim +0.8, bounces out
+gvg 391 1 rim zoom: shot on rim +0.8, bounces away +1.0
+gvg 397 0 dribbling away from rim
+gvg 399 0 transition
+gvg 494 -1 scramble, no clear attempt
+gvg 499 0 transition
+gvg 500 0 no ball at rim
+gvg 400 1 rim zoom: shot hits rim +0.4..0.6, comes off
+gvg 474 1 rim zoom: ball on rim 0.0, falls off, rebounded (checked)
+gvg 488 1 rim zoom: ball on rim 0.0..0.2, falls out (checked)
+gvg 492 1 rim zoom: ball on rim 0.0, falls off (checked)
+gvg 502 0 Scott: deflected jump pass, no shot
+gvg 508 -1 ball near rim -0.5, origin unclear, camera pans away
+gvg 509 0 ref hands ball to player at mid court, no rim in view
+gvg 511 0 transition
+gvg 506 2 rim zoom: ball drops onto rim centre +0.2, gone by +0.4 (likely through net; no overlay to confirm)
+gvg 510 1 rim zoom: ball on rim 0.0, bounces high +0.2, comes off
+gvg 519 1 rim zoom: shot passes beside rim +0.2, falls, rebound
+gvg 529 1 Scott: shot + putback both missed
+gvg 539 1 rim zoom: shot on rim 0.0..0.2, bounces high, rebound
+gvg 540 0 scramble away from rim
+gvg 552 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 553 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 554 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 555 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 556 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 557 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 558 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 559 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 560 -1 post-game shootaround (street clothes, spectators on floor) - excluded
+gvg 542 -1 rim zoom: shot rolls on rim and falls out, ref raises both arms +1.0 (foul or other call) - unclear under Scott rule
+gvg 546 1 rim zoom: shot hits rim +0.8, falls off left
+gvg 551 -1 rim zoom: ball at rim 0.0 then just below it +0.2; make vs miss not clear
+gvg 74 1 shot -0.5 high arc, at rim 0.0, rebound +1.0 (kept)

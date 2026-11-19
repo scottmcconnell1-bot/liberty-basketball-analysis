@@ -1,0 +1,105 @@
+Query: You are MUSE, the REVIEWER on the Liberty basketball team (not Hermes, 
+not the architect). READ-ONLY: do not edit,
+create or rewrite ANY file. Your only output is this review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner) wants every AI's input. Your last three requests ended without a 
+Muse verdict, so answer all three here.
+
+ITEM A - retrain decision. Read .team/review52/prompt_team_retrain52.txt 
+(questions Q1-Q4) and the answers already
+given: .team/review52/hermes_retrain52.txt and 
+.team/review52/cursor_retrain52.txt (they disagree on Q2: Hermes =
+score fouled/waved-off as not-shots, Cursor = exclude them from the auto e2e 
+denominator). Give your answers to
+Q1-Q4 and pick a side on Q2 with a reason.
+
+ITEM B - epoch choice. Read .team/review52/prompt_team_choose_e52.txt, 
+choose_e52_curves.txt, and the replies
+hermes_choose_e52.txt and cursor_choose_e52.txt (both AGREE E=5, rule change 
+only pre-registered for a future run).
+Protocol integrity check: is carrying E=5 into the 3-seed LOGO gate valid? Any 
+peeking?
+
+ITEM C - spec 53 referee signals. Read .team/specs/53_referee_signals_spec.md 
+(v2), .team/review52/
+nfhs_signals_reference.md (official chart), addendum_ref53_scott.txt (Scott: "Go
+with the book, but some wiggle
+room ... deduced with several factors"), and cursor_ref53.txt (Cursor's audit of
+v1: fix the spec-36 cause, v1 =
+arm-raised / both-arms / wave / chop only, moment-window pose on referee boxes, 
+pass bar on Scott's 6 examples plus
+false fires on labelled true shots). Note: spec 53 v2 was written by a model run
+in the Muse slot that edited the
+file by mistake; judge it on content. Review feasibility (ref size 47-93 px 
+wide, panning, occlusion), protocol
+(seen films only, no blind peeking, no new human review loops), and whether v2 
+covers Cursor's v1 changes.
+
+Answer briefly and concretely. End with exactly these three lines (each line 
+starts with MUSE:):
+MUSE: A AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: B AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...
+MUSE: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...   (this last line = ITEM 
+C, spec 53 v2)
+
+────────────────────────────────────────
+☤ Hermes
+I'll read all the relevant files first — this is a review-only task, no edits.
+────────────────────────────────────────
+
+📖 Read prompt_team_retrain52.txt  0.3s
+📖 Read hermes_retrain52.txt  0.3s
+📖 Read cursor_retrain52.txt  0.3s
+📖 Read prompt_team_choose_e52.txt  0.3s
+📖 Read choose_e52_curves.txt  0.3s
+📖 Read hermes_choose_e52.txt  0.3s
+📖 Read cursor_choose_e52.txt  0.3s
+📖 Read 53_referee_signals_spec.md  0.4s
+📖 Read nfhs_signals_reference.md  0.3s
+✗ Read addendum_ref53_scott.txt  0.3s [File not found: addendum_ref53_scott.txt]
+📖 Read cursor_ref53.txt  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+The Scott addendum wasn't at the path I tried. Let me locate it.
+────────────────────────────────────────
+
+🔎 Find addendum_ref53  3.6s
+🔎 Find addendum  1.4s
+🔎 Grep ref53|addendum  1.4s
+
+────────────────────────────────────────
+☤ Hermes
+The file isn't at the wrong path I tried. Let me check the correct location.
+────────────────────────────────────────
+
+📖 Read addendum_ref53_scott.txt
+
+────────────────────────────────────────
+☤ Hermes
+REVIEW — read-only; no files touched.
+
+ITEM A (retrain):
+Q1 Acceptable. Scott's waiver is binding and coherent; labels52_v2 is frozen (sha in drift_log) with his 89 answers and rule applied. Waiver risk: ~130 unchecked relabel/auto-dupe rows leave residual label error unquantified and baked into training — a gate/blind pass is conditional (fit on frozen, partially audited labels), not proof the R3 10% bar was met; a fail is ambiguous (label vs model error) and gets bounded diagnosis, not re-litigation.
+Q2 Exclude them from the auto e2e denominator (Cursor's side, matching spec 53 v2 §6). A ball+rim clip cannot see the whistle, so scoring foul/wave-off misses as hard not-shots injects an unlearnable error into the metric; residual firings are caught by coach-review flags inside the ≤20 cap. Warm-ups at -1 already match this exclusion.
+Q3 Failure-driven, one pass each: Scott labels ≥2 new blind films once before model output; agent does a fixed-seed 20% second-person check of Scott's blind labels (>10% disagreement → one redo max); Scott reviews only flagged coach checks on a scored run (≤20/film hard cap) and, only if the gate fails, the failing confusion classes once (≤20 items). No more train spot-check pages.
+Q4 No structural plan change. Real issues now: confirm ≥2 genuinely unseen films remain for the blind (HSB1 was consumed out-of-sample); make the foul/wave-off not-a-shot denominator treatment explicit before the blind; don't re-litigate frozen labels.
+
+ITEM B (epoch): E=5 is valid as written — R5 pre-registered before data, implemented as approved (nested LOGO wrap, seed 0, miss_recall then sco tie-break, epochs 1–18, median of [9,2,5,8,5] = 5), outputs mutually consistent, Cursor's audit clean, only inner-val numbers seen → no outer-game peeking. O1–O3 are real (saturation, small-sample noise, early-epoch instability; E=5 sits in an unstable band) but changing the rule after seeing these curves is peeking — not allowed without Scott re-registering. Keep E=5; let the 3-seed LOGO Gate judge; the near-max/tie-break amendment is pre-registered for a future re-run only.
+
+ITEM C (spec 53 v2): Feasible — moment-window pose on full-frame referee boxes (47–93 px wide at 720p), not rim crops and not full-film; pose limit honored (arm raised / both arms up only; fists/3-fingers → unknown, never guessed); no-ref-visible → no change; panning/occlusion fall to unresolved → coach flag; small-ref pad/upscale test needed on gvg/hsb/notus before any full-film run. Protocol-clean: seen films only, fixed pass numbers before the run, no blind use until Scott approves, no new human review loops, unknown → coach flag ≤20 cap. Covers Cursor's v1 changes: pose-arm events, no-ref → no change, arm-raised/both-arms/wave/chop only, moment windows on referee boxes. Required changes before sign-off: (1) correct the spec-36 root-cause statement in §3 — proxies fired on real shots and pose was never used (is_referee_player was a spec-39 shooter bug); don't bake in the wrong lesson; (2) pass bar must explicitly include false fires on labelled true shots, not just warm-ups/breaks/halftime; (3) make the small-ref pose test an explicit gate.
+
+MUSE: A AGREE WITH CHANGES: retrain now on labels52_v2 is acceptable (waiver binding; blind is binding verification — conditional, not proof of R3 bar); Q2 exclude fouled/waved-off/warm-up from the auto e2e denominator (clip can't see the whistle; residual firings via coach-review flags ≤20 cap); Q3 failure-driven one-pass human role (Scott labels ≥2 new films once; agent 20% second check, one redo max; Scott only flagged coach checks ≤20/film); Q4 real changes: confirm ≥2 unseen blind films remain, explicit e2e denominator treatment, no label re-litigation
+MUSE: B AGREE WITH CHANGES: E=5 is a valid pre-registered R5 result carried into the 3-seed LOGO gate as-is; changes: none now — O1–O3 don't justify a post-hoc rule change (that would be peeking; the near-max/tie-break amendment is pre-registered for a future re-run only); no peeking — inner-val numbers only, Cursor's run audit clean
+MUSE: AGREE WITH CHANGES: spec 53 v2 is sound on feasibility (moment-window pose on full-frame ref boxes 47–93 px, pose limit honored, no-ref → no change, small-ref test first) and protocol (seen films only, fixed numbers, no blind peeking, no new human loops); covers Cursor's v1 changes (pose-arm events, no-ref → no change, arm-raised/both-arms/wave/chop only, moment windows on referee boxes). Changes required before sign-off: correct spec-36 root cause (proxies fired on real shots, pose never used — is_referee_player was a spec-39 bug), pass bar must include false fires on labelled true shots, small-ref pose test as explicit gate
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-15656e3246b9c465b2116203a3e21c337000bb43541e4b4addb37b1b3c89b9fc
+  hermes -c "MUSE review retrain decision epoch choice"
+
+Session:        local-15656e3246b9c465b2116203a3e21c337000bb43541e4b4addb37b1b3c89b9fc
+Title:          MUSE review retrain decision epoch choice
+Duration:       1m 29s
+Messages:       21 (1 user, 19 tool calls)

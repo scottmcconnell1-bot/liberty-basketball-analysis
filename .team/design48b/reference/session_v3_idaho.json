@@ -1,0 +1,70 @@
+{
+ "L": 420,
+ "periods": [
+  {
+   "start_ms": 227000,
+   "end_ms": 825000,
+   "stops": 10,
+   "end": "z",
+   "n_in_game": 1
+  },
+  {
+   "start_ms": 898000,
+   "end_ms": 1469000,
+   "stops": 8,
+   "end": "z",
+   "n_in_game": 2
+  },
+  {
+   "start_ms": 1910000,
+   "end_ms": 2469000,
+   "stops": 9,
+   "end": "z",
+   "n_in_game": 3
+  },
+  {
+   "start_ms": 2530000,
+   "end_ms": 3039000,
+   "stops": 1,
+   "end": "z",
+   "n_in_game": 4
+  }
+ ],
+ "intervals": [
+  {
+   "start_ms": 227000,
+   "end_ms": 825000
+  },
+  {
+   "start_ms": 898000,
+   "end_ms": 1469000
+  },
+  {
+   "start_ms": 1910000,
+   "end_ms": 2469000
+  },
+  {
+   "start_ms": 2530000,
+   "end_ms": 3039000
+  }
+ ],
+ "ft_windows": [
+  {
+   "start_ms": 825000,
+   "end_ms": 831000
+  },
+  {
+   "start_ms": 1469000,
+   "end_ms": 1475000
+  },
+  {
+   "start_ms": 2469000,
+   "end_ms": 2476000
+  },
+  {
+   "start_ms": 3039000,
+   "end_ms": 3059000
+  }
+ ],
+ "error": null
+}

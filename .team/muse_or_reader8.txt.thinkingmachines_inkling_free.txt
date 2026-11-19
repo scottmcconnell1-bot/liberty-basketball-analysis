@@ -1,0 +1,42 @@
+Query: Read TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, and 
+AGENT_OPERATIONAL_PROTOCOL.md. You are Muse: you check the Vetter (Claude Code).
+The plan is NEXT_TASK.md (Notus reader v8); its first line is the Vetter's 
+VETTED stamp, including one Vetter edit (15% search trigger). Earlier 
+rejections: first line of .team/specs/09_notus_reader_v6_REJECTED.md and 
+_v7_REJECTED.md; failed runs in .team/reader_run2_FAILED/ and 
+.team/reader_run1_VOID/; history in .team/drift_log.md. The goal is that the 
+reader NEVER gives a wrong score (None is acceptable). Check whether the Vetter 
+missed anything: a path to a wrong score, gate or holdout information leaking 
+into any threshold, box or geometry, a cutoff chosen to make the gate pass, a 
+protected-file edit (scoreboard_clock.py), a file outside ## Files, a code bug 
+in the plan's snippets (check _SEVEN_SEGMENT in scoreboard_clock.py), a 
+remaining contradiction. Do NOT open .team/specs/04_notus_holdout_truth.json or 
+any holdout_*.png. Do not edit or create any file. End with exactly one line: 
+MUSE: AGREE  or  MUSE: DISAGREE: <reason>
+📖 Read TEAM_RECOVERY.md
+📖 Read MUSE.md
+📖 Read AUTHORITY.md
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read NEXT_TASK.md
+📖 Read 09_notus_reader_v6_REJECTED.md
+📖 Read 09_notus_reader_v7_REJECTED.md
+📖 Read drift_log.md
+✗ Read reader_run2_FAILED [Cannot read '/mnt/c/Users/scott/Documents/lib...]
+📖 Read scoreboard_clock_720p.py
+📖 Read scoreboard_clock.py
+✗ Read reader_run1_VOID [Cannot read '/mnt/c/Users/scott/Documents/lib...]
+📖 Read .cursorrules
+
+────────────────────────────────────────
+☤ Hermes
+MUSE: DISAGREE: v8 snippet in NEXT_TASK.md line 208-218 has _SEVEN_SEGMENT.get(on_str) returning digit string then int(digit_str) — but scoreboard_clock.py line 47 shows _SEVEN_SEGMENT maps pattern -> digit string ("0"-"9"), so int() is correct only if .get yields a string; however the snippet's return int(digit_str) after int() suggests double conversion not present in v7 fix. More critically, v8's first line claims a Vetter edit "step 0 <15% red pixels fixed to exactly 15%" — but the real gate is the dead-band (T_off >= T_on stop), not a single 15% cutoff, and choosing exactly 15% as a "search trigger" leaks gate/threshold info into the search geometry. Also the snippet does not enforce BLANK vs UNREADABLE separation in arithmetic (line 251 sets tens_digit=0 for "" then score = tens_digit * 10 + ones_digit; if tens_digit is "" converted to 0 and ones_digit is int, arithmetic works; but the code never verifies ones_digit isn't None). The protected file scoreboard_clock.py is not edited (good), but v8 does not close the contradiction from v7 that core_scale stays 0.46 (it does). Holdout isolation is present (step 6/7 correct). Main issue: the 15% search trigger is exactly the kind of cutoff-tuned-to-pass the gate that the Golden Rules ban; it should not be fixed at 15%.MUSE: DISAGREE: v8's "15% search trigger" (line 1, 58) fixes a single coverage cutoff chosen after diagnosis (gate fail at 9/20) to make box-search pass — that is the banned cutoff-tuning path. The snippet uses int(digit_str) on a digit-string lookup correctly, but the arithmetic at line 255 (tens_digit * 10 + ones_digit) relies on "" being converted to 0 at line 251 without confirming ones_digit is an int, leaving a path to a wrong score when ones is unreadable. The dead-band STOP (T_off >= T_on) is present, but the 15% trigger leaks gate info into geometry/box selection. Holdout and protected-file checks pass. The v6/v7 contradictions are fixed.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c592d08f449a97239eaff95643630bacecfef4b72b432c87cb9abfa209ee439c
+  hermes -c "Vet Notus reader v8 plan"
+
+Session:        local-c592d08f449a97239eaff95643630bacecfef4b72b432c87cb9abfa209ee439c
+Title:          Vet Notus reader v8 plan
+Duration:       53s
+Messages:       28 (1 user, 26 tool calls)

@@ -1,0 +1,29 @@
+timestamp=2026-10-27T18:24:29.537Z level=INFO run=807dbb73 message="creating instance" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:24:29.538Z level=INFO run=807dbb73 message=fromDirectory directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:24:29.693Z level=INFO run=807dbb73 message=bootstrapping directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis"
+timestamp=2026-10-27T18:24:29.699Z level=INFO run=807dbb73 message=loading path="C:\\Users\\scott\\.config\\opencode\\config.json"
+timestamp=2026-10-27T18:24:29.700Z level=INFO run=807dbb73 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.json"
+timestamp=2026-10-27T18:24:29.700Z level=INFO run=807dbb73 message=loading path="C:\\Users\\scott\\.config\\opencode\\opencode.jsonc"
+timestamp=2026-10-27T18:24:29.763Z level=INFO run=807dbb73 message="all LSPs are disabled"
+timestamp=2026-10-27T18:24:29.763Z level=INFO run=807dbb73 message="all formatters are disabled"
+timestamp=2026-10-27T18:24:29.763Z level=INFO run=807dbb73 message=init
+timestamp=2026-10-27T18:24:29.894Z level=INFO run=807dbb73 message=created id=ses_e8164b139ffeYyRfLh5Q4JRhkO slug=neon-pixel version=1.19.4 projectID=c30576cc07b2b528a2eede275372519a4312e3b4 directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" path="" workspaceID=undefined parentID=undefined title="New session - 2026-10-27T18:24:29.894Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1793125469894 time.updated=1793125469894
+timestamp=2026-10-27T18:24:29.903Z level=INFO run=807dbb73 message="event connected"
+timestamp=2026-10-27T18:24:29.938Z level=INFO run=807dbb73 message=loop session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO step=0
+timestamp=2026-10-27T18:24:30.298Z level=INFO run=807dbb73 message=stream providerID=opencode modelID=gpt-5.4-nano session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO small=true agent=title mode=primary
+timestamp=2026-10-27T18:24:30.304Z level=INFO run=807dbb73 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=gpt-5.4-nano
+[0m
+> build · beam-free
+[0m
+timestamp=2026-10-27T18:24:30.537Z level=ERROR run=807dbb73 message="stream error" providerID=opencode modelID=gpt-5.4-nano session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO small=true agent=title mode=primary error.error="AI_APICallError: Upstream request failed: Insufficient account funds"
+timestamp=2026-10-27T18:24:30.571Z level=INFO run=807dbb73 message=tracking hash=384935c25e6fc93e96fb8aeff8b3cdd26a3981eb cwd="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" git="C:\\Users\\scott\\.local\\share\\opencode\\snapshot\\c30576cc07b2b528a2eede275372519a4312e3b4\\4d917c0faf4da3de748ab8e0ee8b6277564679a2"
+timestamp=2026-10-27T18:24:30.576Z level=INFO run=807dbb73 message="shell tool using shell" shell="C:\\Program Files\\Git\\usr\\bin\\bash.exe"
+timestamp=2026-10-27T18:24:30.580Z level=INFO run=807dbb73 message=init count=1
+timestamp=2026-10-27T18:24:30.752Z level=INFO run=807dbb73 message="watcher backend" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" platform=win32 backend=windows
+timestamp=2026-10-27T18:24:30.757Z level=INFO run=807dbb73 message="project copy refresh started" projectID=c30576cc07b2b528a2eede275372519a4312e3b4
+timestamp=2026-10-27T18:24:31.199Z level=INFO run=807dbb73 message="project copy refresh done" projectID=c30576cc07b2b528a2eede275372519a4312e3b4 updated=[] removed=[]
+timestamp=2026-10-27T18:24:31.247Z level=INFO run=807dbb73 message="booting location services" directory="C:\\Users\\scott\\Documents\\liberty-basketball-analysis" workspaceID=undefined
+timestamp=2026-10-27T18:24:31.250Z level=INFO run=807dbb73 message=process session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO messageID=msg_17e9b5055001MhkNn2YOKlBK6b
+timestamp=2026-10-27T18:24:31.251Z level=INFO run=807dbb73 message=stream providerID=opencode modelID=beam-free session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO small=false agent=build mode=primary
+timestamp=2026-10-27T18:24:31.255Z level=INFO run=807dbb73 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=opencode llm.model=beam-free
+timestamp=2026-10-27T18:24:31.515Z level=ERROR run=807dbb73 message="stream error" providerID=opencode modelID=beam-free session.id=ses_e8164b139ffeYyRfLh5Q4JRhkO small=false agent=build mode=primary error.error="AI_APICallError: Free usage limit reached. Free models work in OpenCode (https://opencode.ai); subscribe to OpenCode Go to keep going: https://opencode.ai/go"

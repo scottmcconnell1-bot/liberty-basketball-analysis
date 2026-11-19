@@ -1,0 +1,56 @@
+[muse] model recursive/flint-v1.0:free 21:41:12
+Query: Muse, you check the Vetter. Read-only: do not change any file.
+You said MUSE: AGREE on spec 45 (.team/muse_spec45_run.txt). After that, Claude 
+Code found a problem neither caught and added V9 to the block at the top of 
+.team/specs/45_film_scale_make_miss_spec.md (V1 wording changed to match).
+Problem: arc-rule-report calls prove_noop_identity 
+(.team/shot_detectors/keep_ball_detections.py:570-627, called at :1180), which 
+runs ai_bridge.run_saved_v6_rule(timestamps, path); that function re-opens the 
+track file from disk (ai_bridge.py ~957-960). If the scale were set only in 
+memory, the proof would compare scaled vs unscaled tracks and stop on every 720p
+film (Adrian at 1.0 would hide it).
+Check V9: is writing <out-dir>/tracks_scaled.json and pointing the shot list and
+kbd.FILMS at it correct and complete? Does the proof then stay a real check (not
+weakened)? Does any other step read tracks from a path that would still be the 
+unscaled file (grep load_build_shot_list, tracks_path, path_by_film, json.load 
+in keep_ball_detections.py and rim_first_make_miss.py)? Anything else changed by
+V9 that breaks gate G1?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: 
+<reason>.
+📖 Read muse_spec45_run.txt
+📖 Read 45_film_scale_make_miss_spec.md
+💻 $ grep -n "run_saved_v6_rule\|tracks_scaled\|tracks_path\|load_build_shot_list\|path_by_film\|json.load\|keep_ball" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/keep_ball_detections.py
+📖 Read keep_ball_detections.py
+💻 $ sed -n '900,1010p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ai_bridge.py
+💻 $ grep -n "film_scale\|tracks_json\|tracks_scaled\|build_shot_list_from_tracks\|kbd.FILMS\|FILMS\|out_dir\|out-dir\|out_dir" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/rim_first_make_miss.py
+💻 $ grep -n "run_saved_v6_rule\|def decide_shot\|def reason_of\|_court_scale\|_court_scale_x\|_court_scale_y\|film_scale" /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+📖 Read rim_first_make_miss.py
+💻 $ sed -n '160,330p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+💻 $ sed -n '700,900p' /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/small_fixes_v6_copy.py
+💻 $ grep -n "load_build_shot_list\|tracks_path\|path_by_film\|json.load\|load_tracks\|FILMS\|resolve_film_tracks\|from measure_net_moved\|import load_tracks" .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/rim_first_make_miss.py
+💻 $ git status --porcelain + 1 command  28.9s
+
+────────────────────────────────────────
+☤ Hermes
+V9's fix holds up: scaled copy gets both _court_scale keys on every track, refuse-if-exists, then used as tracks_path for build_shot_list_from_tracks and kbd.FILMS.
+
+The no-op proof then feeds run_saved_v6_rule the scaled path while decide_shot runs on the same in-memory scaled track — like with like, so it stays a real check, not weakened.
+
+720p runs now genuinely prove ai_bridge and small_fixes apply the scale identically; Adrian at 1.0 is a true identity, not a hiding shortcut.
+
+Remaining unscaled reads are only cmd_vote (args.tracks_json) and standalone step_overlays/module-level FILMS — neither feeds the proof.
+
+V9 is wrapper-only (S3 scope), so it does not break gate G1; the Adrian byte-match is unaffected.
+
+MUSE: AGREE: V9's like-with-like scaled-copy fix is correct and complete for the no-op proof and G1.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4833035e10fccadc6bd0ea49f20faec1ab9fa15bcc1092ccb0713b6a78404936
+  hermes -c "Muse, you check the Vetter. Read-only: do not… #2"
+
+Session:        local-4833035e10fccadc6bd0ea49f20faec1ab9fa15bcc1092ccb0713b6a78404936
+Title:          Muse, you check the Vetter. Read-only: do not… #2
+Duration:       2m 37s
+Messages:       20 (1 user, 18 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE: V9's like-with-like scaled-copy fix is correct and complete for the no-op proof and G1.

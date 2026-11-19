@@ -1,0 +1,29 @@
+Hermes, you are the Architect. REWRITE ONE file: .team/specs/19_d1_job_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). First line: "D1 JOB SPEC v2 - nothing built". Keep line 2 blank, then on line 3 copy this stamp exactly:
+"REJECTED v1 by Claude Code, 2026-10-30: wrong film paths, wrong frame mapping, no saved peak fields, zone stops at 180 px, whole-list replacement drops the net points, overlays need video in the sandbox. Fixed in v2 below."
+Plain markdown, no line-number prefixes, no literal "\n". Create nothing else. If your write tool refuses, say so plainly.
+
+Keep everything in v1 that is not listed below. Fix these, using exactly these facts (Claude Code checked them in the repo today):
+
+1. FILMS. The films are NOT the tag-file names. Use the FILMS list in .team/shot_detectors/pixel_miss/measure_net_moved.py (lines 31-50): Notus = uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 with tracks v6_tracks_notus_q1.json; Adrian = uploads/nfhs_gam0a66d85e12.mp4 with tracks v6_tracks.json. Load the 140 build-set shots, their tags and tracks with the SAME loaders as measure_net_moved.py (load_shot_tags, load_tracks), so the shot list is identical to Stage A's 140 (the two track files hold 142 entries; the loader decides the 140).
+
+2. FRAME MAPPING. A saved track's ball/bodd entries are [index, x, y] where index is an OFFSET from the tag frame, not an absolute frame. Absolute frame = round(t_ms / 1000 * fps) + index, exactly as peak_from_track does (measure_net_moved.py:155-175, line 164). fps is read from the film with cv2 (25.0 fallback, as FrameReader does).
+
+3. NO SAVED PEAK FIELDS. The saved tracks have only the keys ball, bodd, hoop, result, t (checked). There is no peak_frame, peak_reason or _court_scale_y field; scale_y is 1.0. The anchor is the output of peak_from_track(track, t, fps): the rule's own crossing frame when there is one (reason "crossing"), else the closest-ball frame ("no_crossing_closest_ball"). Import and call that function; do not re-derive it.
+
+4. TRUTH IS ONLY FOR SCORING. The key "result" in each track is the truth label. Only the scoring/report step may read it; the extract, arc and rule steps must not. State this as a rule Cursor's test checks.
+
+5. ZONE MUST REACH BELOW 180 PX. The rule measures a point at y_rel >= 180 px (ai_bridge.py:1208) and deep points beyond 180 px (ai_bridge.py:1164, 1273). Fix the candidate zone in advance as: horizontally |x - hoop_x| <= 3.0 * hoop_w; vertically hoop_y - 4.0 * hoop_w <= y <= hoop_y + 300 px. Top-3 cap by confidence stays; report frames that had more than 3.
+
+6. HOOP WIDTHS (fix the text): Adrian grouped hoop_w is 70-116 px, Notus 51-75 px (checked). The inlier residual stays 0.15 * hoop_w.
+
+7. CHOOSE, DON'T REPLACE THE WHOLE LIST. v1 replaced the whole saved ball list with the before-anchor inliers; that deletes the points through the net that the rule needs (180 px measure, column, drift), so it would break every make. v2:
+   a. BEFORE the anchor (free flight): frames anchor-15 .. anchor, RANSAC parabola in time for y (a > 0, y down) and line in time for x, as in v1 (min 4 points, 100 iterations, seed 42, residual 0.15 * hoop_w).
+   b. AFTER the anchor (in the net, not free flight): frames anchor+1 .. anchor+12, RANSAC straight line in time for x AND for y (no direction constraint, so a ball that comes back up is kept as it is), min 3 points, same iterations, seed and residual.
+   c. In every frame of both windows that has an inlier, the inlier replaces the saved point for that frame (add it if the saved list had no point there - it is a real detection). Frames with no inlier, and all frames outside the two windows, keep the saved point unchanged. bodd is never changed.
+   d. Before any of this runs, the script proves the no-op: with the saved lists untouched, the Stage A copy with every switch off gives the same verdict as the rule on all 140 (Stage A already showed 140/140). If not identical, stop.
+
+8. OVERLAYS NEED VIDEO. Cursor's sandbox cannot read the films. Make overlays a third command, --step overlays, that Claude Code runs on Windows with the repo venv after the report step; it reads d1_results.json and the films and writes the 19 PNGs. Steps 2-8 stay pure Python/NumPy.
+
+9. COMMANDS. Write the Cursor (WSL) commands with /mnt/c/... paths and bash line breaks (\ not ^). Write the Windows commands with C:\... paths for the repo venv C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe.
+
+Everything else stays: hard gate 0 misses called makes, lost makes listed, no tuning after results, no retry loops, stop for Scott after the report, outputs in C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_arc\, protected files read only, nothing in ai_bridge.py / ai_analyzer.py / models/ changes. Every fact you add must come from a file you read; otherwise write "NOT FOUND - Claude Code to check".

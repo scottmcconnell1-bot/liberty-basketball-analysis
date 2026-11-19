@@ -1,0 +1,4 @@
+You are CURSOR, the BUILDER. READ-ONLY, no file edits. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Final check: does .team/specs/52c_first_shot_sequence_prereg.md v2 (sha f5b4d5df..., review52/spec52c_v2_sha.txt) apply every change from your v1 review (review52/muse_spec52c.txt, review52/cursor_spec52c.txt): postproc52b extras_require_seed_disagreement + shot_list wiring + 52b tests; per-film seq over full T, (t,t+6000] inclusive with matching test; dropout on pool then concat, Linear(513,3); softened 6000 ms; F2 confound disclosed with in-session-only NO + reason; sha filename? Anything new broken? Short answer.
+End with ONE line: CURSOR: AGREE | CURSOR: AGREE WITH CHANGES: ... | CURSOR: DISAGREE: ...

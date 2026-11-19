@@ -1,0 +1,19 @@
+Read all files as instructed (TEAM_RECOVERY.md, MUSE.md, AUTHORITY.md, AGENT_OPERATIONAL_PROTOCOL.md, the VETTED plan, both REJECTED versions, and VETTER_FINDINGS.md). No files edited.
+
+**Checks against the checklist:**
+
+1. **NFHS geometry** — all correct in v3: rim-center origin (line 84), FT line +13.75 (lines 85, 137), baseline -5.25 (86, 137), lane ±6 (87), arc R 19.75 centered on the basket (90, 141), FT circle R 6 at (0, +13.75) (91, 142), Liberty center line +40.75 = 46 - 5.25 (93). Nothing else wrong found.
+
+2. **Inflation vectors** — the big one (tuning thresholds on the measured frames) is closed: thresholds frozen on separate calibration frames ≥ 60 s away, measure once, no retuning (lines 126, 278). Court width not gated (149, 157); center line not a failure when undetected (162); Adrian length reported, not gated (267).
+
+3. **Banned trials** — none: per-frame only, explicit no interpolation/temporal smoothing (277), no tracker, no early window, no model retraining in this stage.
+
+4. **Existing-file changes** — none: ## Files lists only new `scripts/stage1b_court_lines.py` + `config/stage1b_court_lines.yaml` + runtime outputs (288-292); "No changes to existing files" (276).
+
+5. **All ten v1/v2 rejection points** — verified fixed one by one: 40.75 everywhere, arc at (0,0), colors not hard-coded (118), non-basketball-line rejection (150, 148), calibration frames (278), center line optional (162), full ## Files + run command, backboard removed, Windows python path restored (297), sidelines fitted not ±25 (88, 131), "tuned" → "fixed" wording (126).
+
+6. **Remaining contradiction the Vetter missed — the deciding one:** the sample JSONs still carry the **exact wrong figure the v1 rejection removed**. v1 line 136 wrongly said "Liberty H = 81.5 ft"; the Vetter fixed the prose but not the samples. v3 per-frame sample: half_court_y_ft 40.8 with court_length_ft **81.6** (lines 222-223) — 81.6 = 2 × 40.8 exactly, i.e. the length was computed by doubling half-court Y and dropping the +5.25 rim-center offset. Correct: 2 × (40.8 + 5.25) = 92.1 ≈ 92 ft (line 93: Liberty 92 ft; TEAM_RECOVERY line 120: "Liberty is 92 ft, half court 40.75 ft from the hoop"). Summary sample repeats it: court_length mean 81.4 = 2 × half_court mean 40.7 (lines 245, 246). The plan's own headline deliverable is "Adrian gym: Length unknown → measured from fitted baseline-to-baseline distance" (line 94); a Coder mirroring the sample formula would print ~81.5 ft — systematically ~10.5 ft short, self-consistent-looking, and wrong. That is both a remaining contradiction and a way the measurement could look better/cleaner than it is. Secondary leftovers: run command pairs WSL `cd /mnt/c/...` with Windows `.\.venv\Scripts\python.exe` (lines 296-297) — runs verbatim in neither shell; the trailer still says "(Only this file is created/edited...)" (line 303), contradicting ## Files.
+
+7. **The Vetter's own edit** — restoring the Windows venv path `.\.venv\Scripts\python.exe` was correct and acceptable (matches TEAM_RECOVERY section 4 and protocol 6.3); the Vetter's own v2 rejection text shows the mangling it described (`..venvScriptspython.exe`). No objection to the edit itself — the problem is what was left behind, not the edit.
+
+MUSE: DISAGREE: v3 sample JSONs still carry the rejected v1 length figure: court_length_ft 81.6 (line 223) and mean 81.4 (line 246) = 2 × half_court_y, dropping the +5.25 rim-center offset — half_court 40.8 implies 92.1 ft, and Liberty is 92 ft (line 93; TEAM_RECOVERY 120) — so a Coder mirroring the schema outputs the exact ~81.5 number the v1 rejection removed, corrupting the headline "Adrian length measured baseline-to-baseline" (line 94); runner-up leftovers: run command mixes WSL cd /mnt/c with Windows .\.venv\Scripts\python.exe (lines 296-297) and the trailer still claims the plan file is the only file created/edited (line 303) against ## Files; the Vetter's backslash edit itself was acceptable

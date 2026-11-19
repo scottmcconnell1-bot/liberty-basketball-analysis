@@ -1,0 +1,17 @@
+You are the Coder. Implement spec 39 (.team/specs/39_shooter_fix_spec.md). Claude Code's block P0-P6 plus the "SETTINGS FIXED BY CLAUDE CODE" line at the top OVERRIDE the Hermes text below (F3 is DROPPED). Muse AGREE.
+
+Edit ONLY .team/shot_detectors/rim_first_finder.py, .team/shot_detectors/rim_first_measure.py (only if needed), .team/shot_detectors/test_rim_first.py. Do not commit. Do not run video or models. Shot calls, hoop steps, make/miss untouched. Keep every existing behaviour behind flags so all-OFF reproduces spec 38 exactly.
+
+Constants (comment "spec 39, fixed by Claude Code 2026-11-06"): REF_INSIDE = 0.5, REF_WINDOW_FRAMES = 12, REF_MIN_FRAMES = 5, MERGE_IOU = 0.5, MATCH_IOU = 0.5.
+
+1 Pure helpers: box_iou(a, b); inside_fraction(player, ref) = area(player INTERSECT ref) / area(ref).
+2 merge_same_body(players, merge_iou): on one frame, repeatedly merge any two player boxes with IoU >= merge_iou, keeping the larger-area box. Deterministic order.
+3 is_referee_player(box, frame, players_by_frame, refs_by_frame, window, min_frames, inside, match_iou): over frames frame-window .. frame+window, follow the box by taking on each frame the player box (after merge) with the highest IoU >= match_iou to the tested box (the tested box itself, not chained); count frames where any referee box has inside_fraction(that player box, ref) >= inside. True if count >= min_frames.
+4 In _trace_walk_back (flags fix_ref, fix_merge, both True by default for live and retrace; CLI --fixes-off turns both off): on each walked frame, players = merge_same_body(...) if fix_merge; then drop players for which is_referee_player(...) if fix_ref; then the existing hold test (release 0.6), existing two-players-hold and break rules unchanged. Cache is_referee_player per (frame, rounded box) so it is not recomputed.
+5 Live detect_span passes referee boxes per frame; retrace reads frames.json "r" ([x,y,w,h,c]).
+6 Each moment records "shooter_fixes": ["ref", "merge"] (those on).
+
+Tests (pure, hand data): box_iou / inside_fraction values; two boxes IoU 0.6 merge to the larger, 0.4 stay two; a player box containing a referee box on 5 of the +-12 frames is dropped, on 4 frames kept; a referee box that is large and only partly overlaps (inside_fraction 0.3) does not drop; with fixes on, a walk that used to stop on a referee box continues to the real holder; two boxes on one body no longer give "two players hold"; --fixes-off retrace equals the spec-38 retrace output on a tiny saved run (tmp_path).
+Run and print exact command + result (python3 if .venv cannot run; say so):
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+End with functions added/changed and choices not spelled out here.

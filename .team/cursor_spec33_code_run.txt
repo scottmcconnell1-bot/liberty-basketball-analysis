@@ -1,0 +1,21 @@
+Created exactly three new files (nothing else touched; no commit; detection not run).
+
+### Created
+1. `.team/shot_detectors/shot_rules_measure.py` — pure rules (v3 landing-zone order: rim→SHOT, near→catch? PASS:AIRBALL, far→NOT_A_SHOT, unclear→ORANGE), A–D summaries, CLI with Scott’s approved constants block (no defaults on rule args).
+2. `.team/shot_detectors/collect_flight_tracks.py` — detection only (BODD full-frame 0.12/960 + V6 hoop crop 0.28/640 as in `collect_q4_bodd.py`); Q4 filtered out; window merge; `--out-dir` refuse-if-exists; `--fakes` from find_shots `results.json`.
+3. `.team/shot_detectors/test_shot_rules_measure.py` — pure tests (no video/model).
+
+### Tests
+```text
+/usr/bin/python3 -m pytest .team/shot_detectors/test_shot_rules_measure.py -q --tb=short
+................                                                         [100%]
+16 passed in 1.31s
+```
+
+(`.venv/bin` missing in this sandbox; system pytest 8.4.2 used.)
+
+### Proven / Inferred / Unknown
+- **Proven:** three untracked files only (`git status`); 16/16 tests pass with the command above.
+- **Inferred:** fake times recomputed from DB via find_shots matching (results.json has counts, not extra times); Claude Code still checks printed 109+31 / 106+31 on the GPU run.
+- **Unknown:** real collect runtime on GPU (C6).Spec 33 coder slice is done: three new files under `.team/shot_detectors/`, **16 tests passed**, no commit, detection left for Claude Code on the GPU.
+[cursor_wsl] exit 0 at 13:21:44

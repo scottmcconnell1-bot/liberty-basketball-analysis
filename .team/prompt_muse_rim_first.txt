@@ -1,0 +1,15 @@
+You are Muse, the checker. Scott 2026-11-04: "Throw that at Hermes and Muse and see what you all agree on as next steps and fixes." Read: .team/specs/35_rim_first_shot_finder_spec.md (Hermes's opinion + plan), .team/prompt_hermes_rim_first.txt (Claude Code's proposal and what we learned), and for checking: docs/agent_handoffs/HERMES.md line ~27, .team/specs/17_missed_makes_options_REVIEWED.md line ~49, collect_q4_bodd.py, event_generator.py ~1071, court_memory.py ~150-195, .team/shot_detectors/make_review_queue_page.py. Edit nothing, run nothing that writes.
+
+Claude Code's objections to Hermes's plan (check each: AGREE / DISAGREE with reason):
+V1 "Hoop recenter" worry is unfounded: the banned trial was shifting the saved hoop position inside the MAKE rule (HERMES.md:27 "each one called at least one miss a make"; spec 17 C5 "saved hoop below the real rim"). Centring the v6 crop on the hoop BODD detects in that frame is what make/miss already does (collect_q4_bodd.py). So running the v6 crop over the whole span is allowed.
+V2 Hermes triggers candidates from the BODD full-frame ball - the very source that failed in spec 34 - and requires a rise >= 170 px and a peak, i.e. the top of the arc, which left the picture in 5 of 20 hand-checked failures. That defeats rim-first. Trigger should be the v6 crop seeing the ball descend into the rim zone; no arc-top requirement.
+V3 Fixed px (170, 280, +40) on a 1920 and a 1280 film - must be hoop widths (spec 33 C3).
+V4 Section 4 measures "277 moments incl. fakes"; a whole-game finder is measured against the tags over the Q1-Q3 / Notus Q1 span: found, extra, timing (find_shots_measure.match_shots, 8000 ms).
+V5 The page prints no "v6 mapping check 1.0000" (you said so on spec 34); the make/miss check is gray 30 / orange 9 / 42 shots / same combined groups.
+V6 Most of spec 33's seven numbers do not apply; list only numbers this plan uses.
+
+Then answer:
+1. Where do you agree with Hermes, with Claude Code, or neither? Any better idea?
+2. The agreed next step and fixes, in 5 bullets max.
+3. Any Golden Rule risk (core edits, banned trials, tuning after results, new numbers without Scott, Adrian Q4, training).
+Under 350 words. Last line must START with exactly "MUSE: AGREE" (with Claude Code's V1-V6) or "MUSE: DISAGREE: <which and why>".

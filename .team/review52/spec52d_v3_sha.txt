@@ -1,0 +1,1 @@
+052fd15a0f78c1da74b698b9267c8e504406f8cce78a0b47edc1f12308824ae4 *specs/52d_context_clip_prereg.md

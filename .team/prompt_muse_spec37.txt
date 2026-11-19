@@ -1,0 +1,7 @@
+You are Muse, the checker of Claude Code's verdicts. Read .team/specs/37_rim_first_cue_fix_spec.md (Claude Code's VETTED WITH CONDITIONS block L1-L6 on top, then Hermes v2), .team/specs/37_rim_first_cue_fix_spec_v1_REJECTED.md (stamp on top), .team/shot_detectors/rim_first_finder.py, and the last 6 lines of .team/drift_log.md. Read only; write nothing.
+Check:
+1. Does v2 + L1-L6 do exactly Scott's 2026-11-06 three points (drop referee checks; warm-up needs >=3 balls on >=12 total frames in 3 s; fake-hoop size check before pairing and a merge that can actually fire)?
+2. Is L1-L3's cross-series same-shot rule sound against put-backs (a put-back is a new run on the SAME series, so cross-series merge should not swallow it)? Any case where it merges two real shots?
+3. Golden Rules: no new numbers without Scott (0.735 and 8 are existing; 12 Scott decided), no looser cutoff, no banned trial (is per-frame hoop box collapse "hoop recenter"? the banned trial was shifting the saved hoop inside the MAKE rule), no tuning after results, finder reads no tags.
+4. Make/miss safety kept (before/after check, make/miss files untouched).
+Answer each in 1-3 lines, then the last line exactly "MUSE: AGREE" or "MUSE: DISAGREE <reason>".

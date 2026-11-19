@@ -1,0 +1,10 @@
+You are HERMES, the architect. Revise .team/specs/52d_context_clip_prereg.md v2 -> v3 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+NEW FACT (coordinator random-input probe, review52/gpu_probe52d.txt; r2plus1d_18 + Dropout/Linear(512,3) head, AdamW, bf16 autocast, input 112x96):
+ T=32 bs8: 3938 MiB, 0.46 s/step (today's recipe; ~40 min logo run)
+ T=87 bs8: 9621 MiB > 8150 MiB card -> Windows spills to shared memory, 21 s/step (~46x slower, days). No OOM error is raised on Windows, so the v2 "OOM -> STOP" rule would never fire. v2 pin is NOT buildable.
+ T=44 bs8 (STEP 0.16, same -0.88..+6.0 s span): 5176 MiB, 0.53 s/step (~45-50 min run)
+ T=87 bs4: 5239 MiB, 0.55 s/step per 4 clips (~2x run time; bs change = R4 recipe change)
+Do: pick ONE buildable setup and pin it with a reason not taken from results. Options: (a) STEP 0.16 / N=44 / bs 8 (keeps R4 bs; but halves frame rate on the shot itself, and time-shift +-2 frames becomes +-0.32 s - pin whether the aug stays at +-2 frames or becomes +-1); (b) N=87 / bs 4 (keeps frame rate; recipe change to bs and maybe lr); (c) other (e.g. 32 dense frames at STEP 0.08 over -0.88..+1.60 plus coarse tail frames to +6.0 s, total <=48). State the trade-off on make/miss accuracy honestly.
+Replace the OOM-only STOP with a speed guard: if measured train s/step > 2x the probe value for the pinned setup (or shared-memory spill seen), STOP for Scott.
+Keep all other v2 content. Sha file .team/review52/spec52d_v3_sha.txt. Mark v3. End with "HERMES: PREREG V3 WRITTEN".

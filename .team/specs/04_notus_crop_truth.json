@@ -1,0 +1,16 @@
+{
+  "read_by": "Claude Code (vetter), by eye from data/roi/notus_crops/*.png, 2026-10-26 21:50",
+  "note": "home = PATRIOTS = Liberty, away = GUEST = Notus; timestamps from the crop file names",
+  "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": {
+    "notus_A1_00_202s": [0, 4], "notus_A1_01_606s": [2, 11], "notus_A1_02_1010s": [4, 11],
+    "notus_A1_03_1413s": [5, 14], "notus_A1_04_1817s": [10, 15], "notus_A1_05_2221s": [13, 19],
+    "notus_A1_06_2625s": [15, 25], "notus_A1_07_3028s": [21, 30], "notus_A1_08_3432s": [29, 38],
+    "notus_A1_09_3836s": [29, 40]
+  },
+  "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": {
+    "notus_A_00_187s": [5, 2], "notus_A_01_562s": [11, 4], "notus_A_02_936s": [13, 8],
+    "notus_A_03_1311s": [16, 9], "notus_A_04_1686s": [16, 11], "notus_A_05_2060s": [16, 15],
+    "notus_A_06_2435s": [19, 15], "notus_A_07_2810s": [23, 17], "notus_A_08_3184s": [25, 21],
+    "notus_A_09_3559s": [36, 21]
+  }
+}

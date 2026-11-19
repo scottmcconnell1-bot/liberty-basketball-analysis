@@ -1,0 +1,27 @@
+Spec 48b is implemented. No commit. No video run. No `.npz` files.
+
+### Pytest
+- `.venv/bin/python` does not exist (Windows venv only: `.venv/Scripts/python.exe`; WSL could not run it).
+- `python3 -m pytest .team/shot_detectors/test_game_session.py -q` → **17 passed**
+- `python3 -m pytest .team/shot_detectors -q --ignore=.../q4_blind_test.py` → **286 passed, 3 failed** (all in `test_d2_pick_frames.py`: hard-coded `C:/Users/.../holdout_names.json` missing under WSL — pre-existing, not this change). Without the ignore, collection dies on missing `ultralytics` in `q4_blind_test.py`.
+
+### Grep (removed v1)
+Nothing outside `game_session.py` / `test_game_session.py` imported the removed symbols (`find_board_boxes`, `period_length`, `clean_and_runs`, `sample_board`, `build_session`, `periods`, yellow/seven-seg helpers). Safe to remove. External uses of `game_session` are only `parse_clock` (design48b) plus the new tests/build_templates.
+
+### Functions
+**Kept:** `parse_clock`, `in_session`, `filter_moments`, filter CLI.
+
+**Added:** `norm_read`, `find_board`, `board_distances`, `board_type`, `clock_crop`, `blobs`, `digit_vec`, `read_home`, `read_adrian`, `sample_film`, `states_full`, `states_partial`, `fill`, `bridge_excursions`, `zero_ends`, `resets_full`, `resets_partial`, `build` (+ S7b `dropped_segments`/`warnings`), `session_from_raw`, `sheet`, `load_templates`; CLI `run --film-id`, `check-reader --video/--out`.
+
+**Removed:** yellow box finder / seven-seg path (`_yellow_mask`, `_components`, `_clusters`, `_union`, `_clock_field_from_frame`, `_period_digit_from_frame`, `find_board_boxes`, `_raw_from_groups`, `_read_clock_crop`, `_read_period_crop`, `sample_board`), v1 run/period stack (`_clean_clock_values`, `_build_runs`, `period_length`, `clean_and_runs`, `periods`, `build_session`, merge/reset helpers), `scoreboard_clock` import.
+
+**NEW files:** `.team/shot_detectors/board_templates/build_templates.py`, `board_templates/README.md` (sha256 pending until Claude Code builds).
+
+### Choices not spelled out in the spec
+1. `sample_film(video, box=None, board=None)` — optional args so `run` does not re-probe.
+2. `dropped_segments` times = `t_ms[lo]` / `t_ms[hi-1]`; field name `start_val`.
+3. Warning strings: `"game with N periods (not 4)"`, `"dropped segment >= 4 min (a-b)"`.
+4. `boxes.json`: `box`, `board`, `distances`, `video_size`, `fps`, `frame_count`.
+5. `board_distances` helper; `build_templates` uses `gs._board_image` / `gs._cell_vecs`.
+6. `sheet()` lives in `game_session` for check-reader (digits48 layout).
+[cursor_wsl] exit 0 at 11:29:38

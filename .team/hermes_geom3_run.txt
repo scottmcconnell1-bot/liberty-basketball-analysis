@@ -1,0 +1,114 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your Stage 1b plan was REJECTED with direction (A) approved: read
+the first line of .team/specs/08_stage1b_court_lines_plan_v2_REJECTED.md for the
+three remaining fixes (v1 seven fixes must stay fixed), then rewrite the WHOLE 
+plan so its body carries every fix (no notes stamped on top). Keep: (A) measured
+first on the same 60 frames (indices in 
+.team/stage1_keypoints/*/summary_*.json), fitted-court overlays for eye review, 
+per-frame JSON, the frame-by-frame comparison with the keypoint model, 
+rim-center origin, no interpolation, no existing file changed, outputs under 
+.team/stage1b_lines/. STRICT: create or edit ONLY 
+.team/specs/08_stage1b_court_lines_plan.md. Do not create, edit, or delete any 
+other file. Do not run code that writes files.
+📖 Read 08_stage1b_court_lines_plan_v2_REJECTED.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/08_stage1b_court_lines_plan.md
+│ .team/specs/08_stage1b_court_lines_plan.md
+│ @@ -0,0 +1,301 @@
+│ +# Stage 1b: Court Lines Detection — Coder Plan
+│ +
+│ +**Author:** Hermes (Architect)  
+│ +**Date:** 2026-10-26  
+│ +**Status:** Plan for Vetted implementation  
+│ +**Gate:** Must pass Vetter review before OpenCode implements
+│ +
+│ +---
+│ +
+│ +## Executive Comparison & Recommendation
+│ +
+│ +### Approach (A): Direct Painted-Line Detection + NFHS Model Fit
+│ +Detect red/blue lines (Liberty) or white lines (Adrian) per frame using color segmentation + line detection (Hough / LSD / Canny + RANSAC), then fit detected line segments to the known NFHS court geometry (lane 12 ft wide, FT line 13.75 ft from rim center, baseline 5.25 ft behind rim center, lane corners at ±6 ft, 3-pt arc radius 19.75 ft centered on the basket, center line). Sideline positions are NOT fixed; court width is treated as unknown and fitted from detected sidelines (or sidelines are left out of the homography and the measured width is reported). Output: per-frame homography from image → court feet (rim-center origin).
+│ +
+│ +**Pros:**  
+│ +- Zero training data needed; works on any gym with painted lines visible  
+│ +- Geometric constraints (parallel lane lines, perpendicular FT line, known arc radius) reject outliers automatically  
+│ +- Interpretable: Vetter can see fitted lines overlaid on frames and judge by eye  
+│ +- Adapts to camera pan/zoom per frame — no temporal smoothing required  
+│ +- Liberty 92 ft court length known; Adrian length measured from fit (baseline-to-baseline)  
+│ +- No banned trials (no interpolation, no learned model to retrain)
+│ +
+│ +**Cons:**  
+│ +- Color thresholds differ by gym (red/blue vs white) — need per-gym color config  
+│ +- Glare, shadows, worn paint, or player occlusion can break line segments  
+│ +- Must handle partial views (zoomed-in on lane may not show 3-pt arc or center line)
+│ +
+│ +### Approach (B): Retrain Keypoint Model on Auto-Labeled Frames
+│ +Use (A) to auto-label 60 frames per gym, Scott reviews/corrects, then fine-tune `court_keypoint_detector.pt`.
+│ +
+│ +**Pros:**  
+│ +- Could generalize to frames where lines are partially occluded  
+│ +- Fast inference once trained
+│ +
+│ +**Cons:**  
+│ +- Stage 1 proved the 18-keypoint model fails on these gyms (8/20 frames with ≥4 points on Notus A1) — retraining on 60 frames is insufficient for robustness across pans/zooms  
+│ +- Black box: Vetter cannot inspect "why" a keypoint was placed  
+│ +- Requires GPU training pipeline, validation set, hyperparameter search — not a small measurable task  
+│ +- Still needs (A) for the auto-labels, so (A) must work first
+│ +
+│ +### Approach (C): Both, (A) Primary + Model Cross-Check
+│ +Run (A) every frame; run keypoint model as a sanity check; flag frames where they disagree > threshold.
+│ +
+│ +**Pros:**  
+│ +- Defense in depth; catches (A) failures on weird frames  
+│ +- Model disagreement becomes a review signal for Scott
+│ +
+│ +**Cons:**  
+│ +- Adds complexity before (A) is proven  
+│ +- Model adds compute with unproven value on these gyms
+│ +
+│ +---
+│ +
+│ +### Recommendation: **Start with (A) only. Measure it rigorously on the same 60 frames. Decide on (B)/(C) after seeing numbers.**
+│ +
+│ +**Rationale:**  
+│ +- The Vetter's finding: "the zero-point frames show the lane, free-throw circle, arcs, and center line clearly. The model, not the video, is the problem."  
+│ +- Painted lines are the ground truth; the model is a noisy observer of them  
+│ +- (A) is the most reliable across gyms/pans/zooms because it uses the invariant NFHS geometry, not a learned prior  
+│ +- Scott wants "the MOST RELIABLE approach across gyms, camera pans and zooms, not the easiest"  
+│ +- (A) produces per-frame homography directly; (B) and (C) depend on (A) working first  
+│ +- If (A) achieves ≥70% valid homography on Notus A1 (matching the Stage 1 keypoint gate), it earns the right to be primary
+│ +
+│ +---
+│ +
+│ +## Stage 1b Goal
+│ +
+│ +Measure approach (A) on the **exact same 60 frames** used in Stage 1 (20 per game: Adrian, Notus A1, Notus A), with:
+│ +
+│ +1. **Overlay images:** Fitted NFHS court model drawn over each frame (lines in court-space colors, projected through the per-frame homography back to image pixels)
+│ +2. **Per-frame JSON:** Lines found, fit error in pixels, success/failure, homography matrix, half-court Y in feet
+│ +3. **Summary report:** Aggregate numbers so (A) and the keypoint model can be compared frame-by-frame
+│ +
+│ +**No banned trials.** No interpolation. No existing file changed. All outputs under `.team/stage1b_lines/`.
+│ +
+│ +---
+│ +
+│ +## Court Geometry (NFHS, Rim-Center Origin)
+│ … omitted 223 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The rewritten plan at .team/specs/08_stage1b_court_lines_plan.md incorporates all three remaining fixes:
+
+1. Run command (line 289-291): Uses ..venvScriptspython.exe for Windows2. Sideline constraint removed: Court width is now unknown — sidelines are fitted from detected lines (or left out of homography) and measured half-width is reported per frame (Court Geometry table, Algorithm §3 "Sideline handling", JSON output adds court_half_width_ft)
+3. Threshold-tuning wording fixed (Algorithm §2): "Parameters fixed on separate calibration frames... per the threshold-tuning constraint" — no longer says "tuned so..." which contradicted the constraint
+
+The seven v1 fixes that were already applied remain intact. No other files created or modified.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-40b0a076028312809ba972361b7b512ae6d26d3079655804331de4d874e6d7dc
+  hermes -c "Rewrite Stage 1b court lines plan"
+
+Session:        local-40b0a076028312809ba972361b7b512ae6d26d3079655804331de4d874e6d7dc
+Title:          Rewrite Stage 1b court lines plan
+Duration:       1m 35s
+Messages:       6 (1 user, 4 tool calls)

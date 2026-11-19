@@ -1,0 +1,34 @@
+Spec 52a pre-run items are in place. No training, no gate run, no logo52a.
+
+### Built
+1. **session_filter** in `ensemble_predict.shot_list` + `gate52.score_film`  
+   - Per-film map: adrian/notus/gvg → `game_session_48b`, hsb → `hybrid49/hsb/session`, rimrock → None  
+   - Pin: `in_session(..., is_ft=True)`; filtered candidates omitted (filtered real shot = recall miss)  
+   - Default **OFF** (`postproc52.json` still `false`)  
+   - R7 amendment: new `postproc52a.json` with `session_filter: true` (logo52a via `gate52 --postproc postproc52a.json`)
+
+2. **Tests** in `test_mm52.py`: on/off, omit/recall-miss, none-session passthrough, logo52 filter-OFF byte-identical to `gate52_report.json`
+
+3. **labels52a** class-0 counts (printed): adrian **26**, notus **6**, hsb **4**, gvg **145**, rimrock **241**  
+   - `labels52_v2.json` unchanged (`56f18cf0…`) · clips7 not touched  
+   - Frozen in `.team/pre52a_sha256.txt`
+
+### Tests
+- **Windows `.venv`**: unreachable here (WSL PE32 interop `UtilConnectUnix` failed; elevated perms denied)
+- **Fallback** `python3 -m pytest .team/mm_clip .team/shot_detectors -q` (ignore ultralytics collector; deselect 3 Windows-path `holdout_names` tests): **312 passed**, 3 deselected
+
+### Changed files (sha256)
+| File | sha256 |
+|------|--------|
+| `.team/mm_clip/ensemble_predict.py` | `d9fcd508a42cbe4ba709e5928a932c3a9949bd98bec817a573740811f73e57be` |
+| `.team/mm_clip/gate52.py` | `4abdd186f30b7cc3dd09e1cd380b9c313b321f898e8b70759b0ea3749f7ded3d` |
+| `.team/mm_clip/postproc52a.json` | `ec70b330bf6da9969580042359d0417d9a2e0c64c31ee75bbd39fa31f2dd00a5` |
+| `.team/mm_clip/test_mm52.py` | `d5492bf1a83e0a31ca7f637040a39968a0c221aa086091f4456bbc77cc631cb5` |
+| `.team/review52/labels52a_class0_restore.json` | `d8d2acd4eaa04004924e3919c0fc3a98ee34f93efe5244d6aa33171b229df384` |
+| `.team/pre52a_sha256.txt` | `5bf9a1b47ba59ec6ea239a045e30625f611ae0c451c96be5afe2ba736ff9ac98` |
+
+`postproc52.json` left at `false` (`150ff7e6…`).
+
+**CURSOR: BUILT | BLOCKED:** Windows `.venv` pytest from this WSL session (interop). Re-run on Windows:  
+`C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe -m pytest .team\mm_clip .team\shot_detectors -q`
+[cursor_wsl] exit 0 at 17:30:45

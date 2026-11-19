@@ -1,0 +1,20 @@
+You are HERMES, the architect. Two small edits; edit ONLY .team/specs/52a_class0_restore_prereg.md (-> v3) and
+.team/specs/53_referee_signals_spec.md (-> v9). Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Reviews: review52/cursor_round_v2v8.txt (52a DISAGREE on counts; 53 AGREE), review52/muse_round_v2v8.txt
+(52a AGREE WITH CHANGES; 53 AGREE WITH CHANGES).
+52a v3:
+1. Counts (Claude Code verified independently, scratchpad overlap52a.py): every adrian out-of-session y=-1 row is
+   ALSO >= 8 s from any coach tag (oos is a subset of far). Unique adrian class-0 = 26 (not 32); notus 6; hsb 4;
+   gvg 145; rimrock 241; hold-out-gvg train class-0 = 277 (not 283). Adrian y=-1 n=45 (39 in-session + 6 oos by
+   48b in_session(is_ft=True) - pin THAT definition); remaining -1: adrian 19, notus 3. Fix every count.
+2. Build order (pin): Cursor implements session_filter in ensemble_predict.shot_list + gate52 path (per-film session
+   json mapping, omit scoring) + tests and writes labels52a + .team/pre52a_sha256.txt; Claude Code verifies;
+   Muse + Cursor confirm; only then training. State explicitly that this amends spec 52 R7 (postproc52
+   session_filter false -> true for logo52a only; R7 lock re-frozen with new sha).
+3. Honesty: record that Scott chose the same-5 re-gate as binding (2026-11-14, 'A'); Muse and Cursor's dissent
+   (same-5 = diagnostic, blind R10 binding) is recorded, and R10 blind on NOTUS_A / IDAHO_CITY / RIVERSTONE stays
+   available after a pass.
+53 v9:
+4. Pass bar applies only when the referee step is enabled (after the Step 0 80% keypoint gate passes); if Step 0
+   fails, the step stays OFF and no pass bar is read. Fix the stale violation-row wording (v8 has violation_travel).
+Status lines v3 / v9. End with "HERMES: SPEC WRITTEN".

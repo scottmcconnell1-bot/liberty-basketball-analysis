@@ -1,0 +1,18 @@
+You are the Coder for the Liberty basketball project (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). You run inside a sandbox. FIRST read AUTHORITY.md and .team/specs/18_makes_misses_work_plan.md in full (VETTED, Muse AGREE). Its first lines are the checker's stamp and BINDING NOTES a-e; they override the plan body. Build ONLY "Stage A - small fixes inside the rule". Do not start Stage B, C or D.
+
+Build exactly this:
+- Create ONLY .team/shot_detectors/small_fixes_v6_copy.py. Change no other file. Never edit ai_bridge.py or any protected file in AUTHORITY.md; import or read only.
+- The file holds a COPY of the decision logic of run_saved_v6_rule (and the helpers it calls: detect_dynamic_entry_crossing, short_track_stays_in_net) from ai_bridge.py, with four switches, all default OFF:
+  A7: bodd points count toward the >=3 net-depth points, only points below the rim (y > hoop_y) and inside 0.6 hoop widths of hoop_x.
+  A8: in the downward-trend test (reason ball_went_up), ignore an upward move only where the same frame pair is a box jump > 60 px (the same jump measure and scale the ball_box_jump check uses).
+  A4: drift (sideways_drift) measured from the crossing point's x instead of x_at_80.
+  C4: two bug fixes: (1) in the LINE TEST, `ball[cross_idx:]` uses an index counted on the combined track (ball + bodd after the ball ends) on the ball-only track - use the ball frames at or after the crossing frame instead; (2) the jump check finds its own "true crossing" with no hoop-width test - use the crossing the rule accepted (cross_idx) instead.
+  No cutoff value may change. No other change.
+- Inputs (binding note b): C:\Users\scott\AppData\Local\Temp\v6_tracks.json and v6_tracks_notus_q1.json. Your sandbox cannot read AppData\Local\Temp: identical copies are in /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/tracks/ - map each tracks_path to that folder by file name when the original is not readable (use the tracks_path in each row of C:\Users\scott\Documents\Liberty_Shot_Outputs\net_moved_build_results.json; support /mnt/c and C:\ forms with pathlib, pick the one that exists). Truth from that results file. Each (film, t) once. Expect 140 = 47 real makes (28 rule-right + 19 missed) + 93 real misses; stop with an error if different.
+- IDENTITY CHECK FIRST (binding note b): with every switch off, the copy must give the same verdict AND the same reason (details['reason'] or details['veto_reason']) as run_saved_v6_rule imported read-only from ai_bridge.py, on all 140 shots. Print "IDENTITY: 140/140 same" or list every shot that differs and STOP without measuring.
+- Then measure: each switch alone, then all four together. For each run print and write: makes right, missed makes, misses called makes, the t values of missed makes recovered, and every shot whose verdict changed (t, film, old reason -> new verdict/reason).
+- Outputs OUTSIDE the repo: --out default C:\Users\scott\Documents\Liberty_Shot_Outputs\small_fixes (build_results.json and per_fix_report.md). In the sandbox test with --out .team/shot_outputs_test/small_fixes.
+- The hard gate is 0 misses called makes. Report it; do not tune anything to the results; no retry loops.
+- The sandbox has Linux python3 with numpy; this is pure JSON logic, so it should run. Use the venv path only in the README text: C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe.
+- Do not commit or change git. STOP when done.
+Report: the exact commands you ran, their console output verbatim, the files you created, and the identity-check line. Never report a result you did not see.

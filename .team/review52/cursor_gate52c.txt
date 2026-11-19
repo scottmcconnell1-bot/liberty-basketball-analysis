@@ -1,0 +1,52 @@
+## Spec 52c same-5 re-gate — Cursor check
+
+**Verdict:** Numbers match the files. Binding FAIL is real. The seq flag was on for all three silents and still did not clear them; 52b cut checks a lot but left rimrock one over the cap. Notus auto drop is a separate make/miss flip, not the silent moving.
+
+### 1. Numbers verified (Proven)
+
+From `Liberty_Shot_Outputs/mm_clip/runs/logo52c/gate52_report.json` + `gate52c_stdout.txt`, and `.team/drift_log.md` end:
+
+| Film | auto | checks | silent | result |
+|------|------|--------|--------|--------|
+| adrian | 93.7 (119/127), checks 6 | 0 | PASS |
+| notus | **87.1 (27/31)**, checks 3 | **1** | FAIL (`auto_ge_90`, `silent_eq_0`) |
+| gvg | 95.4, checks **20**, silent **1** | FAIL (`silent_eq_0`) |
+| hsb | 97.1, checks 5 | 0 | PASS |
+| rimrock | 94.3, checks **21** (cap 20), silent **1** | FAIL (`checks_le_20`, `silent_eq_0`) |
+| **OVERALL** | | | **FAIL** |
+
+52a baseline (`runs/logo52a/gate52_report.json`): gvg checks **150**, rimrock **77**, notus auto **90.3 (28/31)** — so 52b cut is **150→20** and **77→21**. Same three silent times still silent on 52c preds: notus `252520`, rimrock `274807`, gvg `1158600`.
+
+First-shot ensemble P(shot) from `logo_preds.npz` (class 1+2):
+
+| | 52a | 52c |
+|--|-----|-----|
+| notus 252520 | **0.083** | **0.170** |
+| rimrock 274807 | **0.096** | **0.037** |
+| gvg 1158600 | **0.181** | **0.092** |
+
+All three still meet silent_reject (ens P(shot) &lt; 0.2, every seed &lt; 0.5). `seq_follower` on clips7a = **1.0** on all three.
+
+### 2. Why the flag did not help / why notus auto fell
+
+**Flag (Proven):** On clips7a, seq fires on **gvg ~46.9%** and **rimrock ~44.7%** of candidates (~45%). It is not a shot marker: gvg labelled not-a-shot seq rate **0.49** vs labelled shots **0.29**; rimrock not-a-shot **0.42** vs shots **0.45**. Spec 52c already disclosed that confound (F2). One float after a 512-d pool is a tiny channel; with the flag common on scrambles, the head has little reason to treat “flag=1 ⇒ raise P(shot).” Outcome matches that: notus silent only rose to 0.170 (still under floor); rimrock and gvg **got more confident rejects**.
+
+**Notus 90.3 → 87.1 (Proven):** Still 1 silent. Among kept labelled shots, **t=382320** (true miss) flipped miss→make (52a P(miss)≫P(make); 52c P(make) 0.53 &gt; P(miss) 0.45). That alone is 28/31 → 27/31. Seed line `[87.1, 90.3, 90.3]` shows seed0 carrying the ensemble miss. **Inferred:** seq retrain moved weights without fixing the first-of-two blind spot and nudged one other miss.
+
+**52b (Proven):** Check cap problem mostly fixed; silents untouched by design (silent def unchanged).
+
+### 3. Options for Scott (no tuning on these numbers; new run = new prereg)
+
+1. **Stop fighting these 3 silents — allow a coach check (or accept 3 silent misses on same-5).**  
+   Risk: auto never hits silent==0 on this gate as written; you are choosing product honesty over a green logo. Blind films may still show the same first-of-two pattern.
+
+2. **Different model fix (new prereg) — e.g. longer/shifted clip, second context clip, or pair/possession head — not another 1-bit flag.**  
+   Risk: clip rebuild / train cost; may still fail if the rim crop looks like scramble; same-5 can look good and blind can fail.
+
+3. **More labelled first-of-sequence / putback pairs, then a new prereg retrain (no thr/floor fiddling).**  
+   Risk: Scott label time; without a stronger input than a noisy bit, more labels may not move P(shot) over 0.2.
+
+**Proven:** gate + preds + clips7a seq rates. **Inferred:** scalar flag carries ~no class info → head ignored it. **Unknown:** whether a real temporal-context model clears these three without new false shots on blind film.
+
+CURSOR: VERIFIED
+[cursor_wsl] exit 0 at 15:37:44

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Three Shot Check</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--ink:#1d1d1b;--mut:#666;--acc:#1f5fbf;--line:#ddd}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--card:#222;--ink:#eee;--mut:#aaa;--acc:#6aa0ff;--line:#3a3a3a}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 18px}
+video{width:100%;border-radius:6px;background:#000}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+input[type=text]{flex:1;min-width:200px;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.mut{color:var(--mut);font-size:14px}
+</style></head><body><main>
+<h1>Three shot check (one time only)</h1>
+<p class="mut">Each clip is 10 seconds long. The moment in question is about 4 seconds in. The label says each one is a <b>missed shot</b>, but the model rejected all three as not a shot. For each one, mark what really happened. Use the same rules as before: a fouled miss, a waved-off shot or a warm-up shot is not a shot; a putback is its own shot; an airball counts as a shot.</p>
+<div id="list"></div>
+<div class="card"><button id="dl" class="on">Save my answers</button> <span class="mut">This downloads silent3_answers.json. Tell me when it's saved.</span></div>
+</main>
+<script>
+const items=[["notus_252520","Notus, 4:12"],["rimrock_274807","Rimrock, 4:34"],["gvg_1158600","Garden Valley, 19:18"]];
+const opts=["miss","make","not a shot","can't tell"];
+const ans={};
+const list=document.getElementById('list');
+items.forEach(([id,name])=>{
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML=`<h3>${name}</h3><video src="${id}.mp4" controls preload="metadata"></video>
+  <div class="row"><span class="mut">Speed</span>${[0.25,0.5,1].map(s=>`<button data-s="${s}">${s}x</button>`).join('')}</div>
+  <div class="row">${opts.map(o=>`<button data-a="${o}">${o}</button>`).join('')}</div>
+  <div class="row"><input type="text" placeholder="Note (optional)"></div>`;
+  const v=c.querySelector('video');
+  c.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{v.playbackRate=+b.dataset.s;c.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('on',x===b))});
+  c.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{ans[id]=Object.assign(ans[id]||{},{label:b.dataset.a});c.querySelectorAll('[data-a]').forEach(x=>x.classList.toggle('on',x===b))});
+  c.querySelector('input').oninput=e=>{ans[id]=Object.assign(ans[id]||{},{note:e.target.value})};
+  list.appendChild(c);
+});
+document.getElementById('dl').onclick=()=>{
+  const b=new Blob([JSON.stringify(ans,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='silent3_answers.json';a.click();
+};
+</script></body></html>

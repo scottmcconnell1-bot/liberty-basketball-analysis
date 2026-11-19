@@ -1,0 +1,131 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your reader fix plan was REJECTED: read the first line of 
+.team/specs/09_notus_reader_fix_v1_REJECTED.md for the four reasons, then 
+rewrite the WHOLE of NEXT_TASK.md so its body carries every fix. Keep the good 
+part: Notus red digits are dimmer than the Mustangs board, so the imported 
+_red_mask likely misses them. Required in the new plan: (a) First, a check that 
+the home/away TENS boxes actually sit on the tens digits (a lit tens slot 
+measuring V~10, the same as blank, suggests a misplaced box); if a box is wrong,
+the plan says how the coder re-measures it on fitting frames, not gate frames. 
+(b) Any new mask cutoff is NOT chosen by you now. The plan tells the CODER to 
+measure the red-digit colour on fitting frames only, at least 60 s from every 
+gate time and every holdout time, using a rule written in the plan before 
+measuring (for example a fixed percentile of lit-digit pixels), then freeze the 
+values in a file; the plan must not contain final cutoff numbers picked from 
+gate frames. Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 
+3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559. Holdout 
+times (s): A1 246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 
+3477.3, 3881.1; A 232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 
+3229.6, 3603.9. (c) Refit the segment geometry with the new mask on those same 
+fitting frames. (d) Rerun the 20-crop gate once with no retuning; only if it 
+passes 20/20, run the holdout once with a new test 
+tests/test_notus_holdout_gate.py that reads 
+.team/specs/04_notus_holdout_truth.json (the coder writes it; you must NOT open 
+that file or the holdout_*.png crops). (e) A complete heading exactly ## Files. 
+Do not edit scoreboard_clock.py. STRICT: create or edit ONLY NEXT_TASK.md. Do 
+NOT create any other file, not even scratch scripts; if you need numbers, run 
+python with code on stdin (.venv/Scripts/python.exe - <<'PY' ... PY) and never 
+sample video within 60 s of a holdout time.
+📖 Read 09_notus_reader_fix_v1_REJECTED.md
+✗ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md [Refusing to overwrite /mnt/c/Users/scott/Docu...]
+📖 Read NEXT_TASK.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -1,61 +1,101 @@
+│ -## Diagnosis
+│ +# NEXT_TASK.md — Notus 720p Reader Fix (v2)
+│
+│ -**Root cause**: The `_red_mask` imported from `scoreboard_clock.py` uses HSV thresholds (S > 90, V > 120, red hue ranges) tuned for the 1920×1080 Mustangs board. The Notus 1280×720 board's red digits are dimmer — lit segments peak at V ≈ 50–120 — so the mask misses the tens digits entirely (V ≈ 10–50 when lit, V ≈ 10 when blank) and often misses ones digits in early frames.
+│ +## Rejection Reasons (from 09_notus_reader_fix_v1_REJECTED.md)
+│ +1. **Leak**: Mask cutoffs S>50/V>50 were picked from gate-timestamp frames; thresholds must be measured on frames ≥60 s from every gate AND holdout time, then frozen.
+│ +2. **Contradiction**: Lit tens V ≈ 10–50 (blank V ≈ 10) but fix used V>50 — a lit tens at V~10 means the tens box may not sit on the digit. Check box position before any color change.
+│ +3. **Missing holdout run**: Plan omits the single holdout run after gate passes.
+│ +4. **Scope violation**: Only NEXT_TASK.md may be created/edited; no scratch scripts.
+│
+│ -**Measured evidence (video frames at gate timestamps, 1280×720 coords):**
+│ -
+│ -| Game | Slot | Typical V (lit) | `_red_mask` % | `_notus_red_mask` (S>50,V>50) % |
+│ -|------|------|-----------------|---------------|----------------------------------|
+│ -| A1   | home_tens  | 10–105 | 0–20% | 0–65% |
+│ -| A1   | home_ones  | 85–125 | 12–55% | 55–90% |
+│ -| A1   | away_tens  | 10–90  | 0–24% | 0–75% |
+│ -| A1   | away_ones  | 60–125 | 1–57% | 30–85% |
+│ -| A    | home_tens  | 10–87  | 0–32% | 0–60% |
+│ -| A    | home_ones  | 68–98  | 9–39% | 40–80% |
+│ -| A    | away_tens  | 9–80   | 0–36% | 0–70% |
+│ -| A    | away_ones  | 39–88  | 5–39% | 20–75% |
+│ -
+│ -**Gate failure pattern (9/20 fail):**
+│ -- 8 failures: home score returns `None` (tens digit unread → `_score_value` rejects)
+│ -- 1 failure: `notus_A1_05_2221s` away 19 → 14 (segment `g` falsely lit on ones, `e`/`f` missed on tens)
+│ -
+│ -**Why the fitted geometry is wrong**: `fit_notus_segments.py` used the old `_red_mask` (V>120) on non-gate frames. That mask only caught the brightest cores of lit segments, so the "dark hole" detection found gaps that don't align with the true segment boundaries under a proper mask. The saved `notus_segment_geometry.json` therefore defines core regions that are fully lit for BOTH on and off segments when the new mask is used.
+│ +---
+│
+│  ## Fix Plan
+│
+│ -### 1. Add Notus-specific mask to `scoreboard_clock_720p.py`
+│ +### 0. Verify home/away TENS box positions (FIRST, before any mask change)
+│ +On **fitting frames only** (frames ≥60 s from every gate time and every holdout time):
+│ +- For each of the four scoreboard slots (home_tens, home_ones, away_tens, away_ones), crop the current `notus_roi.json` box on a fitting frame where the score is visibly changing (so tens digit is definitely lit).
+│ +- Measure mean V inside the box. If mean V ≈ 10 (same as blank), the box is misplaced — it is not covering the tens digit.
+│ +- **If any box is wrong**: Re-measure its (x, y, w, h) on fitting frames by finding the rectangle that maximizes mean V when the tens digit is lit (e.g., score ≥ 10). Write corrected boxes to a new `data/roi/notus_roi.json` (do not edit the original until verified). The coder does this re-measurement; the plan does not supply coordinates.
+│ +
+│ +Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559  
+│ +Holdout times (s): A1 246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1; A 232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9  
+│ +**Fitting frames = any frame whose timestamp is ≥60 s away from ALL of the above 40 times.**
+│ +
+│ +---
+│ +
+│ +### 1. Measure Notus red-digit colour on fitting frames ONLY (no gate/holdout frames)
+│ +Using the (possibly corrected) ROI boxes from step 0 on fitting frames only:
+│ +- For each lit digit crop (score visibly non-zero), compute HSV of pixels inside the digit region.
+│ +- **Rule (fixed before measuring)**: Take the 10th percentile of V and the 10th percentile of S over all lit-digit pixels across all four slots and all fitting frames. These two numbers become the frozen `NOTUS_S_MIN` and `NOTUS_V_MIN`.
+│ +- Write `NOTUS_S_MIN` and `NOTUS_V_MIN` to `data/roi/notus_red_thresholds.json` (keys: `s_min`, `v_min`). The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│ +- Hue ranges stay the standard red wrap: [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale).
+│ +
+│ +---
+│ +
+│ +### 2. Add Notus-specific mask to `scoreboard_clock_720p.py`
+│  ```python
+│  def _notus_red_mask(crop: np.ndarray) -> np.ndarray:
+│ -    """Red mask tuned for Notus 720p board: lower S/V thresholds for dimmer digits."""
+│ -    import cv2
+│ +    """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
+│ +    import cv2, json
+│ +    from pathlib import Path
+│ +    thresholds = json.loads(Path("data/roi/notus_red_thresholds.json").read_text())
+│ +    s_min = thresholds["s_min"]
+│ +    v_min = thresholds["v_min"]
+│      hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+│ -    low = cv2.inRange(hsv, (0, 50, 50), (12, 255, 255))
+│ -    high = cv2.inRange(hsv, (165, 50, 50), (180, 255, 255))
+│ +    low = cv2.inRange(hsv, (0, s_min, v_min), (12, 255, 255))
+│ +    high = cv2.inRange(hsv, (165, s_min, v_min), (180, 255, 255))
+│      mask = cv2.bitwise_or(low, high)
+│      return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+│  ```
+│
+│ -### 2. Update `scripts/fit_notus_segments.py`
+│ -- Import `_notus_red_mask` from `scoreboard_clock_720p` instead of `_red_mask` from `scoreboard_clock`
+│ -- Use `_notus_red_mask` in `_collect_masks`
+│ -- Keep all other logic (frame sampling ≥60 s from gate, hole detection, core_scale=0.46)
+│ … omitted 62 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The new NEXT_TASK.md is written with all four rejection reasons addressed:
+
+1. Step 0 — verifies TENS box positions on fitting frames first (lit tens V≈10 means misplaced box)
+2. Step 1 — measures thresholds on frames ≥60s from ALL gate/holdout times, uses a fixed rule (10th percentile of S/V) written in the plan before measuring, freezes values to notus_red_thresholds.json — no final cutoff numbers in the plan3. Step 6 — single holdout run via new test_notus_holdout_gate.py after gate passes 20/20
+4. Constraints + Files section — explicitly limits creation/edits to the seven listed files; no scratch scripts, no scoreboard_clock.py edits
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b3b8b48e23c5ee7422e49bafb732e9c7df62e1d95c12c7bdb04b8038355d1499
+  hermes -c "Rewrite Notus reader fix plan with measurements"
+
+Session:        local-b3b8b48e23c5ee7422e49bafb732e9c7df62e1d95c12c7bdb04b8038355d1499
+Title:          Rewrite Notus reader fix plan with measurements
+Duration:       3m 33s
+Messages:       10 (1 user, 8 tool calls)

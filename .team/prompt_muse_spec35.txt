@@ -1,0 +1,9 @@
+You are Muse, the checker of Claude Code's verdicts. Read .team/specs/35_rim_first_shot_finder_spec.md: the top block is Claude Code's VETTED WITH CONDITIONS stamp E1-E9; below it Hermes's v2. For checking you may read collect_q4_bodd.py (is_make line 49, v6_ball 110-146, Q4_MS line 28), .team/shot_detectors/shot_rules_measure.py (release_estimate_frame, ball_inside_player), .team/shot_detectors/collect_flight_tracks.py (lines 59-60), .team/shot_detectors/find_shots_measure.py (match_shots), court_memory.py 150-195, docs/agent_handoffs/HERMES.md ~27. Edit nothing, run nothing that writes.
+
+Scott 2026-11-05: "Proceed." and: "I do not want to manually tag video then you check my tags." Tags are only the answer key while building; the finder must use video only (no tags, no scoreboard, no DB). Make/miss must not break.
+
+Check:
+1. Are E1-E9 correct and enough? Especially E4/E5 (miss trigger and merge reuse is_make's own numbers, so no new number) and E7 (finder provably reads no tags).
+2. Anything still breaking the Golden Rules: core edits, banned trials (linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter), tuning after results, new numbers without Scott, Adrian Q4, training.
+3. Is the make/miss safety check enough?
+Reply under 300 words. Last line must START with exactly "MUSE: AGREE" or "MUSE: DISAGREE: <reason>".

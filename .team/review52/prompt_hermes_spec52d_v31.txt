@@ -1,0 +1,6 @@
+You are HERMES. Edit .team/specs/52d_context_clip_prereg.md v3 -> v3.1 (THIS FILE ONLY), clerical fixes from review52/muse_spec52d_v3.txt and review52/cursor_spec52d_v3.txt, no design change:
+1. Item 2.1 and anywhere else: run budget ~45-55 min (probe 0.53 vs 0.46 s/step x 2376 s); remove stale ~100-120 / ~107 / ~68 min figures as current budgets (keep only as labelled v2 history).
+2. N=44 window spans -0.88..+6.0 s = 6.88 s; fix any "~5.5 s" and do not call N=44 "dense".
+3. Item 4 step 2: force predict bs=8 explicitly in code (train_clip.predict / ensemble_predict).
+4. Item 4 step 3: tests must assert the v3 pin (N=44, K_TRIG=6, STEP 0.16, time-shift +-1, Dropout(0.5)->Linear(512,3), predict bs 8).
+Mark v3.1, write sha to .team/review52/spec52d_v31_sha.txt. End with "HERMES: PREREG V3.1 WRITTEN".

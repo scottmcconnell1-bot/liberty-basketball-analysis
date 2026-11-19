@@ -1,0 +1,8 @@
+(1) Diagnosis is right as the main cause: 180/80/50/60 px were tuned for ~98 px hoops; at ~64 px they demand ~1.5× too much fall. Tag-time Notus 2/9 vs Adrian 27/38 matches that, so rim-first is not the story. Hoop-width gates (0.55/0.6/0.40) already adapt; only the fixed-px depths are broken.
+
+(2) Worth one controlled test. Real risk: **per-track** `hoop_w/98` will *not* leave Adrian alone — Proven: Adrian hoop_w 69.6–115.5 (median 98), so ~65% of tracks get |scale−1|>0.05. Claude’s “scale ~1 → unchanged” is wrong for per-track. d2v1 via the same rule copy is fine; coach risk is extra false makes, not silent misses.
+
+(3) Change: set one **film** scale = `(film median hoop_w) / 98` in the wrapper (not per track). Gate: Adrian must **byte-match** current preds; then Notus/GV seen-report; then one Riverstone blind. Stop if Adrian moves or false makes rise.
+
+RECOMMEND: Do the one-scale test, but with film-median scale and a hard Adrian identity gate — not per-track hoop_w/98.
+[cursor_ask] exit 0 at 18:17:41

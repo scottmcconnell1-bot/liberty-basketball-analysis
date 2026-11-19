@@ -1,0 +1,413 @@
+Query: You are HERMES, the architect. Revise 
+.team/specs/52d_context_clip_prereg.md to v2 (edit THIS FILE ONLY).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Muse and Cursor both AGREE WITH CHANGES (review52/muse_spec52d.txt, 
+review52/cursor_spec52d.txt). Apply ALL:
+G4 (blocking): your "R4 has no dropout" is wrong. R4/ens51/final51 checkpoints 
+use fc = Sequential(Dropout(0.5), Linear(512,3)). Pin head exactly that, no seq,
+no concat; fix 1.5 and Item 4 step 2/3 text and tests.
+G1: budget ~100-120 min (linear 2376 s x 87/32 ~ 107 min). Train bs 8 pinned; 
+predict bs pinned to 8; on CUDA OOM -> STOP for Scott, no silent bs change. 
+Coordinator is running a random-input memory probe; cite its result if present 
+in review52/gpu_probe52d.txt.
+G2: disclose pooling dilution (shot ~2.5 s of 6.9 s under global avg pool) and 
+that dense N=87 STEP 0.08 is accepted now, not switched after results.
+G3: disclose reverse confound: class-0 rows with a shot within +6 s (gvg 17/145,
+rimrock 18/241) now contain a later shot -> false-shot risk; fail -> stop covers
+it.
+G5: disclose track_hoop keeps previous position when match < 0.45 and pads black
+out of frame (crop can freeze); remove the "kept glued" claim.
+G6: keep. Fix sha filename to .team/review52/spec52d_v2_sha.txt.
+Mark v2. End with "HERMES: PREREG V2 WRITTEN".
+📖 Read 52d_context_clip_prereg.md  0.7s
+✗ Read muse_spec52d.txt  0.7s [File not found: muse_spec52d.txt]
+✗ Read cursor_spec52d.txt  0.8s [File not found: cursor_spec52d.txt]
+✗ Read gpu_probe52d.txt  0.8s [error]
+
+────────────────────────────────────────
+☤ Hermes
+The review files weren't at the root path. Let me locate them.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/ + 1 command  1.4s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ 2>/dev/null  0.4s
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/review52/ | grep -i -E "muse|spec52d|sha|gpu|probe"  0.5s
+📖 Read muse_spec52d.txt
+📖 Read cursor_spec52d.txt
+📖 Read gpu_probe52d.txt
+📖 Read prompt_hermes_spec52d_v2.txt
+📖 Read hermes_spec52d_v2.txt  0.1s
+📖 Read spec52d_v1_sha.txt
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/ /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/mm_clip/  0.4s
+💻 $ cat "/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52c/gate52_report.json" 2>/dev/null + 1 command  0.2s
+📖 Read extract_clips.py
+📖 Read train_clip.py
+📖 Read ensemble_predict.py
+📖 Read postproc52b.json
+📖 Read test_mm52.py
+💻 $ tail -120 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md + 5 commands  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+I have the full context now. Let me re-read the tail sections of the spec to get exact text before patching.
+────────────────────────────────────────
+
+📖 Read 52d_context_clip_prereg.md
+
+────────────────────────────────────────
+☤ Hermes
+The file is confirmed unchanged and I have its full content. Now I'll apply the v2 revisions via targeted patches.
+
+Patch 1: title → v2
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -1,4 +1,4 @@
+│ -# Spec 52D - Temporal Context Clip Model Fix (PRE-REGISTERED) v1
+│ +# Spec 52D - Temporal Context Clip Model Fix (PRE-REGISTERED) v2
+│
+│  Author: HERMES (Architect)
+│  Date: 2026-11-15
+
+────────────────────────────────────────
+☤ Hermes
+Patch 2: Status → v2 with the G1-G6 v2 amendment record
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -7,9 +7,28 @@
+│
+│  ## Status
+│
+│ -PRE-REGISTERED (v1). The change set below is frozen BEFORE any code change or training.
+│ +PRE-REGISTERED (v2). The change set below is frozen BEFORE any code change or training.
+│  This is the binding pre-registration for the temporal-context model fix chosen by Scott
+│  (2026-11-15) after the Spec 52C v2 binding same-5 re-gate FAILED.
+│ +
+│ +- v2 AMENDS the v1 pre-registration (Hermes, 2026-11-15; v1 sha review52/spec52d_v1_sha.txt =
+│ +  a008283e11b04ec96ef5381f4ae713fb979d7f67377873eb8c301340dcbd8482; superseding the Muse +
+│ +  Cursor reviews both returning "AGREE WITH CHANGES"). Changes applied here (binding, before
+│ +  Scott approves / Cursor builds / training):
+│ +  G4 (blocking): head pinned EXACTLY as R4 (pool -> nn.Dropout(0.5) -> nn.Linear(512, 3), no
+│ +    seq, no concat; fc = Sequential(Dropout(0.5), Linear(512, 3))); the v1 text ("R4 recipe has
+│ +    no dropout / no pool dropout / plain pooled head / Linear(512,3)") was wrong and is
+│ +    corrected; Item 1.5 + Item 4 step 2/3 text and tests fixed.
+│ +  G1: GPU/time budget ~100-120 min (linear 2376 s x 87/32 ~ 107 min) pinned; train bs 8 pinned;
+│ +    predict bs pinned to 8; CUDA OOM -> STOP for Scott, no silent bs change; random-input GPU
+│ +    memory probe cited from review52/gpu_probe52d.txt if present.
+│ +  G2: pooling dilution (shot ~2.5 s of ~6.9 s under global avg pool) disclosed; dense N=87 /
+│ +    STEP=0.08 ACCEPTED now, not switched after results.
+│ +  G3: reverse-confound disclosure (class-0 rows with a later shot within +6 s; fail->stop
+│ +    covers it).
+│ +  G5: track_hoop weak-match freeze / black out-of-frame pad disclosed; "kept glued" claim
+│ +    removed.
+│ +  G6: kept (6.0 s disclosure honest).
+│
+│  - NOT a 1-bit sequence flag (the Spec 52C model change, now superseded here for the model
+│    input change).
+
+────────────────────────────────────────
+☤ Hermes
+Patch 3: Item 1.5 — G4 head pin fix + G2 pooling-dilution disclosure
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -130,13 +130,27 @@
+│    crop glued to the hoop across the longer span, so extra seconds stay rim-centred and
+│    interpretable (second shooter / putback / scramble).
+│
+│ -### 1.5 Fusion and head (PINNED NOW)
+│ +### 1.5 Fusion and head (PINNED NOW, v2 - G4 FIX + G2 DISCLOSURE)
+│
+│  - Single clip -> single global temporal pool (backbone temporal pool over the clip) ->
+│ -  512-d pooled features -> nn.Linear(512, 3) head. NO seq, NO concat, NO pool dropout (R4
+│ -  recipe has no dropout; 52c added Dropout(0.5) only to support the seq concat).
+│ -- Head in_features = 512 (plain pooled head). Old Linear(512,3) checkpoints are
+│ -  architecture-compatible; fresh training on clips8 is still pinned (no checkpoint reuse).
+│ +  nn.Dropout(0.5) -> nn.Linear(512, 3) head. NO seq, NO concat.
+│ +- Head PINNED EXACTLY AS R4 (v2 G4 fix, BLOCKING): pooled clip -> nn.Dropout(0.5) -> nn.Linear(512, 3)
+│ +  (fc = Sequential(Dropout(0.5), Linear(512, 3)); R4 / ens51 / final51 checkpoint keys
+│ +  fc.0 / fc.1.weight / fc.1.bias). The v1 text was wrong: it claimed "R4 recipe has no dropout;
+│ +  52c added Dropout(0.5) only to support the seq concat" and "NO pool dropout / plain pooled
+│ +  head / Linear(512,3)". Corrected: R4 had Dropout(0.5) before the Linear on the pooled features;
+│ +  52c had pool_dropout + concat seq -> Linear(513, 3), superseded here. NO seq, NO concat, NO pool
+│ +  dropout. Head in_features = 512 (Linear in_features; Dropout(0.5) precedes it). Bare
+│ +  Linear(512,3) would be a recipe change - NOT pinned.
+│ +- DISCLOSURE G2 (v2, accepted now, not switched after results): the r2plus1d backbone ends in
+│ +  a global average pool over the clip; with the pinned window (N=87, ~6.9 s; [t_trig - 0.88,
+│ +  t_trig + 6.0]) the shot itself is ~2.5 s of the ~6.9 s window, so the pooled feature dilutes
+│ +  the shot cue. DISCLOSED as accepted for this pin; dense N=87 / STEP=0.08 is ACCEPTED NOW
+│ +  (frozen), not to be switched after results (STEP=0.16 / 32-dense + coarse-tail alternatives
+│ +  remain future options only).
+│ +- Head in the R4 layout (Sequential(Dropout(0.5), Linear(512,3))) is architecture-compatible with
+│ +  the R4 / ens51 / final51 checkpoints; fresh training on clips8 is still pinned (no checkpoint
+│ +  reuse).
+│
+│  ### 1.6 Why not (b) or the flag
+│
+
+────────────────────────────────────────
+☤ Hermes
+Patch 4: Item 1.4 crop — withdraw "kept glued", add G5 disclosure; Patch 5: Item 1.7 — add G3 disclosure + fix rim-crop wording
+────────────────────────────────────────
+
+✗ Patch .team/specs/52d_context_clip_prereg.md  0.2s [Could not find a match for old_string in the ...]
+
+────────────────────────────────────────
+☤ Hermes
+The patch context didn't match exactly. Let me re-read the current file state to get precise line content.
+────────────────────────────────────────
+
+📖 Read 52d_context_clip_prereg.md
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+
+────────────────────────────────────────
+☤ Hermes
+Now I have the exact current content. Continuing with the remaining patches.
+
+Patch 6: Item 1.4 — withdraw "kept glued", add G5 disclosure
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -126,9 +126,12 @@
+│    t_trig + 6.0 s. Frame resolution (80 ms) preserved.
+│  - K_TRIG = 11 (UNCHANGED; trigger = rim-contact frame).
+│  - Crop: UNCHANGED (hoop-centred, 2.6 x hoop width x 3.0 x hoop width, resize 96 x 112,
+│ -  BGR uint8). Reason: the deficit is temporal, not spatial; the hoop tracker keeps the
+│ -  crop glued to the hoop across the longer span, so extra seconds stay rim-centred and
+│ -  interpretable (second shooter / putback / scramble).
+│ +  BGR uint8). Reason: the deficit is temporal, not spatial; the extra seconds stay rim-centred
+│ +  and interpretable (second shooter / putback / scramble) while the hoop track holds.
+│ +- DISCLOSURE G5 (v2): the crop is NOT kept glued across the longer span. track_hoop keeps the
+│ +  previous position when the template match < 0.45 and pads black (BORDER_CONSTANT) when out of
+│ +  frame; a weak / frozen track means the crop freezes and pads (no loud failure). DISCLOSED; the
+│ +  "kept glued" claim is withdrawn.
+│
+│  ### 1.5 Fusion and head (PINNED NOW, v2 - G4 FIX + G2 DISCLOSURE)
+│
+
+────────────────────────────────────────
+☤ Hermes
+Patch 7: Item 1.7 — add G3 reverse-confound disclosure; fix rim-crop wording
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -169,8 +169,14 @@
+│    window adds no second-shot information, and the 52c flag was the only vehicle (and it
+│    failed). For notus (+2600 ms) and rimrock (+5233 ms) the longer window now brings the
+│    follow-up shot into the input, so the model can learn "shot then shot" without any flag.
+│ -- Rim crop: UNCHANGED 96x112 hoop-centred crop; track_hoop keeps it glued to the hoop, so
+│ -  the extra seconds (second shooter / putback / scramble) remain visible in the crop.
+│ +- DISCLOSURE G3 (v2): reverse confound now disclosed. Class-0 rows with a shot within +6 s
+│ +  (gvg 17/145, rimrock 18/241) now contain a later shot -> false-shot risk (the model can
+│ +  learn "shot later in clip -> shot"); same structural confound class as the 52c seq flag.
+│ +  DISCLOSED; the fail -> stop protocol (Item 8) covers it.
+│ +- Rim crop: UNCHANGED 96x112 hoop-centred crop; track_hoop keeps the previous position on weak
+│ +  match (<0.45) and pads black out of frame, so the crop can freeze over the longer span; the
+│ +  extra seconds (second shooter / putback / scramble) remain visible in the crop WHILE THE
+│ +  TRACK HOLDS (G5 disclosure).
+│
+│  ### 1.8 Disclosure: where the 3 gaps influenced the pin
+│
+
+────────────────────────────────────────
+☤ Hermes
+Patch 8: Item 2.1 — G1 GPU/time-budget fix
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -186,15 +186,20 @@
+│
+│  ## Item 2 - Pin the GPU / memory / run-time cost and the clip rebuild (PINNED)
+│
+│ -### 2.1 GPU / memory / run-time cost (PINNED)
+│ +### 2.1 GPU / memory / run-time cost (PINNED, v2 - G1 FIX)
+│
+│  - NVIDIA GeForce RTX 5060, 8151 MiB (~8 GiB) GPU-0, CUDA 13.2, driver 595.61, 8 W TGP; 33C;
+│    Windows GPU venv.
+│  - Current logo run: ~40 min for 15 model-fits (E=5, seeds 0 1 2, same-5 LOGO, clips7a) on
+│ -  this GPU.
+│ +  this GPU (logo52a 2357 s, logo52c 2376 s ~ 39.3 / 39.6 min).
+│  - clips8 (N=87) vs clips7a (N=32): larger inputs -> memory / time increase. PIN: same GPU,
+│ -  env and recipe; re-measure (train writes res["seconds"]; report) and budget ~60-75 min for
+│ -  the 15 fits on this GPU.
+│ +  env and recipe; re-measure (train writes res["seconds"]; report) and budget ~100-120 min for
+│ +  the 15 fits on this GPU (linear scaling: 2376 s x 87/32 ~ 107 min; the v1 ~60-75 min budget was
+│ +  wrong - corrected here per G1).
+│ +- G1 pins (v2, binding): train bs 8 PINNED (R4 recipe value); predict bs PINNED to 8 (the
+│ +  train_clip.predict default bs=16 is not used for 52d); on CUDA OOM -> STOP for Scott, no
+│ +  silent bs change (a bs change would alter the R4 recipe). Random-input GPU memory probe (no
+│ +  data, no training) by the coordinator: review52/gpu_probe52d.txt; cite its result if present.
+│
+│  ### 2.2 Clip rebuild (PINNED): new clips dir from the SAME candidates and labels52a
+│
+
+────────────────────────────────────────
+☤ Hermes
+Patch 9: Item 3 — R4 recipe unchanged + G1 pins
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -222,6 +222,8 @@
+│  - R4 recipe UNCHANGED: bf16 autocast without GradScaler; WeightedRandomSampler
+│    w = 1/max(cnt, 1); plain CE + label_smoothing 0.05 (no class weights); soft augmentation;
+│    lr 2e-4, bs 8, AdamW wd 0.05, OneCycle pct_start 0.15; time-shift +-2 frames.
+│ +- G1 pins (v2, binding): train bs 8 PINNED; predict bs PINNED to 8; on CUDA OOM -> STOP for
+│ +  Scott, no silent bs change.
+│  - E = 5 pinned (not choose_e).
+│  - Seeds 0 1 2.
+│  - Runs: /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_clip/runs/logo52d/
+
+────────────────────────────────────────
+☤ Hermes
+Patch 10: Item 4 step 1 — G6 sha filename fix → v2
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -238,8 +238,8 @@
+│  0. Prerequisite: this spec written and sha-frozen (step 1) BEFORE any code change or
+│     training. Muse + Cursor review; Scott approves; then the re-gate runs.
+│
+│ -1. Sha freeze (this spec):
+│ -   sha256 of .team/specs/52d_context_clip_prereg.md -> .team/review52/spec52d_context_clip_prereg_sha.txt
+│ +1. Sha freeze (this spec, v2):
+│ +   sha256 of .team/specs/52d_context_clip_prereg.md -> .team/review52/spec52d_v2_sha.txt
+│     (form: <sha256> *specs/52d_context_clip_prereg.md).
+│
+│  2. Code changes (.team/mm_clip/only):
+
+────────────────────────────────────────
+☤ Hermes
+Patch 11: Item 4 step 2 — G4 head-pin text fix in train_clip.py change
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -246,9 +246,10 @@
+│     - extract_clips.py: window parameterized (T0 / STEP / WINDOW_END_S / N); 52d values
+│       pinned (T0 = -0.88, STEP = 0.08, WINDOW_END_S = 6.0, N = 87; OUT_W/OUT_H/crop UNCHANGED);
+│       K_TRIG = int(round(-T0 / STEP)) = 11.
+│ -   - train_clip.py: 52d model = single pooled clip -> Linear(512, 3); forward(x) single
+│ -     input, no seq, no pool dropout; train/predict accept seq=None (no seq) for this model;
+│ -     R4 recipe otherwise UNCHANGED.
+│ +   - train_clip.py: 52d model = single pooled clip -> nn.Dropout(0.5) -> nn.Linear(512, 3) head
+│ +     (PIN EXACTLY AS R4 per G4 fix; fc = Sequential(Dropout(0.5), Linear(512, 3)); NO seq, NO
+│ +     concat, NO pool dropout); forward(x) single input, no seq, no concat; train/predict
+│ +     accept seq=None (no seq) for this model; R4 recipe otherwise UNCHANGED.
+│     - ensemble_predict.py: predict path for 52d models = single pooled clip, no seq
+│       (predict_all without seq / seq=None for 512-head models).
+│     No change: gate52.py, postproc52.json, postproc52a.json, postproc52b.json (52b check rule
+
+────────────────────────────────────────
+☤ Hermes
+Patch 12: Item 4 step 3 — G4 tests text fix
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.1s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -258,8 +258,9 @@
+│  3. Tests (GPU-free where possible; run on the Windows .venv per existing convention; WSL
+│     fallback: python3 -m pytest .team/mm_clip/test_mm52.py -q, deselect the 3 Windows-path
+│     holdout_names tests):
+│ -   - Extend .team/mm_clip/test_mm52.py: window N = 87 / K_TRIG = 11; single-input Linear(512,3)
+│ -     head; no seq; train/predict seq=None; R4 recipe unchanged; 52b check-rule tests unchanged.
+│ +   - Extend .team/mm_clip/test_mm52.py: window N = 87 / K_TRIG = 11; single-input head =
+│ +     Dropout(0.5) -> Linear(512,3) (PIN EXACTLY AS R4 per G4 fix); no seq, no concat; train/predict
+│ +     seq=None; R4 recipe unchanged (incl. Dropout(0.5)); 52b check-rule tests unchanged.
+│     - Run pytest .team/mm_clip/test_mm52.py -q -> all pass before training.
+│
+│  4. Postproc lock (52b check rule combined in this re-gate): postproc52b.json UNCHANGED
+
+────────────────────────────────────────
+☤ Hermes
+Patch 13: Item 5 head wording + final "HERMES: PREREG V2 WRITTEN"
+────────────────────────────────────────
+
+🔧 Patch .team/specs/52d_context_clip_prereg.md  0.2s
+│ .team/specs/52d_context_clip_prereg.md
+│ @@ -296,9 +296,9 @@
+│
+│  Expected effect: mechanism-only. With WINDOW_END_S = 6.0 s the second shot / putback of
+│  every first-of-two-shots sequence is inside the clip, so the longer clip carries the
+│ -follow-up cue without any sequence flag; the head (no seq) learns from the clip directly.
+│ -No certainty is claimed. The re-gate (R6 conditions on the same 5) is the test: ensemble auto
+│ ->= 90%, seed spread <= 5, honest review >= 90%, checks <= 20 hard, silent_reject == 0 per
+│ -game, OVERALL PASS required.
+│ -
+│ -HERMES: PREREG WRITTEN
+│ +follow-up cue without any sequence flag; the head (Dropout(0.5) -> Linear(512,3), no seq) learns
+│ +from the clip directly. No certainty is claimed. The re-gate (R6 conditions on the same 5) is the
+│ +test: ensemble auto >= 90%, seed spread <= 5, honest review >= 90%, checks <= 20 hard, silent_reject
+│ +== 0 per game, OVERALL PASS required.
+│ +
+│ +HERMES: PREREG V2 WRITTEN
+
+────────────────────────────────────────
+☤ Hermes
+All edits applied. Let me verify the final file state and confirm only this file changed.
+────────────────────────────────────────
+
+📖 Read 52d_context_clip_prereg.md
+💻 $ git status --porcelain + 2 commands  94.1s
+
+────────────────────────────────────────
+☤ Hermes
+The file content is now correct and complete. The git status output was huge — let me confirm the mass modifications are pre-existing noise and that I only touched the one file.
+────────────────────────────────────────
+
+💻 $ git status --porcelain | grep -i "52d_context_clip_prereg" + 8 commands  62.6s
+
+────────────────────────────────────────
+☤ Hermes
+Important catch: I referenced a sha in the Status that I should verify against the actual file rather than guess. Let me check it.
+────────────────────────────────────────
+
+📖 Read spec52d_v1_sha.txt
+📖 Read prompt_hermes_spec52d_v2.txt
+
+────────────────────────────────────────
+☤ Hermes
+The v1 sha I used (a008283e...8482) is confirmed correct from the actual file. Let me run a final consistency check for stale v1 text.
+────────────────────────────────────────
+
+💻 $ echo "=== 'kept glued' occurrences (want 0) ===" + 14 commands  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Spec 52D revised to v2 — complete, verified, and ended as required.
+
+What changed in /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/52d_context_clip_prereg.md (edit applied to THIS FILE ONLY):
+
+- G4 (blocking, fixed): Item 1.5 and Item 4 step 2/3 now pin the head exactly as R4 — pool -> nn.Dropout(0.5) -> nn.Linear(512, 3) (fc = Sequential(Dropout(0.5), Linear(512, 3)), keys fc.0/fc.1.weight/fc.1.bias), no seq, no concat, no pool dropout; the incorrect v1 claim ("R4 has no dropout…") is explicitly corrected. Bare Linear(512,3) rejected as a recipe change.
+- G1 (fixed): budget corrected to ~100-120 min (linear 2376 s x 87/32 ≈ 107 min); train bs 8 pinned; predict bs pinned to 8; CUDA OOM -> STOP for Scott, no silent bs change; random-input GPU probe referenced at review52/gpu_probe52d.txt (cite result if present).
+- G2 (disclosed): pooling dilution noted — shot ~2.5 s of ~6.9 s under global avg pool; dense N=87 / STEP=0.08 ACCEPTED now, not switched after results.
+- G3 (disclosed): reverse confound — class-0 rows with a shot within +6 s (gvg 17/145, rimrock 18/241) now contain a later shot -> false-shot risk; fail -> stop covers it.
+- G5 (fixed): "kept glued" claim withdrawn; now disclose that track_hoop keeps previous position on match < 0.45 and pads black out of frame (crop can freeze).
+- G6 (kept): sha freeze filename corrected to .team/review52/spec52d_v2_sha.txt.
+
+Marked v2 throughout (title, PRE-REGISTERED (v2), Status amendment record) and ended with HERMES: PREREG V2 WRITTEN.
+
+Verification performed via real reads/greps: no stale PRE-REGISTERED (v1), final line, title, status, and sha targets all confirmed correct; the v1 sha reference was cross-checked against .team/review52/spec52d_v1_sha.txt and matched exactly.
+
+HERMES: PREREG V2 WRITTENOne note: git status shows a large pre-existing set of modified/untracked files across the repo (and this spec file is currently untracked in git) — that was not caused by this edit, which touched only the one spec file.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-e4daae068c5332b74305d429290cf2a379eb8290d688512884cd3ed9ebe76549
+  hermes -c "You are HERMES, the architect. Revise… #2"
+
+Session:        local-e4daae068c5332b74305d429290cf2a379eb8290d688512884cd3ed9ebe76549
+Title:          You are HERMES, the architect. Revise… #2
+Duration:       20m 54s
+Messages:       45 (1 user, 43 tool calls)
+[hermes] exit 0 at 19:11:18

@@ -1,0 +1,24 @@
+Spec 49 coder slice done. **NEW only:** `.team/shot_detectors/hybrid_pull.py`, `.team/shot_detectors/test_hybrid_pull.py`. No commit. No video. No Riverstone. No `49_rs_score.py`.
+
+### Proven
+- `python3 -m pytest .team/shot_detectors/test_hybrid_pull.py -q` → **9 passed**
+- Full `.team/shot_detectors` on WSL (`python3`; `.venv/bin/python` absent): **295 passed, 3 failed** — all 3 are pre-existing `test_d2_pick_frames.py` Windows `C:/...` path reads. `q4_blind_test.py` collection needs `ultralytics` (ignored for that run). Claude Code should re-run on Windows venv.
+
+### Functions (`hybrid_pull.py`)
+| CLI | Role |
+|---|---|
+| `train` | H4: join labels 0/1 → features by `moment_t_ms`; X = F4/F5/F6 + F12/film-median; fit StandardScaler+LR; write model.json; print sha256; assert pickle-free `p` matches pipeline to 1e-9 |
+| `features` | H3: `mm_learned.build_features_doc` same as `cmd_features` |
+| `pull` | H5: every vote row → `t_ms`, `in_session`, `rules_call`, `p`/`null`, `pulled`; uses `game_session.in_session`; default T **0.70** |
+| `seen-check` | H8 LOGO at 0.70, real shots only; print hidden/pulled/caught; exit 1 unless Adrian 12/7, Notus 3/0, GV 41/17 |
+
+Helpers: `f12_film_median`, `pull_x_from_features`, `build_film_xy`, `make_pipeline`, `model_dict_from_pipeline`, `predict_proba_from_model`, `build_pull_rows`, `seen_check_counts`, …
+
+### Choices not spelled out
+1. **model.json keys:** `feature_names`, `scaler_mean`, `scaler_scale`, `coef`, `intercept`, `sklearn_version`, `train_counts`, `frozen_json_sha256` — no per-film F12 medians stored (your field list; pull/train recompute median from that film’s feature rows).
+2. **pull.json** = bare list (not wrapped).
+3. **`p`** on every in-session row that has features (make/coach too); pulled only for miss ∧ `p >= T`.
+4. **FT lookup** from `--ft-moments` by `t_ms` / `moment_t_ms`; `ft_reason in {free_throw_line, maybe_free_throw}`.
+5. **F12 median** = `statistics.median` over all feature rows; `0 → 1.0` (design48).
+6. Source never contains `F14`/`F15` (test asserts).
+[cursor_wsl] exit 0 at 12:49:41

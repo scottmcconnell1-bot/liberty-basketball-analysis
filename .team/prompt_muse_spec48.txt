@@ -1,0 +1,9 @@
+Muse, you check the Vetter. Read-only: do not change any file. The spec is checked BEFORE code exists; "not coded yet" is normal.
+Read: .team/specs/48_game_session_spec.md (Claude Code's VETTED WITH CONDITIONS V1-V9 at the top, then Hermes's spec with G-S1..G-S8), scoreboard_clock.py (_clock_text, legal_clock, _warm_mask, _digit_groups), scoreboard_clock_720p.py, scripts/measure_notus_rois.py, last 3 entries of .team/drift_log.md.
+Scott's rule: "Use the scoreboard to determine when the game is in session. No starts can be counted when the game is not in session."
+Check that Claude Code did not miss or approve anything wrong:
+- Could a real game shot (incl. free throws with the clock stopped, buzzer shots, shots right after the tip) fall outside the session? Could warm-ups at quarter breaks/halftime/pre-game still fall inside?
+- Is reading only the clock and period (never the score) enough, and does it keep the make/miss blind test honest?
+- Are the misread guard (V2) and no-default rule (V3) sound? Any way a digit-reader failure silently drops real shots?
+- Is the seen-film pass bar (100% of real shots kept on Adrian, Notus, GV, Idaho; GV pre-game/between-game 100% dropped) fair and fixed before any number?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

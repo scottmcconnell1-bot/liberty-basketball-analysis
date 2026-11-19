@@ -1,0 +1,217 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/42_ft_band_lane_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "FT BAND + 
+LANE SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing else, 
+run nothing that writes. One to two pages.
+
+Read first: .team/specs/41_free_throw_line_spec.md (L1-L8 block at top), 
+.team/shot_detectors/ft_half_circle.py (in_band, band_polygon, keep_segments, 
+_adrian_darker_than_both_sides, _line_normal, decide_ft), 
+.team/specs/42_ft_lane_proto.py (Claude Code's prototype - the method to spec), 
+last 6 lines of .team/drift_log.md.
+
+SCOTT 2026-11-08 (binding): "try it" = build the narrower band + lane-line 
+check, test once on the held-out Adrian Q4. Scott's rule: players still AND 
+exactly one player just behind the FT line, between the lane lines. Claude Code 
+picks every setting before the run.
+
+FACTS (Claude Code, Proven, Q1-Q3 Adrian + Q1 Notus still moments; prototype 
+.team/specs/42_ft_lane_proto.py on cached still frames):
+- Depth behind the FT line (player heights): true shooters 0.04-0.21; extra 
+players at the 3PT line 0.81-1.19 (one 0.37); hoop-side players -0.14 to -0.04. 
+Spec-41 band [-0.15, 1.2] too deep (camera foreshortens floor depth).
+- Band [0, 0.35] alone: FT-tagged still moments found 24/25 Adrian (miss 
+1751920: two players at the line, ball unseen), 9/9 Notus.
+- False flags left by the band: 20920 (3PT jumper; picked player on the 3PT arc,
+feet->hoop distance 4.67 player heights) and 2223600 (wide camera view, 
+untagged; no lane-like segment crosses the line near the player).
+- Feet->hoop-centre distance / shooter box height on all 34 true FTs: 1.98-3.14 
+(Adrian 2.09-3.14, Notus 1.98-2.71).
+- Lane check (below): every true FT has a crossing on both sides; 2223600 has 
+none.
+- 3021480 is a duplicate moment of tagged FT 3021000 (12 frames later, same 
+shot); flagging it is the finder's duplicate, not an FT error. Measure must 
+report it as "duplicate of a found FT", not false.
+- Settings chosen after seeing Q1-Q3 -> Q1-Q3 numbers are not a test. The test 
+is Adrian Q4 (3317100..3897037 ms), retrace of rim_first/run37_adrian_q4_blind 
+with video, one try.
+
+SETTINGS FIXED BY CLAUDE CODE BEFORE CODE AND RUN (copy into a SETTINGS FIXED 
+block; do not change):
+- Everything in spec 41 unchanged EXCEPT:
+- BAND_FRONT 0.0, BAND_BACK 0.35 (signed distance in the band player's own 
+height; positive = away from hoop).
+- After the first candidate line with exactly one in-band player who is a 
+candidate (player b, feet f, height bh):
+  1. Hoop distance: |hoop centre - f| / bh > HOOP_DIST_MAX 3.8 -> free_throw 
+false, reason "too_far_from_hoop", trace unchanged.
+  2. Lane lines: from the same Hough segment list (players erased; Adrian 
+darker-than-both-sides check), a lane segment has undirected angle to the FT 
+line direction >= LANE_ANGLE_MIN 30 deg; both endpoints signed distance <= +0.15
+bh (hoop side); nearest endpoint |signed distance| <= LANE_GAP 1.0 bh. Extend it
+to cross the FT line; r = (crossing projection - f projection) / bh along the FT
+line direction. Need one lane segment with r in [-2.5, -0.2] AND one with r in 
+[+0.2, +2.5] (LANE_REACH 2.5, LANE_MIN_OFF 0.2). Missing either side -> 
+free_throw false, reason "no_lane_lines", trace unchanged.
+  3. Both pass -> free_throw true, "free_throw_line" (as spec 41).
+  Fails at step 1 or 2 end the decision (no further candidates tried), as in the
+prototype.
+- Order: hoop distance first, then lane lines.
+
+WRITE:
+A. Detector steps exactly as the SETTINGS block (plain words).
+B. Code plan: Cursor edits ft_half_circle.py (constants, in_band/band_polygon 
+band edges, new lane_crossings + hoop-distance step in decide_ft, debug views 
+add lane segments), test_ft_half_circle.py (synthetic: band edge 0/0.35; lane 
+pair found; lane on one side only -> no_lane_lines; too_far_from_hoop), 
+rim_first_finder.py _apply_ft_decision + rim_first_measure.py only for the two 
+new reason names. No other file.
+C. Gate before the measured run: run .team/specs/42_ft_lane_proto.py logic vs 
+Cursor code on the cached Q1-Q3 still moments (or a full Q1-Q3 retrace) - same 
+decision and same shooter on every still moment; --ft-off must still equal 
+run39b. Mismatch -> stop for Scott.
+D. Measure: Q1-Q3 retrace (reported, not a test) and Adrian Q4 blind retrace 
+(the test): FT flags vs FT tags found/missed/false, duplicates, reasons count, 
+shooter right/wrong. Hand-check: every Q4 flagged FT moment (Q4 is small) looked
+at by Claude Code and verdicts written before reading the Q4 numbers. One try 
+then stop for Scott.
+E. Numbers table: each number with "fixed by Claude Code before the run" + fact 
+behind it.
+Rules: no core edits (court_homography.py, stage1b files read only), no 
+training, no tracker, no interpolation, no banned trials (linear interpolation, 
+ByteTrack, DeepSORT, early windows = OLLAMA.md:31-39, wider column, hoop 
+recenter); finder reads no tags/scoreboard/DB; one try then stop for Scott. 
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading all the required source files in parallel.
+────────────────────────────────────────
+
+📖 Read 41_free_throw_line_spec.md  0.1s
+📖 Read ft_half_circle.py  0.2s
+📖 Read 42_ft_lane_proto.py  0.2s
+📖 Read drift_log.md  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+All four sources read. I have the spec 41 header (L1-L8 override), the current ft_half_circle.py, Claude Code's 42_ft_lane_proto.py, and the drift log tail (ending with Scott's binding "try it" for spec 42). Now I'll write the single spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/42_ft_band_lane_spec.md
+│ .team/specs/42_ft_band_lane_spec.md
+│ @@ -0,0 +1,94 @@
+│ +FT BAND + LANE SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +File: .team/specs/42_ft_band_lane_spec.md (this file only; nothing else is edited by this spec)
+│ +Lineage: spec 41 (VETTED WITH CONDITIONS L1-L8, 2026-11-08; Muse AGREE) -> spec 42. Scott binding 2026-11-08: "try it" -> build the narrower band + lane-line check, test once on held-out Adrian Q4. Claude Code picks every setting before the run. Cursor codes; Claude Code gates and measures; Hermes does not edit source.
+│ +
+│ +Status: v1 - not run. One measured try on Adrian Q4 (blind), then stop for Scott. Q1-Q3 is reported, not a test (settings were chosen after seeing Q1-Q3).
+│ +
+│ +----------------------------------------------------------------
+│ +SETTINGS FIXED (Claude Code 2026-11-08; do not change)
+│ +----------------------------------------------------------------
+│ +- Everything in spec 41 unchanged EXCEPT:
+│ +- BAND_FRONT 0.0, BAND_BACK 0.35 (signed distance in the band player's own height; positive = away from hoop).
+│ +- After the first candidate line with exactly one in-band player who is a candidate (player b, feet f, height bh):
+│ +  1. Hoop distance: |hoop centre - f| / bh > HOOP_DIST_MAX 3.8 -> free_throw false, reason "too_far_from_hoop", trace unchanged.
+│ +  2. Lane lines: from the same Hough segment list (players erased; Adrian darker-than-both-sides check), a lane segment has undirected angle to the FT line direction >= LANE_ANGLE_MIN 30 deg; both endpoints signed distance <= +0.15 bh (hoop side); nearest endpoint |signed distance| <= LANE_GAP 1.0 bh. Extend it to cross the FT line; r = (crossing projection - f projection) / bh along the FT line direction. Need one lane segment with r in [-2.5, -0.2] AND one with r in [+0.2, +2.5] (LANE_REACH 2.5, LANE_MIN_OFF 0.2). Missing either side -> free_throw false, reason "no_lane_lines", trace unchanged.
+│ +  3. Both pass -> free_throw true, "free_throw_line" (as spec 41).
+│ +- Fails at step 1 or 2 end the decision (no further candidates tried), as in the prototype.
+│ +- Order: hoop distance first, then lane lines.
+│ +
+│ +----------------------------------------------------------------
+│ +A. Detector steps (plain words, exactly the SETTINGS block)
+│ +----------------------------------------------------------------
+│ +0. Spec 41 gate, unchanged: not still -> free_throw false "not_still", trace unchanged. No hoop -> "no_hoop". Frame unreadable -> "frame_unreadable".
+│ +1. Candidates: still-frame boxes that held the ball in [trigger-3000 ms, trigger] (spec 41 candidates()), tried in box-key order.
+│ +2. FT line per candidate (spec 41, unchanged): players erased from the paint mask; Hough segments near the feet, near-perpendicular to feet->hoop, Adrian darker-than-both-sides; line = median angle, GROUP_DEG group, mean endpoints, extent along the direction. No line -> try the next candidate.
+│ +3. Band: signed distance of the player's feet from the line (normal chosen so the hoop centre is on the negative side, positive = away from hoop). In band when 0.0 <= s <= 0.35 x player height and the along-line position lies within the line extent +/- END_PAD x player height. Need exactly one in-band player and that player must be a candidate -> that player is b (feet f, height bh). Otherwise try the next candidate.
+│ +4. Hoop distance: |hoop centre - f| / bh > 3.8 -> free_throw false, reason "too_far_from_hoop", trace unchanged. Stop: no further candidates are tried.
+│ +5. Lane lines: from the same erased Hough segment list, a lane segment has undirected angle to the FT line direction >= 30 deg; both endpoints signed distance <= +0.15 bh (hoop side); nearest endpoint |signed distance| <= 1.0 bh. Extend it to cross the FT line; r = (crossing projection - f projection) / bh along the FT line direction. Need one segment with r in [-2.5, -0.2] and one with r in [+0.2, +2.5]. Missing either side -> free_throw false, reason "no_lane_lines", trace unchanged. Stop.
+│ +6. Both pass -> free_throw true, shooter b, reason "free_throw_line", trace unchanged.
+│ +7. If no candidate reaches step 3 with exactly one in-band candidate: any line existed -> "line_not_one"; no line at all -> "ft_line_not_found". Trace unchanged. (Spec 41 L3 reason names; the two new names above are added for rim_first_finder.py _apply_ft_decision and rim_first_measure.py counting only.)
+│ +
+│ +----------------------------------------------------------------
+│ +B. Code plan (Cursor only)
+│ +----------------------------------------------------------------
+│ +- ft_half_circle.py:
+│ +  * Constants: BAND_FRONT = 0.0, BAND_BACK = 0.35 (replace 0.15 / 1.2). in_band() already multiplies by each player's own height, so only the constants change there.
+│ +  * band_polygon(): rectangle spanning s in [0.0, 0.35 x h] for debug draw.
+│ +  * decide_ft(): at the first line with exactly one in-band candidate (player b, feet f, height bh): (a) hoop-distance step -> fail "too_far_from_hoop"; (b) new lane_crossings() step on the same erased Hough segment list -> fail "no_lane_lines"; (c) both pass -> "free_throw_line" with b as shooter. A fail ends the decision; no later candidate is tried.
+│ +  * lane_crossings(line, f, bh, hoop, segments, gray, gym, width): lane segment = angle to FT line direction >= 30 deg, both endpoints signed distance <= +0.15 bh, nearest endpoint |signed distance| <= 1.0 bh, Adrian darker-than-both-sides when gym == adrian; extend to the FT line crossing; r = (crossing projection - f projection) / bh; return the r values on each side. decide_ft needs one r in [-2.5, -0.2] and one in [+0.2, +2.5].
+│ +  * Debug views: add lane segments (with side and r) so debug_image draws them on the still frame next to the kept segments, FT line, band polygon, and cleaned feet (L6 unchanged otherwise).
+│ +- test_ft_half_circle.py (synthetic):
+│ +  * Band edges 0 / 0.35: feet exactly on the line (s = 0) in band; feet at 0.35h in band; feet at 0.350001h out; feet on the hoop side (s < 0) out.
+│ +  * Lane pair found: synthetic segments crossing at r in both reach windows, hoop distance passing -> free_throw_line.
+│ +  * Lane on one side only -> no_lane_lines.
+│ +  * Too far from hoop: feet more than 3.8h from hoop -> too_far_from_hoop, and a later candidate that would pass is NOT tried.
+│ +- rim_first_finder.py: _apply_ft_decision accepts the two new reason names ("too_far_from_hoop", "no_lane_lines") as free_throw false; decide_ft call and debug_image call unchanged in shape. No other change.
+│ +- rim_first_measure.py: count/report the two new reason names in the same section as ft_line_not_found. No other change.
+│ +- No other file. court_homography.py and stage1b files are read only.
+│ +
+│ +----------------------------------------------------------------
+│ +C. Gate before the measured run
+│ +----------------------------------------------------------------
+│ +- Claude Code runs .team/specs/42_ft_lane_proto.py logic (band [0, 0.35] + lane-line check) on the cached Q1-Q3 still moments (adrian + notus, C:\Users\scott\Documents\Liberty_Shot_Outputs\rim_first, c42_adrian / c42_notus caches) and compares it to Cursor's ft_half_circle.py code on the same cached still moments.
+│ +- Pass requirement: same decision (free_throw true/false plus reason) and the same shooter on every still moment.
+│ +- Also: the --ft-off run must still equal run39b on both films (FT off changes nothing for non-FT moments).
+│ +- Any mismatch -> stop for Scott. Do not proceed to the measured run.
+│ +
+│ +----------------------------------------------------------------
+│ +D. Measure
+│ +----------------------------------------------------------------
+│ +- Q1-Q3 retrace (reported, NOT the test): FT flags vs FT tags - found / missed / false, reasons count (too_far_from_hoop, no_lane_lines, line_not_one, not_still, ft_line_not_found, free_throw_line), shooter right / wrong. Baselines from spec 41: Adrian found 16/29 (missed 13: line_not_one 8, not_still 5), false 2 (20920, 2223600), orange ft_line_not_found 1; Notus found 7/9, missed 2 (line_not_one), false 0. Expect the narrow band to clear line_not_one misses; these numbers are reported only because settings were fixed after seeing Q1-Q3.
+│ +- Adrian Q4 blind retrace (THE test): 3317100..3897037 ms, retrace of rim_first/run37_adrian_q4_blind with video, one try. Report FT flags vs FT tags - found / missed / false, duplicates (a moment that is a duplicate of a found FT, e.g. 3021480 of 3021000, 12 frames later same shot, is reported "duplicate of a found FT", not false), reasons count, shooter right / wrong.
+│ +- Hand-check before the Q4 numbers are read: Claude Code looks at every Q4 flagged FT moment (Q4 is small) and writes verdicts (.team/specs/42_handcheck_results.json or spec-42 scratchpad) before reading the Q4 numbers.
+│ +- One try on Q4; then stop for Scott. No re-run, no tuning after seeing the numbers.
+│ +
+│ +----------------------------------------------------------------
+│ +E. Numbers table (each number: fixed by Claude Code before the run + fact behind it)
+│ +----------------------------------------------------------------
+│ +BAND_FRONT 0.0 - fixed - fact: band [0, 0.35] found 24/25 FT-tagged Adrian still moments and 9/9 Notus (42_ft_lane_proto.py, cached Q1-Q3 still moments); true shooters sit 0.04-0.21 player heights behind the line (spec 41 miss diagnosis, drift log 2026-11-08).
+│ +BAND_BACK 0.35 - fixed - fact: same source; extra band players at the 3PT line sit 0.81-1.19 player heights (one 0.37); hoop-side extras -0.14 to -0.04. Spec 41 band [-0.15, 1.2] is too deep (camera foreshortens floor depth).
+│ +HOOP_DIST_MAX 3.8 - fixed - fact: feet-to-hoop-centre distance / shooter box height on all 34 true FTs is 1.98-3.14 (Adrian 2.09-3.14, Notus 1.98-2.71); the 20920 false flag (3PT jumper on the arc) is 4.67 (42_ft_lane_proto.py).
+│ +LANE_ANGLE_MIN 30 deg - fixed - fact: lane lines run 25-35 deg vs the FT line at 75-81 deg to the feet->hoop direction (41_ftline_calibration_proto.py); every true FT has a lane crossing on both sides; 2223600 has none (42_ft_lane_proto.py).
+│ +LANE_GAP 1.0 bh, endpoint hoop side <= +0.15 bh - fixed - fact: prototype settings (42_ft_lane_proto.py); the lane check stops 2223600 (wide camera view, no lane-like segment crosses the line near the player) and passes all true FTs.
+│ +LANE_REACH 2.5, LANE_MIN_OFF 0.2 - fixed - fact: prototype settings; r windows [-2.5, -0.2] and [+0.2, +2.5] of shooter height along the FT line from the shooter's feet.
+│ +Duplicate rule - fixed - fact: 3021480 is a duplicate moment of tagged FT 3021000 (12 frames later, same shot); report "duplicate of a found FT", not false (42_ft_lane_proto.py / drift log 2026-11-08).
+│ +Q4 range 3317100..3897037 ms - fixed - fact: drift log spans (collect_q4_bodd.py:28).
+│ +Band-alone false flags - fact (not a setting): 20920 (3PT jumper, feet->hoop 4.67h, picked player on the 3PT arc) and 2223600 (wide view, untagged, no lane-like segment near the player) remain after the band; hoop distance removes 20920 (4.67 > 3.8), lane lines remove 2223600 (no crossing).
+│ … omitted 16 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+File written and verified on disk. Quick read-only checks: line 1 exact, no ||, no literal \n.
+────────────────────────────────────────
+
+💻 $ head -1 .team/specs/42_ft_band_lane_spec.md + 3 commands  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Done. .team/specs/42_ft_band_lane_spec.md written (94 lines, ~1.5 pages), verified: line 1 is exactly FT BAND + LANE SPEC v1 - not run, zero ||, zero literal \n, plain markdown.
+
+What changed: one new file only — .team/specs/42_ft_band_lane_spec.md. Nothing else edited, nothing run that writes.
+
+Contents:
+- SETTINGS FIXED block copied verbatim from Scott's 2026-11-08 binding (BAND_FRONT 0.0 / BAND_BACK 0.35 in the player's own height; hoop-distance step > 3.8 → too_far_from_hoop; lane-line step ≥ 30 deg, endpoints hoop-side ≤ +0.15 bh, gap ≤ 1.0 bh, reach windows [-2.5,-0.2] and [+0.2,+2.5] → no_lane_lines; both pass → free_throw_line; hoop distance first, fail ends the decision).
+- A. Detector steps — plain words mirroring the settings block (spec 41 gate → candidates → FT line → band → hoop distance → lane lines → fallback reasons).
+- B. Code plan — Cursor edits: ft_half_circle.py (constants, in_band/band_polygon edges, new lane_crossings + hoop-distance step in decide_ft, debug views add lane segments), test_ft_half_circle.py (synthetic band edges 0/0.35, lane pair found, one-side-only → no_lane_lines, too-far → too_far_from_hoop with later candidate skipped), rim_first_finder.py _apply_ft_decision + rim_first_measure.py for the two new reason names only, no other file.
+- C. Gate — prototype logic vs Cursor code on cached Q1-Q3 still moments: same decision and shooter on every still moment; --ft-off must still equal run39b; mismatch → stop for Scott.
+- D. Measure — Q1-Q3 retrace reported (not a test; baselines: Adrian 16/29 with 2 false flags, Notus 7/9) and Adrian Q4 blind retrace (3317100..3897037 ms) as the test; duplicates like 3021480 reported as "duplicate of a found FT", not false; hand-check verdicts on every Q4 flagged FT moment written before Q4 numbers are read; one try, then stop.
+- E. Numbers table — every setting with its fact (24/25 Adrian + 9/9 Notus band hits, true shooters 0.04-0.21h, 34 true FTs at 1.98-3.16h vs 20920 at 4.67h, lane angles 25-35 deg vs FT line 75-81 deg, duplicate rule, Q4 range); unmeasured items marked NOT FOUND - Claude Code to check.
+- Rules — no core edits (court_homography.py, stage1b read-only), no training/tracker/interpolation, no banned trials, finder reads no tags/scoreboard/DB.
+
+Verification: head -1 exact, grep || = 0, grep \\n = 0, wc -l = 94.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b355c2f00f09b6eb62d87c5dac82fcdedb57962c630b84020b5b21131cc85122
+  hermes -c "Write FT band lane spec file"
+
+Session:        local-b355c2f00f09b6eb62d87c5dac82fcdedb57962c630b84020b5b21131cc85122
+Title:          Write FT band lane spec file
+Duration:       3m 8s
+Messages:       11 (1 user, 9 tool calls)

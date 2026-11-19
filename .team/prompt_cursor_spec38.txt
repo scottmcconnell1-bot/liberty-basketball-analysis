@@ -1,0 +1,28 @@
+You are the Coder. Implement spec 38 (.team/specs/38_shooter_finder_spec.md). Claude Code's VETTED WITH CONDITIONS block S1-S8 (with the SCOTT APPROVED line) at the top OVERRIDES the Hermes text below it. Muse AGREE. Add NO number beyond those listed.
+
+Edit ONLY .team/shot_detectors/rim_first_finder.py, .team/shot_detectors/rim_first_measure.py, .team/shot_detectors/test_rim_first.py. No other file. Do not commit. Do not run video or models. Do not touch shot-call logic (assign_shot_calls, filter_frame_hoops, cross-series merge, shoot-around) or make/miss code. Keep existing functions; trace_shooter keeps its old behaviour behind a flag.
+
+FINDER
+1 trace_shooter(..., walk_back: bool) . walk_back False = exactly today's behaviour. walk_back True:
+  - track = combine_ball_track(series v6 points in window, best-conf BODD per frame in window) as today; window [trigger - TRACE_BEFORE_MS, trigger] unchanged.
+  - start = release_estimate_frame(track, hoop_samples, rim_r_px, fps); if None, start = latest track frame <= trigger. If the track is empty -> orange "no release frame".
+  - Walk backward over track points with frame <= start (detected points only, no fill). Stop with orange "track broken" when the frame gap between the current point and the next earlier point is > TRACK_BREAK_GAP_FRAMES (= MAKE_GAP_FRAMES 8, comment "spec 38 S8, Scott approved 2026-11-06"). At each point, players on that frame (BODD players only, referees never) that pass ball_inside_player(bx, by, p, RELEASE_TRACE_FACTOR, mode="release"): none -> keep walking; exactly one -> that is the shooter, release_frame = that frame, shooter_box, floor_spot = (x, y + h/2); two or more -> orange "two players hold" with "hold_boxes" listed.
+  - Reaching the window start with no hold -> orange "ball not inside a player box". Orange keeps "last_checked_frame".
+  - Add "trace_mode": "walk_back" or "single_frame" to each moment.
+2 Retrace mode (S6), CLI: --retrace-from <run dir> --out-dir <new dir> [--walk-off]. Reads that dir's moments.json + frames.json only (no video, no model, no tags). Rebuild per-series hoop_samples by re-running the same hoop steps the live run used on saved frames "h" (film_median_hoop_w on raw h, filter_frame_hoops, _hoop_samples_from_raw, build_hoop_carry, resolve_frame_hoops, assign_frame_hoops), in frame order. v6 points per series from saved "series" rows. BODD balls / players from saved frames. For each saved moment, re-run trace_shooter (walk_back = not --walk-off) and overwrite ONLY status, reason, shooter_box, floor_spot, release_frame, shooter, shooter_reason, trace_mode, hold_boxes, last_checked_frame. Every other moment field copied unchanged. Write moments.json + frames.json (frames copied) to the new dir; refuse if it exists. Record "retrace_from" in metadata.
+  Gate built in: print rebuilt series count and ref_x vs saved series rows, and (with --walk-off) the number of moments whose status/reason/release_frame differ from the saved ones. Exit code 2 if series differ or (walk-off) any moment differs.
+  Note: live run series ref_x is the LAST paired hoop x; match that.
+  Live detect_span also uses walk_back True from now on.
+
+MEASURE (rim_first_measure.py, keep all existing output)
+3 shooter section: counts by status/reason; found split by series; for tag-matched moments (existing M1 matches): release->trigger seconds (found vs orange); floor spot relative to the moment hoop in hoop widths ((fx-hx)/hw, (fy-hy)/hw) using moment["hoop"].
+4 FT spot (S3): FT-tag matched moments with floor spot, grouped by moment series; per group the median spot; each FT's distance from it in hoop widths; pass = distance <= FT_SPOT_PASS_WIDTHS 1.5 ("spec 38 S8, Scott approved"). Report n, pass count, median distance per group.
+5 3PT vs 2PT (S4): report only - distance of floor spot from hoop in hoop widths, median and quartiles per tag kind.
+6 Review list: per tag-matched moment: t_ms, tag eventtype, result, player, shooter status/reason, floor spot (hoop widths). Into results.json and summary.md.
+
+TESTS (pure, hand data): walk_back finds a hold 20 frames before an in-flight start; gap of 9 frames -> track broken, gap of 8 -> continues; two players hold -> orange; referee box never chosen; no rise -> starts at latest point <= trigger; walk_back False equals old result on the existing trace tests; retrace on a tiny saved run dir (written in tmp_path) with walk-off reproduces the input moments exactly and exits 0; series mismatch -> exit 2; FT spot pass/fail at 1.5 and 1.51 widths.
+Keep the finder import-grep test (no tag/scoreboard/db/sqlite imports).
+
+Run and print exact command + result (python3 if .venv cannot run; say so):
+python3 -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+End with functions added/changed and choices this prompt did not spell out.

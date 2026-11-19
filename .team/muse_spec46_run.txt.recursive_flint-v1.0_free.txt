@@ -1,0 +1,85 @@
+Query: Muse, you check the Vetter. Read-only: do not change any file.
+Read: .team/specs/46_scaled_crop_spec.md (Claude Code's VETTED WITH CONDITIONS 
+V1-V8 block at the top, then Hermes's spec), collect_q4_bodd.py v6_ball 
+(~110-146), .team/shot_detectors/rim_first_make_miss.py (tracks/d1/vote, spec 45
+--film-scale, cmd_d1), .team/shot_detectors/keep_ball_detections.py lines 23-45 
+and 165-200 and every use of 
+CROP_LEFT_RIGHT/CROP_ABOVE/CROP_BELOW/ZONE_BELOW_PX, last 4 entries of 
+.team/drift_log.md.
+Check that Claude Code did not miss or approve anything wrong:
+- Does overriding the four kbd module constants really change the crop in 
+extract and the zone in arc/report for v6 AND d2v1? Any other fixed-pixel number
+in that path left unscaled that matters?
+- Can G1 (v6_ball_scaled s=1.0 == v6_ball) and G2 (Adrian byte-match at s=1.0) 
+truly prove Adrian is unchanged? Any float/int difference at s=1.0?
+- Does the d2v1 mapping check (candidates vs v6 proof) still work when both 
+crops are scaled?
+- Any tag, label, scoreboard or truth read in the scaled path? Any tuning after 
+a number? Any edit outside the two wrapper files? Any unseen film touched?
+- Is the Notus control (rebuild without scaled crop) enough to separate the crop
+effect from BODD rebuild noise?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: 
+<reason>.
+📖 Read 46_scaled_crop_spec.md  0.1s
+📖 Read keep_ball_detections.py  0.2s
+💻 $ tail -n 40 .team/drift_log.md
+💻 $ grep -n "CROP_LEFT_RIGHT\|CROP_ABOVE\|CROP_BELOW\|ZONE_BELOW_PX\|ZONE_HOOP_WIDTHS_H\|ZONE_ABOVE_HOOP_WIDTHS\|RESIDUAL_HOOP_W_FRAC" -r .team --include=*.py | grep -v keep_ball_detections.py  0.6s
+💻 $ grep -n "def v6_ball\|def cmd_tracks\|def cmd_d1\|def cmd_vote\|film_scale\|scaled\|--film-scale\|--scaled-crop\|crop_scale\|v6_ball_scaled" .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/collect_q4_bodd.py  0.1s
+💻 $ find . -name "*collect*" -not -path "./.git/*" 2>/dev/null + 1 command  23.0s
+💻 $ grep -n "def \|CROP\|ZONE\|RESIDUAL\|scale" .team/shot_detectors/rim_first_make_miss.py | sed -n '1,140p'  0.1s
+💻 $ wc -l collect_q4_bodd.py .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/keep_ball_detections.py .team/drift_log.md .team/specs/46_scaled_crop_spec.md .team/shot_detectors/test_rim_first_make_miss.py  0.2s
+📖 Read collect_q4_bodd.py
+📖 Read rim_first_make_miss.py
+💻 $ git status --porcelain + 2 commands  78.4s
+💻 $ grep -rn "_court_scale\|v6_ball_scaled\|scaled_crop\|crop_scale\|kbd_crop\|scaled" --include=*.py . --exclude-dir=.venv --exclude-dir=.git -l  2.4s
+💻 $ grep -n "" .team/drift_log.md
+💻 $ git diff --numstat -- .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/small_fixes_v6_copy.py ai_bridge.py .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/test_rim_first_make_miss.py .team/drift_log.md .team/STATUS.md + 2 commands  0.3s
+💻 $ grep -rn "_court_scale" --include=*.py . --exclude-dir=.venv --exclude-dir=.git  2.3s
+💻 $ grep -n "scaled\|film_scale\|v6_ball_scaled\|crop" .team/shot_detectors/rim_first_make_miss.py
+📖 Read test_rim_first_make_miss.py
+💻 $ git diff -- .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/small_fixes_v6_copy.py  0.2s
+💻 $ git diff -- .team/shot_detectors/test_keep_ball_detections.py  0.1s
+💻 $ git diff --numstat ai_bridge.py + 4 commands  0.4s
+💻 $ grep -n "scale\|_court\|def decide_shot\|def reason_of\|CROP\|ZONE\|RESIDUAL\|180\|60\|50\|80\|220\|260\|200\|240\|300\|0.35\|conf" .team/shot_detectors/small_fixes_v6_copy.py | sed -n '1,160p'
+💻 $ ls .team/ + 6 commands  0.1s
+💻 $ sed -n '960,1010p;1400,1470p' ai_bridge.py
+✗ $ grep -n "def peak_from_track" -A 40 .team/shot_detectors/pixel_miss/measure_net_moved.py + 4 commands  0.1s [exit 2]
+💻 $ ls -la .team/ | grep -i "spec\|cursor\|hermes\|muse\|plan\|prompt" + 2 commands  1.6s
+💻 $ grep -rln "spec 46\|spec46\|scaled.crop\|scaled_crop\|v6_ball_scaled\|crop_scale" .team --include=*.txt --include=*.md --include=*.json 2>/dev/null | grep -v "specs/46_scaled"  1.6s
+🗜️ Compacting context — summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+🗜️ Compacting context — still summarizing earlier conversation so I can continue...
+💻 $ git status --porcelain + 4 commands  79.7s
+💻 $ cat .team/prompt_muse_spec46.txt + 6 commands  0.1s
+📖 Read 46_scaled_crop_spec.md
+💻 $ grep -rn "scaled.crop\|scaled_crop\|v6_ball_scaled\|crop_scale\|kbd_crop\|film_scale" --include=*.py . | grep -v node_modules  38.1s
+💻 $ grep -n "ZONE_BELOW_PX\|CROP_LEFT_RIGHT\|CROP_ABOVE\|CROP_BELOW\|CROP_HOOP_WIDTHS\|in_near_hoop_zone\|ZONE_HOOP_WIDTHS_H\|ZONE_ABOVE_HOOP_WIDTHS\|RESIDUAL_HOOP_W_FRAC" .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/small_fixes_v6_copy.py ai_bridge.py
+💻 $ sed -n '100,150p' collect_q4_bodd.py + 2 commands
+💻 $ grep -n "" .team/drift_log.md
+💻 $ grep -n "MAPPING\|PROOF\|mapping\|proof" .team/shot_detectors/keep_ball_detections.py
+💻 $ sed -n '160,205p;270,300p;350,395p;430,470p' .team/shot_detectors/keep_ball_detections.py
+✗ $ grep -c "scaled.crop\|v6_ball_scaled\|crop_scale\|kbd_crop\|scaled_crop" .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/collect_q4_bodd.py .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/small_fixes_v6_copy.py ai_bridge.py .team/shot_detectors/test_rim_first_make_miss.py + 2 commands [exit 2]
+
+────────────────────────────────────────
+☤ Hermes
+Read-only Vetter check of Claude Code's spec 46 V1-V8 (2026-11-10) — findings:
+
+- Spec file says "v1 - not run"; no cursor_spec46 code run exists; V1-V8 vetted conditions target work never coded.
+- Implementation absent: no --scaled-crop / v6_ball_scaled / crop_scale / kbd_crop in rim_first_make_miss.py, keep_ball_detections.py, small_fixes_v6_copy.py, ai_bridge.py, or the tests; only spec 45 film_scale code present.
+- Q1: override does change crop + zone (module globals read at call time); ZONE_HOOP_WIDTHS_H / ZONE_ABOVE_HOOP_WIDTHS are hoop-width ratios (no scale needed, V7 right); MAPPING_MATCH_PX=3 is full-frame, RESIDUAL_HOOP_W_FRAC=0.15 is ratio (both fine).
+- Q2: G1 at s=1.0 is exact by construction (x*1.0 and int() are no-ops); G2 rests on spec 45 G1 Adrian byte-match that passed; no float/int divergence expected at s=1.0.
+- Q3: VETTER MISSED: scaled candidates payload constants (post-override) != old proof constants -> MAPPING PROOF MISMATCH stops d2v1 on scaled Notus/GV runs; V5 only gated Adrian s=1.0 where they coincide.
+- Q4: scaled path design adds no tag/label/truth reads; V8 no tuning after numbers; working-tree diffs to keep_ball_detections.py etc. need --ignore-cr-at-eol to separate real edits from EOL churn.
+- Q5: Notus control rebuild design not clean: control and scaled rebuilds each re-run BOBD -> independent noise mixes into crop delta.
+
+MUSE: DISAGREE: Vetter missed the scaled-run mapping-proof mismatch and cleared a spec (v1 - not run) whose gates cannot pass as written.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d53c3bef392725b9a6d214e65c6edec7149c285b75ad8a7604e12ecd96ecb84d
+  hermes -c "Muse, you check the Vetter. Read-only: do not… #3"
+
+Session:        local-d53c3bef392725b9a6d214e65c6edec7149c285b75ad8a7604e12ecd96ecb84d
+Title:          Muse, you check the Vetter. Read-only: do not… #3
+Duration:       11m 14s
+Messages:       27 (1 user, 25 tool calls)

@@ -1,0 +1,19 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/31_coach_calls_to_boxscore_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "COACH CALLS TO BOX SCORE SPEC v1 - not run". Plain markdown, no line-number prefixes, no literal "\n". Edit nothing else, run nothing that writes (read-only commands and sqlite SELECTs on a COPY are fine). If your write tool refuses, say so plainly. One to two pages.
+
+Scott 2026-11-03: "yes all three" to (1) commit (done, 1a2710d), (2) "Coach input goes straight into the box score - the coach's clicks land in the game's stats without sending a file", (3) then shot type 2/3/FT. This spec is item 2 only. Scott earlier: "then we work on how to submit the coaches input."
+
+FACTS (Claude Code checked this session):
+- Coach review page: .team/shot_detectors/make_review_queue_page.py --wide-combined -> Liberty_Shot_Outputs/review_queue/page_v6/review.html (static local HTML, minors in film so it must stay local/private). Export button writes coach_calls.json: rows {shot: "<film>_<t ms>", game, clock, program: "auto"|"review", coach_call: "make"|"miss"|"duplicate"|"", note}. Films: "adrian" = tags data/film_tags/jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334.json, video uploads/nfhs_gam0a66d85e12.mp4; "notus_a1" = data/film_tags/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json. Shots not on the page are auto misses (both models said miss).
+- Scott's latest export (C:/Users/scott/Downloads/coach_calls (5).json): 41/42 called, 0 differ from his tags.
+- The box score: game_boxscore.py (CORE FILE - Scott gate) build_official_box(db, game_id, event_counts=False), apply_ai_event, scorebook merge; used by blueprints/ai.py, program_mode.py, verify_boxscores.py. The app is app.py (Flask, blueprints/). schema.sql is a Scott gate. Read these to find: where shot events live in the DB, how a game_id maps to a film/tag file, and whether an existing table/route already stores human-verified shot results (look for "human_verified", "review", "verified" in code: e.g. check_human_verified.py, fix_review_payloads.py, check_review_status.py).
+- Rules: no edit to core files (ai_analyzer.py, event_generator.py, court_memory.py, net_detector.py, manual_tag_teach.py, game_boxscore.py, scoreboard_clock.py) or schema.sql without Scott's gate - if the plan needs one, say exactly which line and why, as a Scott decision; prefer an existing table/route. Back up the DB before any write. applied_to_core stays false (explain what that flag guards and whether coach-verified results are allowed to bypass it - NOT FOUND -> Claude Code to check). HS Boys, HS Girls and JH Girls data untouched. Nothing published; page stays local.
+
+PLAN:
+1. Where coach calls should land (existing table/route if one fits; name it, with file and line).
+2. How the page sends them: options (a) a local Flask route the page POSTs to when served by app.py, (b) an import command/route that reads the exported coach_calls.json. Pick one, say why, keep it small.
+3. Mapping: shot id -> game_id and event row; what happens to "duplicate" (removed from stats) and blank (unchanged).
+4. Which Scott gates it needs, if any.
+5. Tests (no video): mapping, duplicate, blank, idempotent re-import, other teams untouched.
+6. One run: on a DB COPY, import Scott's coach_calls (5).json for the Adrian and Notus games; pass = box score FG makes for those games equal the coach makes (32 across both) and nothing else changes. Then Scott decides on the real DB.
+7. Roles: Claude Code vets, Muse checks, Cursor codes.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - Claude Code to check".

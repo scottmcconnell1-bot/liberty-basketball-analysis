@@ -1,0 +1,223 @@
+Query: Hermes, you are the Architect. WRITE ONE new file: 
+.team/specs/44_rim_first_make_miss_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis). Line 1: "RIM-FIRST 
+MAKE/MISS SPEC v1 - not run". Plain markdown, no "\n", no "||". Edit nothing 
+else, run nothing that writes. One to two pages.
+
+Read first: collect_q4_bodd.py (collect_samples, groups, v6_ball, main track 
+loop), .team/shot_detectors/keep_ball_detections.py (load_build_shot_list, 
+step_extract, step_arc_rule_report, run_arc_and_rule_on_shot, 
+--mapping-proof-json), .team/shot_detectors/make_review_queue_page.py (vote near
+line 453), .team/shot_detectors/q4_rebuild_tracks.py, last 4 lines of 
+.team/drift_log.md.
+
+SCOTT (binding): makes/misses "took several days and multiple attempts... We 
+exhausted all possibilities" -> NO new make/miss logic, no tuning; only feed the
+existing make/miss steps from the program's own shot moments instead of coach 
+tags. "I do not want to overwhelm the coach." Claude Code picks every setting.
+
+FACTS (Claude Code, Proven):
+- Today the make/miss steps only run on coach tag times: track = BODD hoop/ball 
++ v6 ball for 80 frames starting at the tag time (collect_q4_bodd.py); D1 
+(keep_ball_detections.py arc + rule) runs twice, v6 and d2v1 candidates; vote: 
+both make -> auto make, one -> coach, both miss -> auto miss.
+- Rim-first finder moments (moments.json: t_ms, frame, hoop, series, 
+release_frame) are at the ball-at-rim time. Signed moment minus tag time on 
+matched shots: Adrian Q1-Q3 median 420 ms (2PT 760, 3PT 1650, FT 1460, range 
+-1780..3760), Notus median 190 ms.
+- Tag-based results (seen): 140 build shots, where both models say make 28/28 
+real; disagree 7/140. Adrian Q4 blind: both models 2/5 makes, 1 false make.
+- Idaho City: only 1 FT trip; earlier "FT setups" were sideline inbounds (drift 
+log). Next blind game: Garden Valley (LIBERTY_H_v_GARDEN_VALLEY_A, home gym, no 
+tags exist, never looked at). Its finder base run (--ft-off) -> 
+rim_first/run44base_gv.
+
+SETTINGS FIXED BY CLAUDE CODE (copy into a SETTINGS FIXED block; do not change):
+- S1 Shot list = every moment in the run's moments.json. No tags, no scoreboard,
+no truth read anywhere in the make/miss path.
+- S2 Track start = moment t_ms - TRACK_LEAD_MS (1000, named constant). Then the 
+existing collect_q4_bodd.py functions UNCHANGED (collect_samples 80 frames, 
+groups, BODD ball conf >= 0.28, hoop nearest the BODD balls, v6_ball, same 
+models BODD_yolov8n_0001.pt and v6 best.pt). Track "t" = start ms. Why 1000: 
+puts the rim about 1 s into the 3.2 s window, like tag tracks (fixed now from 
+seen data, not tuned).
+- S3 D1 twice (v6 weights, d2v1 weights 
+Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best_basketball.pt) with the 
+SAME functions; only the shot list is swapped, via a new wrapper (no edit to 
+keep_ball_detections.py, collect_q4_bodd.py, make_review_queue_page.py). d2v1 
+uses --mapping-proof-json from the v6 run as spec 23 v3. Truth fields absent -> 
+gt_make None; wrapper must not crash on it.
+- S4 Vote as make_review_queue_page.py: both make -> "make", exactly one -> 
+"coach", none -> "miss". No hoop or no ball track -> "no_track" (counted as 
+coach load).
+- S5 Output only a new folder (make_miss.json per moment: t_ms, start_ms, hoop, 
+v6 pred+reason, d2v1 pred+reason, call; summary.md counts). NOT added to the 
+coach page in this test (quarantine).
+
+WRITE: A steps in plain words; B code plan: new 
+.team/shot_detectors/rim_first_make_miss.py + test_rim_first_make_miss.py, no 
+other file; C gate: (1) wrapper fed the 140 tag shots with TRACK_LEAD_MS 0 and 
+the existing track files reproduces existing D1 new_pred for v6 and d2v1 on all 
+140 (ball_arc/d1_results.json, d2_train/test2/d2_results.json); (2) pytest; 
+mismatch -> stop for Scott; D seen report (not a test): Adrian Q1-Q3 
+run43_adrian + Notus run43_notus moments, matched to tags: makes right, misses 
+called make, makes called miss, coach, no_track; E Garden Valley blind: Claude 
+Code labels every GV moment from video BEFORE the run (real shot y/n, make/miss,
+FT y/n + shooter feet) into .team/specs/44_gv_labels.json, score script 
+.team/specs/44_gv_score.py frozen first; then spec-43 FT retrace (unchanged 
+rule) and make/miss once; report auto make right/wrong, auto miss right/wrong 
+(silent errors), coach items, no_track, FT found/missed/false/maybe; hand-check 
+before reading the score; F numbers table.
+Rules: no core edits, no training, no tuning, no banned trials (linear 
+interpolation, ByteTrack, DeepSORT, early windows OLLAMA.md:31-39, wider column,
+hoop recenter); finder and make/miss read no tags/scoreboard/DB; one try then 
+stop for Scott. Every fact from a file you read or above; otherwise "NOT FOUND -
+Claude Code to check".
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading all the required source files in parallel.
+────────────────────────────────────────
+
+📖 Read collect_q4_bodd.py  0.3s
+📖 Read keep_ball_detections.py  0.3s
+📖 Read make_review_queue_page.py L430-489  0.3s
+📖 Read q4_rebuild_tracks.py  0.3s
+📖 Read drift_log.md  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+I have the main files. Now let me capture the vote context, the exact last 4 lines of drift_log.md, and the specs directory conventions.
+────────────────────────────────────────
+
+📖 Read make_review_queue_page.py L400-444  0.3s
+📖 Read drift_log.md L203-212  0.4s
+🔎 Find 44_|43_  0.4s
+
+────────────────────────────────────────
+☤ Hermes
+Let me look at the specs directory structure and an existing spec for style conventions.
+────────────────────────────────────────
+
+🔎 Find 43_  0.5s
+🔎 Grep spec 35|spec 36|spec 43|rim_first  0.5s
+
+────────────────────────────────────────
+☤ Hermes
+Let me read an existing spec file fully to match style conventions.
+────────────────────────────────────────
+
+📖 Read 43_ft_next_release_spec.md
+📖 Read 42_ft_band_lane_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+I have everything I need. The vote at make_review_queue_page.py:452-453 (prog = "auto" if (p1 and p2) else ("review" if (p1 or p2) else "miss")), drift log lines 209-212 (Garden Valley = next blind game, Idaho = one FT trip, earlier "FT setups" were sideline inbounds), and the existing spec style are confirmed. Now I'll write the single spec file — nothing else is edited and nothing is run.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/44_rim_first_make_miss_spec.md  0.1s
+│ .team/specs/44_rim_first_make_miss_spec.md
+│ @@ -0,0 +1,69 @@
+│ +RIM-FIRST MAKE/MISS SPEC v1 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +File: .team/specs/44_rim_first_make_miss_spec.md (this file only; nothing else is edited by this spec)
+│ +Lineage: spec 43 (VETTED WITH CONDITIONS V1-V5, 2026-11-08; Muse AGREE) -> spec 44. Scott binding 2026-11-09: makes/misses "took several days and multiple attempts... We exhausted all possibilities" -> NO new make/miss logic, no tuning; only feed the existing make/miss steps from the program's own shot moments instead of coach tags. "I do not want to overwhelm the coach." Claude Code picks every setting. Cursor codes; Claude Code gates and measures; Hermes does not edit source.
+│ +Status: v1 - not run. One measured try on Garden Valley (blind), then stop for Scott. Q1-Q3/Q4 seen films are reported, not a test (settings chosen after seeing them).
+│ +
+│ +----------------------------------------------------------------
+│ +SETTINGS FIXED (Claude Code; do not change)
+│ +----------------------------------------------------------------
+│ +S1 Shot list = every moment in the run's moments.json (t_ms, frame, hoop, series, release_frame). No tags, no scoreboard, no truth read anywhere in the make/miss path.
+│ +S2 Track start = moment t_ms - TRACK_LEAD_MS (TRACK_LEAD_MS = 1000 ms, named constant). Then the existing collect_q4_bodd.py functions UNCHANGED (collect_samples 80 frames, groups, BODD ball conf >= 0.28, hoop nearest the BODD balls, v6_ball, same models BODD_yolov8n_0001.pt and v6 best.pt). Track "t" = start ms. Why 1000: puts the rim about 1 s into the 3.2 s window, like tag tracks (fixed now from seen data, not tuned).
+│ +S3 D1 twice (v6 weights; d2v1 weights Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best_basketball.pt) with the SAME functions (keep_ball_detections.run_arc_and_rule_on_shot); only the shot list is swapped, via a new wrapper (no edit to keep_ball_detections.py, collect_q4_bodd.py, make_review_queue_page.py). d2v1 uses --mapping-proof-json from the v6 run as spec 23 v3. Truth fields absent -> gt_make None; the wrapper must not crash on it.
+│ +S4 Vote as make_review_queue_page.py: both make -> "make", exactly one -> "coach", none -> "miss". No hoop or no ball track -> "no_track" (counted as coach load).
+│ +S5 Output only a new folder (one make_miss.json per moment: t_ms, start_ms, hoop, v6 pred+reason, d2v1 pred+reason, call; summary.md counts). NOT added to the coach page in this test (quarantine).
+│ +
+│ +----------------------------------------------------------------
+│ +A. Steps in plain words
+│ +----------------------------------------------------------------
+│ +0. The wrapper takes one run dir (its moments.json + video) and one output folder. It never reads tags, scoreboard, or a database.
+│ +1. Build the shot list: every moment in moments.json (S1).
+│ +2. For each moment: start_ms = t_ms - TRACK_LEAD_MS (S2). Run collect_q4_bodd.collect_samples (80 frames from start), groups (hoop candidates), keep BODD balls with conf >= 0.28, hoop = nearest candidate to the BODD balls, v6_ball series (crop around the hoop, conf 0.28, imgsz 640, sequential reads from the start frame). Track = {t: start_ms, hoop, ball, bodd}. No hoop or no ball series -> call "no_track", skip D1.
+│ +3. Run D1 on that track twice with the unchanged functions: v6 weights and d2v1 weights (best_basketball.pt). d2v1 passes --mapping-proof-json from the v6 run (spec 23 v3). Each run returns pred + reason.
+│ +4. Vote (S4): both make -> "make"; exactly one -> "coach"; none -> "miss"; no_track -> "no_track".
+│ +5. Write one make_miss.json per moment into the new output folder only: t_ms, start_ms, hoop, v6 pred + reason, d2v1 pred + reason, call. Write summary.md with the counts. Nothing else is written; the coach page is not touched (quarantine).
+│ +
+│ +----------------------------------------------------------------
+│ +B. Code plan (new files only; no other file is edited)
+│ +----------------------------------------------------------------
+│ +- .team/shot_detectors/rim_first_make_miss.py: the S1-S5 wrapper. Imports collect_q4_bodd (unchanged) and keep_ball_detections.run_arc_and_rule_on_shot (unchanged). CLI: run dir (moments.json + video), v6 weights, d2v1 weights, mapping-proof-json, output folder, TRACK_LEAD_MS default 1000. D1 twice per moment; vote; per-moment make_miss.json + summary.md. No truth anywhere in the path; gt_make None when absent; never crashes on missing truth.
+│ +- .team/shot_detectors/test_rim_first_make_miss.py: pytest. (1) Gate C reproduction: wrapper fed the 140 tag shots with TRACK_LEAD_MS 0 and the existing track files must reproduce the existing D1 new_pred for v6 (ball_arc/d1_results.json) and d2v1 (d2_train/test2/d2_results.json) on all 140 shots; any mismatch fails and stops for Scott. (2) Unit votes mapping both make/make/coach/miss/no_track. (3) Wrapper does not crash on moments without truth fields. No edits to existing files; no other test file.
+│ +
+│ +----------------------------------------------------------------
+│ +C. Gate (before anything is reported)
+│ +----------------------------------------------------------------
+│ +1. Reproduction: the wrapper fed the 140 tag shots with TRACK_LEAD_MS 0 on the existing track files reproduces the existing D1 new_pred for v6 and d2v1 on all 140 shots, compared against ball_arc/d1_results.json and d2_train/test2/d2_results.json. Mismatch -> stop for Scott; no tuning, no retry.
+│ +2. pytest passes. Mismatch -> stop for Scott.
+│ +
+│ +----------------------------------------------------------------
+│ +D. Seen report (not a test)
+│ +----------------------------------------------------------------
+│ +Adrian Q1-Q3 run43_adrian moments and Notus run43_notus moments, each matched to its tag by time (signed moment_ms - tag_ms: Adrian Q1-Q3 median 420 ms, 2PT 760, 3PT 1650, FT 1460, range -1780..3760; Notus median 190 ms). Run make/miss (TRACK_LEAD_MS 1000, S1-S5) on those matched moments and report: makes right, misses called make, makes called miss, coach, no_track. Seen tag-based context only (not this run's numbers): 140 build shots, both models say make 28/28 real, disagree 7/140; Adrian Q4 blind: both models 2/5 makes, 1 false make. This section's numbers are NOT FOUND until the run - Claude Code to check.
+│ +
+│ +----------------------------------------------------------------
+│ +E. Garden Valley blind (the test)
+│ +----------------------------------------------------------------
+│ +Game: LIBERTY_H_v_GARDEN_VALLEY_A, home gym, no tags exist, never looked at. Finder base run (--ft-off) -> rim_first/run44base_gv; its moments.json feeds S1.
+│ +0. Claude Code labels EVERY GV moment from video frames BEFORE the run: real shot y/n, make/miss, FT y/n, shooter feet. Frozen into .team/specs/44_gv_labels.json before any make/miss run.
+│ +1. Score script .team/specs/44_gv_score.py is written and frozen BEFORE the run. It scores the make/miss output against the labels: auto make right/wrong, auto miss right/wrong (silent errors), coach items, no_track, FT found/missed/false/maybe (spec 43 FT retrace, unchanged rule, re-scored on GV too).
+│ +2. Hand-check verdicts for every flagged GV moment are written BEFORE the score is read. One make/miss try; then stop for Scott. No re-run, no tuning after seeing the score. Labels stay out of the coach page (quarantine).
+│ +
+│ +----------------------------------------------------------------
+│ +F. Numbers table (fixed by Claude Code before the run + fact behind each)
+│ +----------------------------------------------------------------
+│ +TRACK_LEAD_MS      1000 ms   fixed   fact: seen data puts the rim about 1 s into the 3.2 s collect window, like tag tracks; moment_ms - tag_ms medians 420 ms (Adrian Q1-Q3) / 190 ms (Notus), so the rim moment is ~0.2-0.4 s after the tag and a 1 s lead keeps it inside the window.
+│ +Both-make real     28/28     seen    tag-based context only; NOT FOUND for rim-first start until gate/run.
+│ +Disagree rate         7/140  seen    tag-based context only.
+│ +GV labels / score          NOT FOUND - Claude Code to check (labels frozen first, hand-check before the score).
+│ +Every number here not marked "seen" is NOT FOUND - Claude Code to check.
+│ +
+│ +----------------------------------------------------------------
+│ +Rules
+│ +----------------------------------------------------------------
+│ +- No core edits, no training, no tuning, no banned trials (linear interpolation, ByteTrack, DeepSORT, early windows OLLAMA.md:31-39, wider column, hoop recenter). collect_q4_bodd.py, keep_ball_detections.py, make_review_queue_page.py are unchanged; only the two new files are added.
+│ +- Finder and make/miss read no tags, scoreboard, or database.
+│ +- One try on Garden Valley; then stop for Scott. No re-run, no tuning after seeing the score.
+│ +- Every fact above comes from a file read in this session or the binding; anything else is "NOT FOUND - Claude Code to check".
+│ +
+│ +End of spec.
+
+────────────────────────────────────────
+☤ Hermes
+File written. Let me verify line 1 and the constraints (no ||, no literal \n) with a read-back.
+────────────────────────────────────────
+
+📖 Read 44_rim_first_make_miss_spec.md  0.2s
+🔎 Grep \|\||\\n  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Done. One new file written, nothing else touched, nothing executed.
+
+.team/specs/44_rim_first_make_miss_spec.md (69 lines, plain markdown, verified line 1 = RIM-FIRST MAKE/MISS SPEC v1 - not run; zero || table syntax and zero literal \n sequences)
+
+Contents per the binding:
+- SETTINGS FIXED block S1–S5 copied verbatim (shot list = moments.json only; track start = t_ms − TRACK_LEAD_MS 1000 via unchanged collect_q4_bodd.py; D1 twice through unchanged keep_ball_detections.run_arc_and_rule_on_shot with d2v1 weights and --mapping-proof-json; vote both-make/one/none → make/coach/miss, no hoop or no ball → no_track; output quarantined to a new folder with per-moment make_miss.json + summary.md, never the coach page).
+- A Steps in plain words (wrapper over moments.json → unchanged track build → D1 twice → vote → per-moment JSON + summary).
+- B Code plan: only .team/shot_detectors/rim_first_make_miss.py + .team/shot_detectors/test_rim_first_make_miss.py, no other file.
+- C Gate: reproduction of existing D1 new_pred on all 140 tag shots with TRACK_LEAD_MS 0 against ball_arc/d1_results.json and d2_train/test2/d2_results.json, then pytest; mismatch → stop for Scott, no tuning.
+- D Seen report (not a test): run43_adrian / run43_notus moments matched to tags (medians 420 ms / 190 ms; Adrian breakdown 760/1650/1460, range −1780..3760), report makes right, misses called make, makes called miss, coach, no_track; numbers marked NOT FOUND until the run.
+- E Garden Valley blind: labels .team/specs/44_gv_labels.json and score script .team/specs/44_gv_score.py frozen before the run; spec-43 FT retrace re-scored on GV; hand-check before reading the score; auto make/miss right/wrong, coach, no_track, FT found/missed/false/maybe.
+- F Numbers table (spaced columns, no pipes): TRACK_LEAD_MS 1000 with fact; 28/28 and 7/140 marked seen tag-context only; GV numbers NOT FOUND.
+- Rules: no core edits/training/tuning/banned trials; finder and make/miss read no tags/scoreboard/DB; one GV try then stop; unverified claims flagged NOT FOUND — Claude Code to check.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c3313b756668452dfce79186574f46110d0ea3afd3c2620680325cbb330c936f
+  hermes -c "Create .team/specs/44_rim_first_make_miss_spec.md"
+
+Session:        local-c3313b756668452dfce79186574f46110d0ea3afd3c2620680325cbb330c936f
+Title:          Create .team/specs/44_rim_first_make_miss_spec.md
+Duration:       3m 25s
+Messages:       23 (1 user, 21 tool calls)

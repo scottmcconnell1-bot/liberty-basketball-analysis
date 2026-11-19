@@ -1,0 +1,646 @@
+{
+ "read_by": "Claude Code (Vetter), by eye from the _cell_ crops, 2026-10-27",
+ "note": "digit null = blank tens slot (score below 10). Liberty is HOME. Fitting frames only, all >= 60 s from every gate and holdout time.",
+ "entries": [
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_142.00s.png",
+   "game": "A1",
+   "timestamp_s": 142.0,
+   "slot": "away_ones",
+   "score": 2,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_1518.30s.png",
+   "game": "A1",
+   "timestamp_s": 1518.3,
+   "slot": "away_ones",
+   "score": 15,
+   "digit": 5
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_1922.10s.png",
+   "game": "A1",
+   "timestamp_s": 1922.1,
+   "slot": "away_ones",
+   "score": 15,
+   "digit": 5
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_2161.00s.png",
+   "game": "A1",
+   "timestamp_s": 2161.0,
+   "slot": "away_ones",
+   "score": 16,
+   "digit": 6
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_2565.00s.png",
+   "game": "A1",
+   "timestamp_s": 2565.0,
+   "slot": "away_ones",
+   "score": 23,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3133.50s.png",
+   "game": "A1",
+   "timestamp_s": 3133.5,
+   "slot": "away_ones",
+   "score": 30,
+   "digit": 0
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3537.30s.png",
+   "game": "A1",
+   "timestamp_s": 3537.3,
+   "slot": "away_ones",
+   "score": 38,
+   "digit": 8
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_3941.10s.png",
+   "game": "A1",
+   "timestamp_s": 3941.1,
+   "slot": "away_ones",
+   "score": 40,
+   "digit": 0
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_546.00s.png",
+   "game": "A1",
+   "timestamp_s": 546.0,
+   "slot": "away_ones",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_ones_950.00s.png",
+   "game": "A1",
+   "timestamp_s": 950.0,
+   "slot": "away_ones",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_142.00s.png",
+   "game": "A1",
+   "timestamp_s": 142.0,
+   "slot": "away_tens",
+   "score": 2,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_1518.30s.png",
+   "game": "A1",
+   "timestamp_s": 1518.3,
+   "slot": "away_tens",
+   "score": 15,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_1922.10s.png",
+   "game": "A1",
+   "timestamp_s": 1922.1,
+   "slot": "away_tens",
+   "score": 15,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_2161.00s.png",
+   "game": "A1",
+   "timestamp_s": 2161.0,
+   "slot": "away_tens",
+   "score": 16,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_2565.00s.png",
+   "game": "A1",
+   "timestamp_s": 2565.0,
+   "slot": "away_tens",
+   "score": 23,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3133.50s.png",
+   "game": "A1",
+   "timestamp_s": 3133.5,
+   "slot": "away_tens",
+   "score": 30,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3537.30s.png",
+   "game": "A1",
+   "timestamp_s": 3537.3,
+   "slot": "away_tens",
+   "score": 38,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_3941.10s.png",
+   "game": "A1",
+   "timestamp_s": 3941.1,
+   "slot": "away_tens",
+   "score": 40,
+   "digit": 4
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_546.00s.png",
+   "game": "A1",
+   "timestamp_s": 546.0,
+   "slot": "away_tens",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_away_tens_950.00s.png",
+   "game": "A1",
+   "timestamp_s": 950.0,
+   "slot": "away_tens",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_142.00s.png",
+   "game": "A1",
+   "timestamp_s": 142.0,
+   "slot": "home_ones",
+   "score": 0,
+   "digit": 0
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_1518.30s.png",
+   "game": "A1",
+   "timestamp_s": 1518.3,
+   "slot": "home_ones",
+   "score": 8,
+   "digit": 8
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_1922.10s.png",
+   "game": "A1",
+   "timestamp_s": 1922.1,
+   "slot": "home_ones",
+   "score": 10,
+   "digit": 0
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_2161.00s.png",
+   "game": "A1",
+   "timestamp_s": 2161.0,
+   "slot": "home_ones",
+   "score": 10,
+   "digit": 0
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_2565.00s.png",
+   "game": "A1",
+   "timestamp_s": 2565.0,
+   "slot": "home_ones",
+   "score": 15,
+   "digit": 5
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3133.50s.png",
+   "game": "A1",
+   "timestamp_s": 3133.5,
+   "slot": "home_ones",
+   "score": 21,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3537.30s.png",
+   "game": "A1",
+   "timestamp_s": 3537.3,
+   "slot": "home_ones",
+   "score": 29,
+   "digit": 9
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_3941.10s.png",
+   "game": "A1",
+   "timestamp_s": 3941.1,
+   "slot": "home_ones",
+   "score": 29,
+   "digit": 9
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_546.00s.png",
+   "game": "A1",
+   "timestamp_s": 546.0,
+   "slot": "home_ones",
+   "score": 2,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_ones_950.00s.png",
+   "game": "A1",
+   "timestamp_s": 950.0,
+   "slot": "home_ones",
+   "score": 3,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_142.00s.png",
+   "game": "A1",
+   "timestamp_s": 142.0,
+   "slot": "home_tens",
+   "score": 0,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_1518.30s.png",
+   "game": "A1",
+   "timestamp_s": 1518.3,
+   "slot": "home_tens",
+   "score": 8,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_1922.10s.png",
+   "game": "A1",
+   "timestamp_s": 1922.1,
+   "slot": "home_tens",
+   "score": 10,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_2161.00s.png",
+   "game": "A1",
+   "timestamp_s": 2161.0,
+   "slot": "home_tens",
+   "score": 10,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_2565.00s.png",
+   "game": "A1",
+   "timestamp_s": 2565.0,
+   "slot": "home_tens",
+   "score": 15,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3133.50s.png",
+   "game": "A1",
+   "timestamp_s": 3133.5,
+   "slot": "home_tens",
+   "score": 21,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3537.30s.png",
+   "game": "A1",
+   "timestamp_s": 3537.3,
+   "slot": "home_tens",
+   "score": 29,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_3941.10s.png",
+   "game": "A1",
+   "timestamp_s": 3941.1,
+   "slot": "home_tens",
+   "score": 29,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_546.00s.png",
+   "game": "A1",
+   "timestamp_s": 546.0,
+   "slot": "home_tens",
+   "score": 2,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334_home_tens_950.00s.png",
+   "game": "A1",
+   "timestamp_s": 950.0,
+   "slot": "home_tens",
+   "score": 3,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1041.30s.png",
+   "game": "A",
+   "timestamp_s": 1041.3,
+   "slot": "away_ones",
+   "score": 8,
+   "digit": 8
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1416.00s.png",
+   "game": "A",
+   "timestamp_s": 1416.0,
+   "slot": "away_ones",
+   "score": 9,
+   "digit": 9
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_1626.00s.png",
+   "game": "A",
+   "timestamp_s": 1626.0,
+   "slot": "away_ones",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2165.10s.png",
+   "game": "A",
+   "timestamp_s": 2165.1,
+   "slot": "away_ones",
+   "score": 15,
+   "digit": 5
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2375.00s.png",
+   "game": "A",
+   "timestamp_s": 2375.0,
+   "slot": "away_ones",
+   "score": 15,
+   "digit": 5
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_2750.00s.png",
+   "game": "A",
+   "timestamp_s": 2750.0,
+   "slot": "away_ones",
+   "score": 17,
+   "digit": 7
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_292.30s.png",
+   "game": "A",
+   "timestamp_s": 292.3,
+   "slot": "away_ones",
+   "score": 4,
+   "digit": 4
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_3289.60s.png",
+   "game": "A",
+   "timestamp_s": 3289.6,
+   "slot": "away_ones",
+   "score": 21,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_3499.00s.png",
+   "game": "A",
+   "timestamp_s": 3499.0,
+   "slot": "away_ones",
+   "score": 21,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_ones_502.00s.png",
+   "game": "A",
+   "timestamp_s": 502.0,
+   "slot": "away_ones",
+   "score": 4,
+   "digit": 4
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_1041.30s.png",
+   "game": "A",
+   "timestamp_s": 1041.3,
+   "slot": "away_tens",
+   "score": 8,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_1416.00s.png",
+   "game": "A",
+   "timestamp_s": 1416.0,
+   "slot": "away_tens",
+   "score": 9,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_1626.00s.png",
+   "game": "A",
+   "timestamp_s": 1626.0,
+   "slot": "away_tens",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2165.10s.png",
+   "game": "A",
+   "timestamp_s": 2165.1,
+   "slot": "away_tens",
+   "score": 15,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2375.00s.png",
+   "game": "A",
+   "timestamp_s": 2375.0,
+   "slot": "away_tens",
+   "score": 15,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_2750.00s.png",
+   "game": "A",
+   "timestamp_s": 2750.0,
+   "slot": "away_tens",
+   "score": 17,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_292.30s.png",
+   "game": "A",
+   "timestamp_s": 292.3,
+   "slot": "away_tens",
+   "score": 4,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_3289.60s.png",
+   "game": "A",
+   "timestamp_s": 3289.6,
+   "slot": "away_tens",
+   "score": 21,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_3499.00s.png",
+   "game": "A",
+   "timestamp_s": 3499.0,
+   "slot": "away_tens",
+   "score": 21,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_away_tens_502.00s.png",
+   "game": "A",
+   "timestamp_s": 502.0,
+   "slot": "away_tens",
+   "score": 4,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1041.30s.png",
+   "game": "A",
+   "timestamp_s": 1041.3,
+   "slot": "home_ones",
+   "score": 13,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1416.00s.png",
+   "game": "A",
+   "timestamp_s": 1416.0,
+   "slot": "home_ones",
+   "score": 16,
+   "digit": 6
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_1626.00s.png",
+   "game": "A",
+   "timestamp_s": 1626.0,
+   "slot": "home_ones",
+   "score": 16,
+   "digit": 6
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2165.10s.png",
+   "game": "A",
+   "timestamp_s": 2165.1,
+   "slot": "home_ones",
+   "score": 16,
+   "digit": 6
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2375.00s.png",
+   "game": "A",
+   "timestamp_s": 2375.0,
+   "slot": "home_ones",
+   "score": 19,
+   "digit": 9
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_2750.00s.png",
+   "game": "A",
+   "timestamp_s": 2750.0,
+   "slot": "home_ones",
+   "score": 23,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_292.30s.png",
+   "game": "A",
+   "timestamp_s": 292.3,
+   "slot": "home_ones",
+   "score": 9,
+   "digit": 9
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_3289.60s.png",
+   "game": "A",
+   "timestamp_s": 3289.6,
+   "slot": "home_ones",
+   "score": 32,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_3499.00s.png",
+   "game": "A",
+   "timestamp_s": 3499.0,
+   "slot": "home_ones",
+   "score": 36,
+   "digit": 6
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_ones_502.00s.png",
+   "game": "A",
+   "timestamp_s": 502.0,
+   "slot": "home_ones",
+   "score": 11,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1041.30s.png",
+   "game": "A",
+   "timestamp_s": 1041.3,
+   "slot": "home_tens",
+   "score": 13,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1416.00s.png",
+   "game": "A",
+   "timestamp_s": 1416.0,
+   "slot": "home_tens",
+   "score": 16,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_1626.00s.png",
+   "game": "A",
+   "timestamp_s": 1626.0,
+   "slot": "home_tens",
+   "score": 16,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2165.10s.png",
+   "game": "A",
+   "timestamp_s": 2165.1,
+   "slot": "home_tens",
+   "score": 16,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2375.00s.png",
+   "game": "A",
+   "timestamp_s": 2375.0,
+   "slot": "home_tens",
+   "score": 19,
+   "digit": 1
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_2750.00s.png",
+   "game": "A",
+   "timestamp_s": 2750.0,
+   "slot": "home_tens",
+   "score": 23,
+   "digit": 2
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_292.30s.png",
+   "game": "A",
+   "timestamp_s": 292.3,
+   "slot": "home_tens",
+   "score": 9,
+   "digit": null
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_3289.60s.png",
+   "game": "A",
+   "timestamp_s": 3289.6,
+   "slot": "home_tens",
+   "score": 32,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_3499.00s.png",
+   "game": "A",
+   "timestamp_s": 3499.0,
+   "slot": "home_tens",
+   "score": 36,
+   "digit": 3
+  },
+  {
+   "crop_path": ".team/notus_fit_crops/jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334_home_tens_502.00s.png",
+   "game": "A",
+   "timestamp_s": 502.0,
+   "slot": "home_tens",
+   "score": 11,
+   "digit": 1
+  }
+ ]
+}

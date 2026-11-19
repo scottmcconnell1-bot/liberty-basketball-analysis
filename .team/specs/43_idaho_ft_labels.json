@@ -1,0 +1,894 @@
+{
+ "written": "2026-11-08 by Claude Code BEFORE the spec-43 retrace on Idaho (V3)",
+ "method": "every moment: 1 frame at trigger-1s in 6-up grids (scratchpad idaho_ftgrid); 15 stopped-clock / lineup moments re-checked with 4 wide frames -1.0/-0.4/0/+0.8 s (idaho_wide), 2379560 also -3.0..-1.2 s",
+ "finding": "no moment of run42base_idaho is a free-throw shot; FT setups (455600, 459520, 2023280, 2024560) fired with the ref holding the ball and the FT shots themselves are not moments (shot-finder miss). Idaho tests FT false alarms only; FT recall cannot be scored here.",
+ "moments": {
+  "127200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "150840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "233520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "269880": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "277440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "279880": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "284120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "323200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "329160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "333840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "336760": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "356760": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "406160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "410800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "444680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "450000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "455600": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup (lane lined up, ref holds ball), no shot in window"
+  },
+  "459520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup, ref holds ball, no shot"
+  },
+  "467680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "487320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "487880": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "490920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "520560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "551600": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "552480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "557200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "562160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "572280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "ref holds ball, dead ball"
+  },
+  "574840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball"
+  },
+  "578920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball, ref passes"
+  },
+  "580320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball"
+  },
+  "591520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "602040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "607280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "656600": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "658440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "674520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "676840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "709640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "711360": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "717560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "719000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "721200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "743520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "745200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "746320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "748720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "767440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "784200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball / inbound (clock-stop check)"
+  },
+  "791640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "890960": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "894280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball / inbound (clock-stop check)"
+  },
+  "905000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "920400": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "937680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "985840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "999560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1001720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1007680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1037840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1054480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1128600": {
+   "label": "FT",
+   "shooter_feet": [
+    815,
+    561
+   ],
+   "note": "CORRECTED after the retrace during hand-check: real FT (clock stopped 4:27, lane lined up, Idaho City #3 at the line shoots; zoom_1128600.jpg). First grid pass missed it."
+  },
+  "1144240": {
+   "label": "FT",
+   "shooter_feet": [
+    813,
+    561
+   ],
+   "note": "CORRECTED after the retrace during hand-check: real FT (clock stopped 4:27, lane lined up, Idaho City #3 at the line shoots; zoom_1144240.jpg). First grid pass missed it."
+  },
+  "1165880": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1175040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1179440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup, ref holds ball, no shot (clock-stop check)"
+  },
+  "1180800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup, ref holds ball, no shot (clock-stop check)"
+  },
+  "1191320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1206640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1211200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1218680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1281560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1283560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "inbound, ref holds ball"
+  },
+  "1288200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "inbound, ref holds ball"
+  },
+  "1289800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "inbound"
+  },
+  "1296160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1299720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1304160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1325080": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1363320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1366400": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1369240": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1372440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1376960": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1385200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1425640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1431960": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1437640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1438800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball 16.2"
+  },
+  "1441120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead-ball shot after whistle"
+  },
+  "1455800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1463800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1719440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1724320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1740040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1780640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1806520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1813360": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1825280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1827320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1842720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1847240": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1940200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1958000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1962120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1969640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1980160": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "1999320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2002040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2023280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup, ref holds ball, no shot"
+  },
+  "2024560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "FT setup, ref holds ball, no shot"
+  },
+  "2036840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2063920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2096520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2113200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2126800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2145040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2145640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2146640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2147880": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2168440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2183200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2198720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2200840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2202920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2226320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2229520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2253400": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2254080": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2255520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2257120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2258280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2270520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2271320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2287200": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2300960": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2325480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2338440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead ball / inbound (clock-stop check)"
+  },
+  "2374800": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2379560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "dead-ball scramble under basket, clock stopped 48.4, not FT"
+  },
+  "2385560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2391000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2392480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2394120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2395000": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2396560": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2398320": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2400960": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2430040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2463240": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2548520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2554240": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2594640": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2666680": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2670040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2763760": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2764720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2765280": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2769760": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2802080": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2804480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2838600": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2841120": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2846240": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2848920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2852480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2903720": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2906520": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2908440": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "live play (clock running), not FT"
+  },
+  "2932040": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2976840": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2977920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "2981080": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "3002920": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "3005480": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  },
+  "3009600": {
+   "label": "no",
+   "shooter_feet": null,
+   "note": "game play / warm-up, no FT lineup"
+  }
+ },
+ "correction": "2026-11-08 after the spec-43 retrace: Claude Code's first labels missed 2 real FTs (1128600, 1144240) that the rule flagged. Re-checked ALL moments with a stopped scoreboard clock (clock-digit diff -1.5 s vs +0.5 s, scratchpad clockdiff.json; 21 moments <= 3.7) plus 4-frame wide sheets: no other FT shot moment. Labels corrected; this is disclosed, not hidden."
+}

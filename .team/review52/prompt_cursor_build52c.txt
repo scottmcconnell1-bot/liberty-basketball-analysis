@@ -1,0 +1,6 @@
+You are CURSOR, the BUILDER. Scott approved spec .team/specs/52c_first_shot_sequence_prereg.md v2 (sha f5b4d5df..., verify vs review52/spec52c_v2_sha.txt FIRST; stop if mismatch).
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Build Item 4 steps 2, 3, 4 EXACTLY as the spec says (train_clip.py seq head + per-film seq_follower; ensemble_predict.py predict_all seq + shot_list extras_require_seed_disagreement; test_mm52.py tests incl. 52b; postproc52b.json + sha file). Keep postproc52.json / postproc52a.json unchanged and logo52 / logo52a gate reproductions byte-identical (test exists). Do NOT train, do NOT run the gate on any new preds.
+Run tests in WSL: python3 -m pytest .team/mm_clip .team/shot_detectors -q (deselect the 3 Windows-path holdout_names tests and ultralytics collector, as before).
+Also make sure the train command in step 6 works with the GPU venv on Windows (C:/Users/scott/.venvs/liberty-gpu/Scripts/python.exe, Windows paths) - state the exact Windows command.
+Report changed files with sha256. End with: CURSOR: BUILT | CURSOR: BLOCKED: <why>

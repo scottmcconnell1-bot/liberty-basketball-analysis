@@ -1,6 +1,6 @@
-# Daily save: refresh learning status, commit safe source changes, push to origin.
-# Never commits secrets, DB, uploads, logs, or teach/panel runtime files:
-# only paths on the scripts/git_save_select.py allowlist are staged.
+# Daily refresh: panel score + learning status only. No commit, no push (Scott, 2026-10-28).
+# Scott decides every save/push/merge; Claude Code recommends them. The old commit+push
+# block is in git history (commit 9040391) if it is ever wanted again.
 # Usage: pwsh -File scripts/daily_git_save.ps1
 # Scheduled: Task Scheduler → Liberty Daily Git Save
 
@@ -85,65 +85,9 @@ try {
     Invoke-PySoft "full_film_panel" @("scripts/score_full_film_panel.py")
     Invoke-PySoft "learning_status" @("scripts/generate_learning_status.py") -RetryOnSqliteLock
 
-    # ALLOWLIST staging: scripts/git_save_select.py returns only source/doc files
-    # under known folders (+ docs/LEARNING_STATUS.md etc.). Never `git add -A`:
-    # that pushed browser Local Storage, Flask logs and scratch screenshots.
-    # Start from a clean index so nothing staged earlier rides along.
-    Invoke-Git @("reset", "-q")
-    $pathFile = [System.IO.Path]::GetTempFileName()
-    try {
-        Write-Log "Selecting allowlisted paths: py -3.12 scripts/git_save_select.py"
-        & py -3.12 (Join-Path $RepoRoot "scripts\git_save_select.py") --repo $RepoRoot --out $pathFile
-        if ($LASTEXITCODE -ne 0) {
-            throw "git_save_select.py failed with exit $LASTEXITCODE"
-        }
-        if ((Get-Item -LiteralPath $pathFile).Length -gt 0) {
-            # NUL-separated literal paths: safe for spaces, commas, '#', '*' in names.
-            Invoke-Git @("--literal-pathspecs", "add", "--pathspec-from-file=$pathFile", "--pathspec-file-nul")
-        }
-    }
-    finally {
-        Remove-Item -LiteralPath $pathFile -ErrorAction SilentlyContinue
-    }
-
-    # Refuse if a staged file looks like a secret.
-    $staged = & git diff --cached --name-only
-    $blocked = $staged | Where-Object {
-        $_ -match '(^|/)\.env($|\.)' -or
-        $_ -match '\.(pem|pfx|p12)$' -or
-        $_ -match '(^|/)credentials\.json$' -or
-        $_ -match '(^|/)film_analysis\.db$' -or
-        $_ -match '(^|/)uploads/' -or
-        $_ -match 'full_film_panel_latest\.json$' -or
-        $_ -match 'full_film_panel_history\.jsonl$' -or
-        $_ -match 'teach_loop_state\.json$'
-    }
-    if ($blocked) {
-        throw ("Refusing to commit sensitive/runtime paths: " + ($blocked -join ", "))
-    }
-
-    $pending = & git diff --cached --name-only
-    if (-not $pending) {
-        Write-Log "No safe changes to commit."
-        Write-Log "=== daily_git_save done (noop) ==="
-        exit 0
-    }
-
-    Write-Log ("Staging {0} files" -f @($pending).Count)
-    $date = Get-Date -Format "yyyy-MM-dd"
-    $msg = @"
-chore: daily learning status $date
-
-Automated Liberty daily snapshot: learning status report + safe source changes (no .env/DB/uploads/logs/panel runtime).
-"@
-    Invoke-Git @("commit", "-m", $msg)
-
-    # Always push explicitly to origin. Do NOT probe @{u}: with
-    # $ErrorActionPreference=Stop, a failed rev-parse aborts before fallback.
-    # -u keeps tracking healthy for interactive git use.
-    Write-Log "Pushing HEAD to origin (set upstream)"
-    Invoke-Git @("push", "-u", "origin", "HEAD")
-
+    # Commit and push removed (Scott, 2026-10-28): the job pushed unapproved work to
+    # team/auto. Files are refreshed on disk only; saving is recommended to Scott.
+    Write-Log "Refresh only: no commit, no push."
     Write-Log "=== daily_git_save done ==="
     exit 0
 }

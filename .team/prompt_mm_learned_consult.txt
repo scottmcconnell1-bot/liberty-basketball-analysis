@@ -1,0 +1,21 @@
+You are advising the Liberty basketball team on ONE decision. Read-only: do not change any file.
+Read: the last 3 entries of .team/drift_log.md (the 2026-11-10 diagnosis), .team/shot_detectors/small_fixes_v6_copy.py decide_shot (the hand rules), collect_q4_bodd.py v6_ball (the fixed-pixel crop and pick).
+
+SCOTT (binding, 2026-11-10): "So, yes, try your suggestion to fix the issue. Ask the other AIs for their opinion." Goal: makes/misses right on games the program has never seen, without overwhelming the coach.
+
+FACTS (Claude Code, Proven unless marked):
+- Hand rules (decide_shot: ~12 reject checks, ~50 fixed numbers) were tuned on Adrian Q1-Q3. Makes found: Adrian Q1-Q3 27/38 (tuned set), Adrian Q4 (same game, not tuned) 2/5, Notus 2/9, GV 17/64 with the spec-45 film scale (10/64 without). Each film fails different checks.
+- 720p ball tracks are not thinner (ball points per make: Adrian 25, Notus 31, GV 37).
+- Cause (proven on 2 GV frames, inferred for the rest): v6 crop (hoop +-260 px x, -200/+240 px y) and 220 px pick radius are fixed pixels. At 720p they cover ~8x7 hoop widths instead of ~5x4.5, so the shooter's release and balls on the floor are inside the crop; the rule "ball starts well below rim = rebound" then rejects normal shots (14 of 43 GV missed makes).
+- Labels: Adrian coach tags 127 shots (43 make; Q4 18 shots was the old holdout), Notus A1 coach tags 31 (9 make), GV Claude Code labels from frames 184 real shots (64 make) plus 326 non-shot moments. Total 342 shots, 116 makes, 3 games, 2 gyms (Adrian away gym; Notus A1 and GV = Liberty home gym).
+- Unseen films: Riverstone (Liberty HOME gym, finder already run, not looked at), HSB, HSB1, Rimrock (Liberty AWAY = other gyms), Idaho City (seen for FT only, Liberty home).
+- Models on hand: BODD (ball/hoop/player/referee), v6 ball, d2v1 ball (trained on 7 films' ball boxes). GPU: RTX 5060 laptop. Finder gives rim-time moments (no tags) on any film.
+
+Claude Code's proposal (not yet a spec): replace the hand rules with a LEARNED make/miss model.
+- Input: a short clip around the rim from the finder moment, cropped and resized by hoop width (so every camera looks the same size), e.g. ~1.5 s, rim box ~3 hoop widths.
+- Model options: (a) small video/image-sequence classifier on the rim crop (net/ball through rim); (b) hand-made features normalized by hoop width (BODD ball path through rim zone, net-pixel motion below rim) + a simple model (logistic regression / gradient boosting); (c) cheap step first: scale the v6 crop and pick radius by hoop width and re-run the rules (seen films only).
+- Honesty: train/measure with leave-one-game-out (train on 2 games, score the 3rd) so we see how it holds across games BEFORE any blind test. Then ONE blind test on an unseen game, labels and score frozen first. Output = make / miss / coach (unsure band), coach load reported.
+
+Questions: (1) Which option (a/b/c or a mix) and why, given only 342 labelled shots? (2) Is leave-one-game-out the right check? Anything that would leak? (3) Blind test game: Riverstone (same gym as Notus/GV) or an away game (HSB/Rimrock, new gym/camera) - or both? (4) Biggest risks (small data, label noise in Claude Code's GV labels, tag-time vs finder-time clips, gym overfit, coach load) and how to guard. (5) Anything Claude Code has wrong?
+Answer in at most 12 short lines. Then one line: RECOMMEND: <one sentence>.
+Last line exactly: MUSE: AGREE (if you support trying a learned model) or MUSE: DISAGREE: <reason>.

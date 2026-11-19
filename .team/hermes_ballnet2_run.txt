@@ -1,0 +1,125 @@
+﻿Query: ﻿Hermes, your plan .team/specs/16_ball_in_net_plan.md was REJECTED by 
+Claude Code. The 3 reasons are at the top of
+.team/specs/16_ball_in_net_plan_v1_REJECTED.md - read it FIRST. Revise 
+.team/specs/16_ball_in_net_plan.md (read it
+FIRST before overwriting) to fix those 3 points and nothing else. Keep "PLAN - 
+NOT BUILT OR MEASURED YET" at the top.
+Plain markdown, no line-number prefixes, no literal "\n".
+📖 Read 16_ball_in_net_plan_v1_REJECTED.md
+📖 Read 16_ball_in_net_plan.md  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Now I understand the three rejection points. Let me revise the plan to fix them.
+────────────────────────────────────────
+
+✗ Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/16_ball_in_net_plan.md [Escape-drift detected: halving old_string's b...]
+📖 Read 16_ball_in_net_plan.md L22-36
+✗ Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/16_ball_in_net_plan.md [Escape-drift detected: halving old_string's b...]
+📖 Read 16_ball_in_net_plan.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/16_ball_in_net_plan.md
+│ .team/specs/16_ball_in_net_plan.md
+│ @@ -4,9 +4,9 @@
+│
+│  # Ball In Net Plan — Task 1 Step 4: Existing Ball Detector on Net Box Read-Only Measurement
+│
+│ -**Author:** Hermes (Architect)  
+│ -**Date:** 2026-10-29  
+│ -**Status:** Plan for Vetted implementation  
+│ +**Author:** Hermes (Architect)
+│ +**Date:** 2026-10-29
+│ +**Status:** Plan for Vetted implementation
+│  **Gate:** Must pass Vetter review before Cursor implements
+│
+│  ---
+│ @@ -22,12 +22,13 @@
+│  ## 2. Scope
+│
+│  - **Read-only measurement only.** No edits to `ai_bridge.py`, `net_detector.py`, `models/ball_detector.pt`, `ball_confidence`, `schema.sql`, or any protected core file.
+│ -- **No cutoff changes.** The production `ball_confidence` (default 0.25) stays exactly as it is. The detector's confidence setting is **NOT changed** (Scott gate; no looser cutoffs). If the detector needs a crop upscaled to see the ball, say so and why; report detector confidence values as measured, but the summary uses the existing confidence setting only.
+│ +- **No cutoff changes.** The production `ball_confidence` is stored in `settings_store.py:13` (default 0.25) and may be overridden by the user; the script **reads this setting read-only** via `ai_settings.get("ball_confidence", 0.25)` (same as `ai_analyzer.py:40-41`). The detector's confidence is **never lowered** from that value.
+│  - **New code only** in `.team/shot_detectors/pixel_miss/` (one new file: `ball_in_net.py` and `README.md`).
+│  - **Measured on the same 140 tagged shots** (Notus A1 Q1: 31, Adrian Q1–Q3: 109).
+│  - **Output** written to `C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_in_net\` (outside repo).
+│  - **Sandbox test run** writes to `.team/shot_outputs_test/ball_in_net/` (never committed).
+│  - **Crops for the 39 review shots** with the net box and any ball box drawn, so Scott can see what it saw.
+│ +- **Front-of-rim risk:** From this camera angle, a miss that drops just in front of or behind the rim lands inside the net box in the picture. **Write a crop for EVERY real miss the check fires on** (not only the 10 review misses), so Scott can see why it fired.
+│
+│  ---
+│
+│ @@ -46,7 +47,7 @@
+│  ball_model = model if ball_model_path == person_model_path else YOLO(ball_model_path)
+│  ```
+│
+│ -The production model is `models/ball_detector.pt` (class 0 = Ball, confidence 0.25). The detector runs on full frames during AI analysis. Here we run it **only on a crop** (the net box region).
+│ +The production model is `models/ball_detector.pt` (class 0 = Ball, confidence 0.25). The detector runs on full frames during AI analysis. Here we run it on two columns as described in §6.
+│
+│  ---
+│
+│ @@ -89,16 +90,26 @@
+│
+│  ---
+│
+│ -## 6. Running the Ball Detector on the Net Box Crop
+│ +## 6. Running the Ball Detector on the Net Box — Two Columns, No Upscaling
+│ +
+│ +Production runs the detector on the **whole frame at imgsz=640** (`ai_analyzer.py:363`). On 1280×720 and 1920×1080 films the ball appears at half or a third of its size. Upscaling a ~60 px net box to 640 makes the ball roughly ten times bigger than anything the detector is used to, so a miss or a hit would say nothing about the detector.
+│ +
+│ +**Fix:** Run two columns, both at `imgsz=640`, no upscaling of the net box:
+│ +
+│ +**Column A (native-resolution square window):** A 640×640 square window centred on the net box, clamped to the frame bounds, **no resizing**, run at `imgsz=640`. This matches the detector's native input size and the ball's apparent size in production.
+│ +
+│ +**Column B (full frame, production path):** The full frame at `imgsz=640`, exactly as production runs it (`ai_analyzer.py:363`).
+│ +
+│ +In **both columns**, keep only detections whose box centre is inside the net box and below `hoop_y`. Report both columns; the 0-misses bar applies to each separately.
+│
+│  For each sampled frame:
+│
+│  1. Read the full frame from the video.
+│ -2. Crop to the net box ROI (`x0, y0, x1, y1` from `_net_box`).
+│ -3. **If the crop is smaller than the detector's training input size (640×640 for YOLOv8), upscale it** to at least 640 on the short side (maintain aspect ratio). The ball in the net is small (~20–40 px); upscaling gives the detector enough pixels to see it. Report the upscale factor used.
+│ -4. Run `ball_model.predict(crop, conf=ball_confidence, classes=[ball_class_id], verbose=False)` — **using the production `ball_confidence` (0.25) and class 0**.
+│ -5. For each detection: compute the box centre in **original image coordinates** (`cx = x0 + det_x + det_w/2`, `cy = y0 + det_y + det_h/2`).
+│ -6. **Decision per frame:** "ball in net" = **any detection with centre inside the net box AND `cy > hoop_y`**.
+│ +2. Compute the net box ROI (`x0, y0, x1, y1` from `_net_box`).
+│ +3. **Column A:** Extract a 640×640 square centred on the net box centre (`cx = (x0+x1)/2`, `cy = (y0+y1)/2`), clamped to frame bounds. No resize. Run `ball_model.predict(window, conf=ball_confidence, classes=[ball_class_id], imgsz=640, verbose=False)`.
+│ +4. **Column B:** Run `ball_model.predict(full_frame, conf=ball_confidence, classes=[ball_class_id], imgsz=640, verbose=False)` — exactly as production.
+│ +5. For each detection in either column: compute the box centre in **original image coordinates**.
+│ +6. **Decision per frame per column:** "ball in net" = **any detection with centre inside the net box AND `cy > hoop_y`**.
+│
+│  ---
+│
+│ @@ -112,18 +123,18 @@
+│  Run the check on **every shot in the build set** (140 shots). Report:
+│
+│  ### For the 19 missed makes:
+│ -- How many have **≥1 frame with "ball in net" = True** (caught)
+│ -- Per-shot: list of frames where detected, detection confidence, box centre
+│ +- How many have **≥1 frame with "ball in net" = True** (caught) — **per column**
+│ +- Per-shot: list of frames where detected, detection confidence, box centre, which column
+│
+│ … omitted 140 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 16_ball_in_net_plan.md L22-56
+📖 Read 16_ball_in_net_plan.md L90-139
+📖 Read 16_ball_in_net_plan.md L140-189
+📖 Read 16_ball_in_net_plan.md L190-269
+
+────────────────────────────────────────
+☤ Hermes
+The plan has been revised with all three fixes:
+
+1. Ball size (§6) — Replaced upscaling with two columns: Column A (640×640 square window centred on net box, clamped, no resize, imgsz=640) and Column B (full frame at imgsz=640, production path). Both keep only detections with centre inside net box and below hoop_y. 0-misses bar applies to each column separately.
+
+2. Confidence (§2, §3, §6, §10, §12) — Script reads ball_confidence read-only from settings_store.py:13 via ai_settings.get("ball_confidence", 0.25) (same as ai_analyzer.py:40-41). Never lowered.
+
+3. Front-of-rim risk (§2, §8, §10, §11, §12) — Added risk statement; crops now generated for every real miss where either column fires (not just the 10 review misses).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c364308130fddba34872391b8b4ef0bddfde7e2bca7e99ba15896d4df436871e
+  hermes -c "Revise ball in net plan per rejection"
+
+Session:        local-c364308130fddba34872391b8b4ef0bddfde7e2bca7e99ba15896d4df436871e
+Title:          Revise ball in net plan per rejection
+Duration:       5m 41s
+Messages:       23 (1 user, 21 tool calls)

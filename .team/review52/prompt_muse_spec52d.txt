@@ -1,0 +1,12 @@
+You are MUSE, the REVIEWER. READ-ONLY, no file edits. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Review .team/specs/52d_context_clip_prereg.md v1 (Hermes; longer post-shot clip window, Scott chose "different model fix" after 52c FAIL). Check against code (extract_clips.py, train_clip.py, ensemble_predict.py, gate52.py, test_mm52.py) and the 52c results (review52/*_gate52c.txt).
+Coordinator facts / concerns to verify, not trust:
+G1 Memory/time: N=87 vs 32 frames is ~2.7x activations; 8 GB RTX 5060, bs 8, bf16. Will it fit? Is the 60-75 min estimate honest (linear scaling suggests ~110 min)? If bs must drop, that changes the R4 recipe - pin it now.
+G2 Pooling dilution: r2plus1d global average pool over 6.9 s where the shot itself is the first ~2.5 s. Could this lower accuracy on ordinary shots and make/miss calls? Is STEP 0.16 (fewer frames, same span) or keeping 32 frames dense + a coarse tail better, and is that a pin to choose now without results?
+G3 Confound: a class-0 scramble that is followed by a putback/shot within 6 s will now also contain a shot later in its clip. Does the longer window teach "shot later in clip -> shot", raising false shots on scramble candidates (gvg/rimrock have 145/241 class-0 rows)? Same failure mode as the 52c flag?
+G4 Dropout: spec says R4 recipe has no dropout, but 52c spec said "nn.Dropout(0.5) before the head UNCHANGED". Which is true in pre-52c code? Pin the head exactly as R4 had it.
+G5 Crop over 6 s: broadcast camera pans; does track_hoop in extract_clips keep the hoop over 6.9 s, and what happens if the hoop leaves frame?
+G6 Is the 6.0 s disclosure honest (it was set above the max observed gap 5233 ms)?
+Also: build order, sha freeze, clips8 t_ms parity with clips7a, tests, E=5 seeds 0 1 2, fail -> stop for Scott.
+End with ONE line starting exactly: MUSE: AGREE | MUSE: AGREE WITH CHANGES: <list> | MUSE: DISAGREE: <why>

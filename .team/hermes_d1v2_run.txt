@@ -1,0 +1,195 @@
+Query: Hermes, you are the Architect. REWRITE ONE file: 
+.team/specs/19_d1_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+First line: "D1 JOB SPEC v2 - nothing built". Keep line 2 blank, then on line 3 
+copy this stamp exactly:
+"REJECTED v1 by Claude Code, 2026-10-30: wrong film paths, wrong frame mapping, 
+no saved peak fields, zone stops at 180 px, whole-list replacement drops the net
+points, overlays need video in the sandbox. Fixed in v2 below."
+Plain markdown, no line-number prefixes, no literal "\n". Create nothing else. 
+If your write tool refuses, say so plainly.
+
+Keep everything in v1 that is not listed below. Fix these, using exactly these 
+facts (Claude Code checked them in the repo today):
+
+1. FILMS. The films are NOT the tag-file names. Use the FILMS list in 
+.team/shot_detectors/pixel_miss/measure_net_moved.py (lines 31-50): Notus = 
+uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4 with tracks 
+v6_tracks_notus_q1.json; Adrian = uploads/nfhs_gam0a66d85e12.mp4 with tracks 
+v6_tracks.json. Load the 140 build-set shots, their tags and tracks with the 
+SAME loaders as measure_net_moved.py (load_shot_tags, load_tracks), so the shot 
+list is identical to Stage A's 140 (the two track files hold 142 entries; the 
+loader decides the 140).
+
+2. FRAME MAPPING. A saved track's ball/bodd entries are  where index is an 
+OFFSET from the tag frame, not an absolute frame. Absolute frame = round(t_ms / 
+1000 * fps) + index, exactly as peak_from_track does 
+(measure_net_moved.py:155-175, line 164). fps is read from the film with cv2 
+(25.0 fallback, as FrameReader does).
+
+3. NO SAVED PEAK FIELDS. The saved tracks have only the keys ball, bodd, hoop, 
+result, t (checked). There is no peak_frame, peak_reason or _court_scale_y 
+field; scale_y is 1.0. The anchor is the output of peak_from_track(track, t, 
+fps): the rule's own crossing frame when there is one (reason "crossing"), else 
+the closest-ball frame ("no_crossing_closest_ball"). Import and call that 
+function; do not re-derive it.
+
+4. TRUTH IS ONLY FOR SCORING. The key "result" in each track is the truth label.
+Only the scoring/report step may read it; the extract, arc and rule steps must 
+not. State this as a rule Cursor's test checks.
+
+5. ZONE MUST REACH BELOW 180 PX. The rule measures a point at y_rel >= 180 px 
+(ai_bridge.py:1208) and deep points beyond 180 px (ai_bridge.py:1164, 1273). Fix
+the candidate zone in advance as: horizontally |x - hoop_x| <= 3.0 * hoop_w; 
+vertically hoop_y - 4.0 * hoop_w <= y <= hoop_y + 300 px. Top-3 cap by 
+confidence stays; report frames that had more than 3.
+
+6. HOOP WIDTHS (fix the text): Adrian grouped hoop_w is 70-116 px, Notus 51-75 
+px (checked). The inlier residual stays 0.15 * hoop_w.
+
+7. CHOOSE, DON'T REPLACE THE WHOLE LIST. v1 replaced the whole saved ball list 
+with the before-anchor inliers; that deletes the points through the net that the
+rule needs (180 px measure, column, drift), so it would break every make. v2:
+   a. BEFORE the anchor (free flight): frames anchor-15 .. anchor, RANSAC 
+parabola in time for y (a > 0, y down) and line in time for x, as in v1 (min 4 
+points, 100 iterations, seed 42, residual 0.15 * hoop_w).
+   b. AFTER the anchor (in the net, not free flight): frames anchor+1 .. 
+anchor+12, RANSAC straight line in time for x AND for y (no direction 
+constraint, so a ball that comes back up is kept as it is), min 3 points, same 
+iterations, seed and residual.
+   c. In every frame of both windows that has an inlier, the inlier replaces the
+saved point for that frame (add it if the saved list had no point there - it is 
+a real detection). Frames with no inlier, and all frames outside the two 
+windows, keep the saved point unchanged. bodd is never changed.
+   d. Before any of this runs, the script proves the no-op: with the saved lists
+untouched, the Stage A copy with every switch off gives the same verdict as the 
+rule on all 140 (Stage A already showed 140/140). If not identical, stop.
+
+8. OVERLAYS NEED VIDEO. Cursor's sandbox cannot read the films. Make overlays a 
+third command, --step overlays, that Claude Code runs on Windows with the repo 
+venv after the report step; it reads d1_results.json and the films and writes 
+the 19 PNGs. Steps 2-8 stay pure Python/NumPy.
+
+9. COMMANDS. Write the Cursor (WSL) commands with /mnt/c/... paths and bash line
+breaks (\ not ^). Write the Windows commands with C:\... paths for the repo venv
+C:\Users\scott\Documents\liberty-basketball-analysis\.venv\Scripts\python.exe.
+
+Everything else stays: hard gate 0 misses called makes, lost makes listed, no 
+tuning after results, no retry loops, stop for Scott after the report, outputs 
+in C:\Users\scott\Documents\Liberty_Shot_Outputs\ball_arc\, protected files read
+only, nothing in ai_bridge.py / ai_analyzer.py / models/ changes. Every fact you
+add must come from a file you read; otherwise write "NOT FOUND - Claude Code to 
+check".
+📖 Read 19_d1_job_spec.md  0.1s
+📖 Read measure_net_moved.py
+📖 Read ai_bridge.py L1150-1299
+🔎 Grep Adrian.*hoop.*70.*116|Notus.*hoop.*51.*75|grouped.*hoop_w  9.7s
+🔎 Grep hoop_w.*70|hoop_w.*116|hoop_w.*51|hoop_w.*75  29.5s
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the facts. Let me write the v2 spec.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/19_d1_job_spec.md  0.1s
+│ .team/specs/19_d1_job_spec.md
+│ @@ -1,4 +1,6 @@
+│ -D1 JOB SPEC v1 - nothing built
+│ +D1 JOB SPEC v2 - nothing built
+│ +
+│ +REJECTED v1 by Claude Code, 2026-10-30: wrong film paths, wrong frame mapping, no saved peak fields, zone stops at 180 px, whole-list replacement drops the net points, overlays need video in the sandbox. Fixed in v2 below.
+│
+│  # D1 Job Spec: Keep Every Ball Detection Near the Rim and Choose by Real Arc
+│
+│ @@ -11,56 +13,70 @@
+│
+│  ## 2. Model, ball class, confidence (same as the saved v6 tracks)
+│
+│ -- **Weights**: the exact v6 weights that produced the saved tracks — `r"/mnt/c/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt"` (from `BallHoopExperiment.v6_weights_path` in `ai_bridge.py:612-615`).
+│ +- **Weights**: the exact v6 weights that produced the saved tracks — `r"C:\Users\scott\AppData\Local\Temp\ball_net_runs\v6\weights\best.pt"` (from `BallHoopExperiment.v6_weights_path` in `ai_bridge.py:612-615`).
+│  - **Ball class**: class name `'basketball'` (class id 0 in the v6 model; `BallHoopExperiment.detect_frame` filters `d['class_name'] == 'basketball'` at `ai_bridge.py:706`).
+│  - **Confidence**: the model's default confidence threshold (0.25) — the saved v6 tracks were generated by `BallHoopExperiment.detect_frame` which calls `self.model(frame, verbose=False)` **without** a `conf=` argument (line 636), so the YOLO default 0.25 was used. This matches `AI_DEFAULTS["ball_confidence"] = 0.25` in `ai_analyzer.py:48/50` and `settings_store.py:13`. **Never lower it.** If a per-run `ball_confidence` was persisted in `film_analysis.db` for these tracks, it is read with `sqlite3.connect(..., uri=True, mode="ro")` — but the v6 track files carry no confidence field, so the model default 0.25 is the fixed number.
+│
+│ -## 3. Frames (exactly the frames each saved v6 track covers)
+│ +## 3. Films and loaders (identical to Stage A's 140 shots)
+│
+│ -- **Source films**: the same two build-set films used for the 140 shots:
+│ -  - Notus A1 Q1: `jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334` — 1280×720, 25 fps
+│ -  - Adrian Q1-Q3: `jrhigh_adrian,_or_LIBERTY_A_v_ADRIAN_H_20260809_221334` — 1920×1080, 25 fps
+│ -- **Frame range per shot**: for each shot timestamp `t`, the saved v6 track (in `v6_tracks.json` or `v6_tracks_notus_q1.json`) contains `ball` and `bodd` lists of `[frame, x, y]`. The frames to process are **all frames from `min(ball[0][0], bodd[0][0] if bodd else ball[0][0])` to `max(ball[-1][0], bodd[-1][0] if bodd else ball[-1][0])` inclusive** — exactly the span the saved track covers.
+│ +- **Source films** (from `.team/shot_detectors/pixel_miss/measure_net_moved.py:31-50`):
+│ +  - Notus A1 Q1: `uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4` with tracks `v6_tracks_notus_q1.json`
+│ +  - Adrian Q1-Q3: `uploads/nfhs_gam0a66d85e12.mp4` with tracks `v6_tracks.json`
+│ +- **Loaders**: Use the SAME loaders as `measure_net_moved.py` (`load_shot_tags`, `load_tracks`) so the shot list is identical to Stage A's 140 (the two track files hold 142 entries; the loader decides the 140).
+│ +- **Frame range per shot**: For each shot timestamp `t`, the saved v6 track contains `ball` and `bodd` lists of `[index, x, y]` where `index` is an **offset from the tag frame** (not an absolute frame). The frames to process are all frames covered by the track's combined ball+bodd span, exactly as `measure_net_moved.py` does.
+│  - **Decoding**: `cv2.VideoCapture` on the original film file, **no resize, no `imgsz` argument** — `BallHoopExperiment.process_video_for_tags` reads frames directly with `cap.read()` (line 805) and passes the raw frame to `detect_frame`. The v6 model was trained on native-resolution frames (720p and 1080p respectively); the same native frames are used here.
+│ +- **FPS**: Read from the film with `cv2` (25.0 fallback, as `FrameReader` does in `measure_net_moved.py:186-187`).
+│
+│ -## 4. Candidates kept per frame
+│ +## 4. Frame mapping (offsets, not absolute frames)
+│ +
+│ +- A saved track's `ball`/`bodd` entries are `[index, x, y]` where `index` is an **OFFSET from the tag frame**, not an absolute frame.
+│ +- **Absolute frame** = `round(t_ms / 1000 * fps) + index`, exactly as `peak_from_track` does (`measure_net_moved.py:155-175`, line 164).
+│ +- The anchor frame is the output of `peak_from_track(track, t, fps)` — the rule's own crossing frame when there is one (reason `"crossing"`), else the closest-ball frame (`"no_crossing_closest_ball"`). **Import and call that function; do not re-derive it.**
+│ +
+│ +## 5. No saved peak fields
+│ +
+│ +- The saved tracks have only the keys `ball`, `bodd`, `hoop`, `result`, `t` (checked). There is **no** `peak_frame`, `peak_reason`, or `_court_scale_y` field; `scale_y` is 1.0.
+│ +- The anchor is the output of `peak_from_track(track, t, fps)` as above.
+│ +
+│ +## 6. Truth is only for scoring
+│ +
+│ +- The key `"result"` in each track is the truth label. **Only the scoring/report step may read it**; the extract, arc and rule steps must not. State this as a rule Cursor's test checks.
+│ +
+│ +## 7. Candidates kept per frame
+│
+│  For every frame in the shot's frame range:
+│  - Run the v6 model on the frame.
+│  - Keep **ALL** detections where `class_name == 'basketball'` and `confidence >= 0.25` (the fixed confidence from §2).
+│ -- **Near-hoop zone filter** (the same zone the v6 rule already reads — BINDING NOTE e): keep only those whose centre satisfies
+│ -  - horizontally: `abs(x_center - hoop_x) <= 3.0 * hoop_w`  (within 3 hoop widths of the grouped hoop centre)
+│ -  - vertically: `y_center <= hoop_y + 180 * scale_y`  (from above the rim down to 180 px below it; `scale_y` from the track's `_court_scale_y`, default 1.0)
+│ +- **Near-hoop zone filter** (fixed in advance, must reach below 180 px for the rule's measures at `ai_bridge.py:1208` and deep points at `ai_bridge.py:1164, 1273`): keep only those whose centre satisfies
+│ +  - horizontally: `abs(x_center - hoop_x) <= 3.0 * hoop_w` (within 3 hoop widths of the grouped hoop centre)
+│ +  - vertically: `hoop_y - 4.0 * hoop_w <= y_center <= hoop_y + 300` px (from 4 hoop widths above the rim down to 300 px below it)
+│    - no pixel colour, no net box.
+│  - **Cap**: if more than 3 candidates survive in a frame, keep only the **top 3 by confidence** (Scott's pasted advice). **Report** the number of frames where >3 candidates existed before capping.
+│
+│ -## 5. Arc model (fixed in advance, no tuning after seeing results)
+│ +## 8. Arc model (fixed in advance, no tuning after seeing results)
+│
+│ -- **Model**: parabola in frame-time for y, straight line in frame-time for x:
+│ -  - `y(t) = a * t^2 + b * t + c`  (image coordinates, y down)
+│ -  - `x(t) = m * t + k`
+│ -- **Fitting**: RANSAC on the **real candidate points only** (no interpolation, no made-up points, no ByteTrack/DeepSORT — banned).
+│ +- **Model**: RANSAC on **real candidate points only** (no interpolation, no made-up points, no ByteTrack/DeepSORT — banned).
+│  - **Fixed hyperparameters**:
+│ -  - Minimum points to attempt a fit: **4** (3 for parabola + 1 for RANSAC consensus).
+│ -  - Maximum residual for an inlier: **0.15 * hoop_w** pixels (scales with hoop width so 720p and 1080p are comparable; grouped hoop_w is 90–110 px, so ~13–16 px).
+│ +  - Minimum points to attempt a fit: **4** for before-anchor (3 for parabola + 1 for RANSAC consensus), **3** for after-anchor.
+│ +  - Maximum residual for an inlier: **0.15 * hoop_w** pixels (inlier residual scales with hoop width; Adrian grouped hoop_w is 70–116 px, Notus 51–75 px).
+│    - RANSAC iterations: **100**.
+│    - Random seed: **42** (fixed).
+│ -  - Time window: **15 frames before the anchor frame** (≈0.6 s at 25 fps). The anchor frame is the rule's own crossing frame (`cross_idx` from the UNCHANGED rule) if a crossing was found, otherwise the saved `peak_frame` from the track's `peak_reason` (never the truth label).
+│ -  - Constraint: `a > 0` in image y-down coordinates (falling trajectory).
+│ … omitted 134 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 19_d1_job_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Done. The file is rewritten with:
+
+- Line 1: D1 JOB SPEC v2 - nothing built
+- Line 2: blank- Line 3: exact rejection stamp
+- All 9 fixes applied per the facts from the repo files you citedThe spec now uses the FILMS list from measure_net_moved.py:31-50, the peak_from_track frame mapping (offsets + tag frame), no saved peak fields, truth-only-for-scoring rule, zone extended to hoop_y + 300 px, hoop widths fixed to Adrian 70-116 / Notus 51-75, choose-don't-replace with before/after-anchor windows and no-op check, overlays as a separate --step overlays Windows command, and WSL/Windows command splits with correct paths.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-241a340c3f72af4ecd4a5b1a15578ac66ec06ef5b63097b95df1d03afb90bf24
+  hermes -c "Rewrite D1 job spec file with corrected film paths"
+
+Session:        local-241a340c3f72af4ecd4a5b1a15578ac66ec06ef5b63097b95df1d03afb90bf24
+Title:          Rewrite D1 job spec file with corrected film paths
+Duration:       2m 19s
+Messages:       16 (1 user, 14 tool calls)
+exit 0

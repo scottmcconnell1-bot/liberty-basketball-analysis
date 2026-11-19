@@ -1,0 +1,169 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your reader fix plan v2 was REJECTED: read the first line of 
+.team/specs/09_notus_reader_fix_v2_REJECTED.md for the five reasons (v1 reasons:
+first line of .team/specs/09_notus_reader_fix_v1_REJECTED.md; keep those fixed),
+then rewrite the WHOLE of NEXT_TASK.md so its body carries every fix. Keep the 
+good part: Notus red digits are dimmer than the Mustangs board, so the imported 
+_red_mask likely misses them. Required in the new plan: (a) First, a check that 
+the home/away TENS boxes actually sit on the tens digits (a lit tens slot 
+measuring V~10, the same as blank, suggests a misplaced box); if a box is wrong,
+the plan says how the coder re-measures it on fitting frames, not gate frames. 
+(b) Any new mask cutoff is NOT chosen by you now. The plan tells the CODER to 
+measure the red-digit colour on fitting frames only, at least 60 s from every 
+gate time and every holdout time, using a rule written in the plan before 
+measuring (for example a fixed percentile of lit-digit pixels), then freeze the 
+values in a file; the plan must not contain final cutoff numbers picked from 
+gate frames. Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 
+3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559. Holdout 
+times (s): A1 246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 
+3477.3, 3881.1; A 232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 
+3229.6, 3603.9. (c) Refit the segment geometry with the new mask on those same 
+fitting frames. (d) Rerun the 20-crop gate once with no retuning; only if it 
+passes 20/20, run the holdout once with a new test 
+tests/test_notus_holdout_gate.py that reads 
+.team/specs/04_notus_holdout_truth.json (the coder writes it; you must NOT open 
+that file or the holdout_*.png crops). (e) A complete heading exactly ## Files. 
+Do not edit scoreboard_clock.py. STRICT: create or edit ONLY NEXT_TASK.md. Do 
+NOT create any other file, not even scratch scripts; if you need numbers, run 
+python with code on stdin (.venv/Scripts/python.exe - <<'PY' ... PY) and never 
+sample video within 60 s of a holdout time.
+📖 Read 09_notus_reader_fix_v2_REJECTED.md  0.1s
+📖 Read 09_notus_reader_fix_v1_REJECTED.md  0.1s
+📖 Read NEXT_TASK.md
+📖 Read scoreboard_clock_720p.py
+📖 Read fit_notus_segments.py
+📖 Read notus_scoreboard_rois.json
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the context. Let me rewrite the complete NEXT_TASK.md with all fixes from both rejections.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -1,6 +1,13 @@
+│ -# NEXT_TASK.md — Notus 720p Reader Fix (v2)
+│ +# NEXT_TASK.md — Notus 720p Reader Fix (v3)
+│
+│ -## Rejection Reasons (from 09_notus_reader_fix_v1_REJECTED.md)
+│ +## Rejection Reasons (from 09_notus_reader_fix_v2_REJECTED.md)
+│ +1. **Wrong ROI file**: `data/roi/notus_roi.json` does not exist; the ROI file is `data/roi/notus_scoreboard_rois.json` (scoreboard_clock_720p.py line 30). Say whether a corrected box replaces it or goes to a new file AND that the reader loads it.
+│ +2. **Holdout leak in fitting**: `scripts/fit_notus_segments.py` `_sample_timestamps` (line 60) excludes only GATE times; fitting frames could sit next to holdout times. The plan must have the coder add the 20 holdout times (from the plan, not from the holdout file) to the exclusion.
+│ +3. **Circular threshold rule**: "10th percentile over lit-digit pixels" needs lit pixels defined before any cutoff exists. Give a rule that does not depend on the cutoff being set, e.g. red-hue pixels inside the segment regions of segments that are ON for a digit whose value is known from the fitting frame (say how the value is known — e.g. the Vetter reads the fitting crops by eye before measuring), or another rule fixed in advance.
+│ +4. **Unbounded box re-measure**: "maximize mean V" shrinks to a few bright pixels. Keep the measured w,h and only search a bounded x,y shift, on fitting frames.
+│ +5. **_notus_red_mask loads JSON per-call with cwd-relative path**: Load once from ROOT / data/roi, like `_load_segment_geometry`.
+│ +
+│ +## Rejection Reasons (from 09_notus_reader_fix_v1_REJECTED.md — keep fixed)
+│  1. **Leak**: Mask cutoffs S>50/V>50 were picked from gate-timestamp frames; thresholds must be measured on frames ≥60 s from every gate AND holdout time, then frozen.
+│  2. **Contradiction**: Lit tens V ≈ 10–50 (blank V ≈ 10) but fix used V>50 — a lit tens at V~10 means the tens box may not sit on the digit. Check box position before any color change.
+│  3. **Missing holdout run**: Plan omits the single holdout run after gate passes.
+│ @@ -12,9 +19,9 @@
+│
+│  ### 0. Verify home/away TENS box positions (FIRST, before any mask change)
+│  On **fitting frames only** (frames ≥60 s from every gate time and every holdout time):
+│ -- For each of the four scoreboard slots (home_tens, home_ones, away_tens, away_ones), crop the current `notus_roi.json` box on a fitting frame where the score is visibly changing (so tens digit is definitely lit).
+│ +- For each of the four scoreboard slots (home_tens, home_ones, away_tens, away_ones), crop the current `notus_scoreboard_rois.json` box on a fitting frame where the score is visibly changing (so tens digit is definitely lit).
+│  - Measure mean V inside the box. If mean V ≈ 10 (same as blank), the box is misplaced — it is not covering the tens digit.
+│ -- **If any box is wrong**: Re-measure its (x, y, w, h) on fitting frames by finding the rectangle that maximizes mean V when the tens digit is lit (e.g., score ≥ 10). Write corrected boxes to a new `data/roi/notus_roi.json` (do not edit the original until verified). The coder does this re-measurement; the plan does not supply coordinates.
+│ +- **If any box is wrong**: Re-measure its (x, y) on fitting frames by searching a bounded x,y shift (±8 px in x, ±6 px in y) around the current box center, keeping the measured w,h fixed, to maximize mean V when the tens digit is lit (e.g., score ≥ 10). Write corrected boxes back into `data/roi/notus_scoreboard_rois.json` (replacing the existing tens/ones boxes under `games/*/scores` and `default/scores`). The reader already loads this file via `load_rois()` — no code change needed. The coder does this re-measurement; the plan does not supply coordinates.
+│
+│  Gate times (s): A1 202, 606, 1010, 1413, 1817, 2221, 2625, 3028, 3432, 3836; A 187, 562, 936, 1311, 1686, 2060, 2435, 2810, 3184, 3559  
+│  Holdout times (s): A1 246.9, 650.7, 1054.5, 1458.3, 1862.1, 2265.9, 2669.7, 3073.5, 3477.3, 3881.1; A 232.3, 606.8, 981.3, 1356.0, 1730.6, 2105.1, 2479.6, 2854.1, 3229.6, 3603.9  
+│ @@ -24,20 +31,32 @@
+│
+│  ### 1. Measure Notus red-digit colour on fitting frames ONLY (no gate/holdout frames)
+│  Using the (possibly corrected) ROI boxes from step 0 on fitting frames only:
+│ -- For each lit digit crop (score visibly non-zero), compute HSV of pixels inside the digit region.
+│ -- **Rule (fixed before measuring)**: Take the 10th percentile of V and the 10th percentile of S over all lit-digit pixels across all four slots and all fitting frames. These two numbers become the frozen `NOTUS_S_MIN` and `NOTUS_V_MIN`.
+│ +- The Vetter reads ~10 fitting-frame crops per slot by eye to get the ground-truth digit value for each crop.
+│ +- For each crop where the Vetter-confirmed digit is non-blank, take the **segment regions from the current `notus_segment_geometry.json`** (mapped into the slot box), union the seven regions, and collect pixels inside that union whose hue falls in the standard red wrap [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale). These are the "red-hue lit-segment pixels" — defined without any S/V cutoff.
+│ +- **Rule (fixed before measuring)**: Take the 10th percentile of V and the 10th percentile of S over all red-hue lit-segment pixels across all four slots and all fitting frames. These two numbers become the frozen `NOTUS_S_MIN` and `NOTUS_V_MIN`.
+│  - Write `NOTUS_S_MIN` and `NOTUS_V_MIN` to `data/roi/notus_red_thresholds.json` (keys: `s_min`, `v_min`). The coder runs the measurement and writes the file; **this plan contains no final cutoff numbers**.
+│ -- Hue ranges stay the standard red wrap: [0, 12] ∪ [165, 180] (H in 0–179 OpenCV scale).
+│
+│  ---
+│
+│  ### 2. Add Notus-specific mask to `scoreboard_clock_720p.py`
+│  ```python
+│ +_NOTUS_THRESHOLDS: dict | None = None
+│ +
+│ +def _load_notus_thresholds() -> dict:
+│ +    global _NOTUS_THRESHOLDS
+│ +    if _NOTUS_THRESHOLDS is not None:
+│ +        return _NOTUS_THRESHOLDS
+│ +    import json
+│ +    from pathlib import Path
+│ +    path = ROOT / "data" / "roi" / "notus_red_thresholds.json"
+│ +    _NOTUS_THRESHOLDS = json.loads(path.read_text(encoding="utf-8"))
+│ +    return _NOTUS_THRESHOLDS
+│ +
+│ +
+│  def _notus_red_mask(crop: np.ndarray) -> np.ndarray:
+│      """Red mask for Notus 720p board using frozen thresholds from notus_red_thresholds.json."""
+│ -    import cv2, json
+│ -    from pathlib import Path
+│ -    thresholds = json.loads(Path("data/roi/notus_red_thresholds.json").read_text())
+│ +    import cv2
+│ +    thresholds = _load_notus_thresholds()
+│      s_min = thresholds["s_min"]
+│      v_min = thresholds["v_min"]
+│      hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+│ @@ -52,7 +71,8 @@
+│  ### 3. Update `scripts/fit_notus_segments.py`
+│  - Import `_notus_red_mask` from `scoreboard_clock_720p` instead of `_red_mask` from `scoreboard_clock`.
+│  - Use `_notus_red_mask` in `_collect_masks`.
+│ -- Keep all other logic (frame sampling ≥60 s from gate, hole detection, `core_scale=0.46`).
+│ +- **In `_sample_timestamps`**: add the 20 holdout times (listed in step 0 above, hardcoded in the function) to the exclusion check alongside gate times, so fitting frames stay ≥60 s from both gate AND holdout timestamps.
+│ +- Keep all other logic (frame sampling, hole detection, `core_scale=0.46`).
+│  - Re-run to produce new `data/roi/notus_segment_geometry.json`.
+│
+│  ---
+│ @@ -84,10 +104,10 @@
+│  ---
+│ … omitted 12 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The new NEXT_TASK.md incorporates all five v2 rejection fixes plus the four v1 fixes that were already correct:
+
+v2 Rejection: Wrong ROI filename
+Fix in v3: Step 0: uses notus_scoreboard_rois.json, explains corrected boxes
+  replace tens/ones in place under games/*/scores and default/scores, reader
+  loads via existing load_rois()
+────────────────────────────────────────
+v2 Rejection: Holdout leak in fitting
+Fix in v3: Step 3: coder adds the 20 holdout times (hardcoded from step 0) to
+  _sample_timestamps exclusion
+────────────────────────────────────────
+v2 Rejection: Circular threshold rule
+Fix in v3: Step 1: "red-hue pixels inside segment regions of segments ON for a
+  Vetter-confirmed digit value" — defined without S/V cutoff
+────────────────────────────────────────
+v2 Rejection: Unbounded box re-measure
+Fix in v3: Step 0: bounded x,y shift (±8px/±6px) around center, fixed w,h
+────────────────────────────────────────
+v2 Rejection: Per-call JSON load
+Fix in v3: Step 2: _load_notus_thresholds() caches once from ROOT/data/roi
+  like _load_segment_geometry
+
+v1 Rejection (kept fixed): Leak: gate-frame cutoffs
+Status: Step 1: fitting frames ≥60s from gate AND holdout
+────────────────────────────────────────
+v1 Rejection (kept fixed): Contradiction: lit tens V~10
+Status: Step 0: verify box position first
+────────────────────────────────────────
+v1 Rejection (kept fixed): Missing holdout run
+Status: Step 6: single holdout run after gate passes
+────────────────────────────────────────
+v1 Rejection (kept fixed): Scope: only NEXT_TASK.md
+Status: Files section lists exactly 7 files; no scratch scripts
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-9a400d5bcdaeba09c6a887788756a68851a3ef81c3b4368926b194c29d35dcda
+  hermes -c "Rewrite Next Task With Reader Fix V3"
+
+Session:        local-9a400d5bcdaeba09c6a887788756a68851a3ef81c3b4368926b194c29d35dcda
+Title:          Rewrite Next Task With Reader Fix V3
+Duration:       2m 54s
+Messages:       13 (1 user, 11 tool calls)

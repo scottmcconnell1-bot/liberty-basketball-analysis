@@ -1,0 +1,2 @@
+NonRetriableError: Provider Error We're having trouble finding the resource you requested. If the problem persists, please contact support.
+[cursor_wsl] exit 1 at 20:42:33

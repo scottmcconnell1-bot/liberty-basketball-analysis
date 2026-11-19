@@ -1,0 +1,99 @@
+Query: TEAM REQUEST - referee hand signals (proposed spec 53). Read-only; do not
+edit any file except where your role says.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+
+Scott (owner), 2026-11-14, binding request:
+"Fouls/Violations called by the referee during a shot attempt can be detected by
+watching the referees hands.
+He/she will indicate a call by raising their hand. You can tell a lot by 
+watching them. They indicate when to stop
+the clock, when to start the clock, whether a shot is a 3pt attempt, when a foul
+is committed, when a violation is
+committed, when a foul is committed on a made shot. Find all the referees calls 
+and hand signals and include it in
+your decisions based on the hand motions."
+Scott also: "DO not run this by yourself. I want everyone involved and input 
+with their strengths." So nothing is
+built until the team agrees.
+
+CONTEXT
+- Scott rule (binding, 2026-11-14): fouled missed attempts, waved-off shots and 
+warm-up shots do NOT count as shots;
+  putbacks are separate; airballs count. The current shot model (r2plus1d clip 
+crop around the rim, .team/mm_clip/)
+  cannot see referees, so these cases become errors today.
+- Scott's own examples (.team/review52/spot_check_52_answers.json notes): 
+rimrock:77 travel called on the shot
+  ("no shot"), rimrock:253 shot waved off, gvg:149 shooting foul ("referee 
+raising his hand"), hsb:91 fouled shot,
+  gvg:349 jump ball (two thumbs up), rimrock:325 fouled before clip. Use them as
+the first known cases.
+- Tools on disk: the BODD/player detector already outputs a 'referee' class 
+(models/player_detector.pt,
+  rim_first_finder.py REFEREE_CLASS, is_referee_player); ultralytics 8.4.189 in 
+the GPU env
+  (~/.venvs/liberty-gpu, RTX 5060) -> a YOLO pose model (keypoints: shoulders, 
+elbows, wrists) can be added.
+  Films are 720p broadcast/NFHS; referees are often small and sometimes off 
+screen when the camera pans.
+- History: 2026-11-06 spec 36 referee cues (fouled_miss, referee_holding) were 
+DROPPED after false fires
+  (drift_log line ~149). Say why this attempt will not repeat that.
+- Standard signals (NFHS): stop clock = open hand raised; foul = closed fist 
+raised, then report; 3-pt attempt =
+  one arm raised with 3 fingers; 3-pt made = both arms raised; start clock = 
+chopping arm; violation (travel etc.)
+  = rotating fists / hand signal + direction; waved off / no basket = arms swung
+across body; and-one (foul on a
+  made basket) = count basket + foul signal; jump ball = thumbs up both hands; 
+timeout = T or hands to shoulders.
+- Spec 52 training is running (choose_e). Do not change spec 52; this is 
+additive.
+
+ROLES
+- HERMES (architect): write .team/specs/53_referee_signals_spec.md (this file 
+only): what to detect (ref box ->
+  pose keypoints -> arm-raised / fist / both-arms / waving / chop events with 
+times), how each event changes a
+  shot decision (fouled miss -> not a shot; waved off -> not a shot; 3-pt 
+attempt tag; and-one make stays make;
+  stop/start clock -> dead-ball and game-session help), how to measure it on 
+SEEN films only (labelled shots +
+  Scott's examples) before any blind use, with fixed pass numbers, and what 
+happens when no referee is visible
+  (no change; never guess). Keep it buildable. End with "HERMES: SPEC WRITTEN".
+- MUSE (reviewer): judge feasibility and risks on these films (ref size, 
+panning, occlusion, false fires like
+  spec 36), and the measurement protocol (no blind peeking, no new human review 
+loops - Scott refused more clip
+  reviews; any human role must be one-time and bounded). End with "MUSE: AGREE |
+AGREE WITH CHANGES: ... | DISAGREE: ...".
+- CURSOR (builder/auditor): check what exists in code (referee class quality, 
+frames.json referee boxes, where a
+  pose step plugs in, compute cost per film), list exact files/functions to 
+build, and the smallest prototype to
+  test on 3 seen clips first. End with "CURSOR: AGREE | AGREE WITH CHANGES: ... 
+| DISAGREE: ...".
+⚠️  Attempt 1/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 3.0s (attempt 2/3)...
+⚠️  Attempt 2/3 failed: HTTP 429: Provider returned error
+⏱️ Rate limited. Waiting 4.8s (attempt 3/3)...
+⚠️  Attempt 3/3 failed: HTTP 429: Provider returned error
+❌ Rate limited after 3 retries — HTTP 429: Provider returned error
+   💀 Final error: HTTP 429: Provider returned error
+
+────────────────────────────────────────
+☤ Hermes
+OpenRouter rate-limited every one of 3 attempts — it looks temporarily unavailable. Wait a minute and send /retry, or switch models with /model. To avoid this in future, add a backup provider with hermes fallback add.
+
+Provider said: HTTP 429: Provider returned error
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-e97eca7ca0c61549190595ebb42b6180537cfc2857dd69b1e6e3c89013623d7f
+  hermes -c "TEAM REQUEST - referee hand signals (proposed… #3"
+
+Session:        local-e97eca7ca0c61549190595ebb42b6180537cfc2857dd69b1e6e3c89013623d7f
+Title:          TEAM REQUEST - referee hand signals (proposed… #3
+Duration:       12s
+Messages:       2 (1 user, 0 tool calls)

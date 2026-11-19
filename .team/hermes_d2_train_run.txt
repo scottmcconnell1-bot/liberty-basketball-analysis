@@ -1,0 +1,198 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/23_d2_train_job_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "D2 TRAIN JOB SPEC v1 - nothing built". Plain markdown, no line-number 
+prefixes, no literal "\n". Create nothing else, run nothing, edit no other file.
+If your write tool refuses, say so plainly.
+
+Read first: .team/specs/21_d2_plan.md (sections 3, 4, 5, 6), 
+.team/specs/22_d2_label_job_spec.md, AUTHORITY.md, 
+AGENT_OPERATIONAL_PROTOCOL.md.
+
+Scott's word, 2026-11-02: "Go" = gate 2 (OK to train) for the D2 ball model on 
+his labels. He also said the ball that counts is "a ball that is actively in 
+play during the game. Not before, on breaks, or off of the court." He reviewed 
+all 600 frames and dropped 86 (warmup, halftime, breaks, off-court balls).
+
+Facts (Claude Code checked them this session, 2026-11-02):
+- Labels: 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_frames/labels_live.json = 514 
+frames kept (361 with one ball box, 153 no ball). labels_all.json = all 600, 
+dropped.json = the 86 dropped. Row = {"frame": "<crop jpg name>", "boxes": [] or
+[], "class": "basketball"}; box is top-left origin, crop pixels. The crop jpgs 
+are in the same folder; most are 520x440, edge crops are smaller (for example 
+520x389). frames.json there gives film, frame_number, time_seconds, crop_box per
+crop.
+- Kept per film (ball / no ball): HSB_H 73/13, HSB_H1 65/15, RIMROCK_H 18/56, 
+GARDEN_VALLEY_A 47/12, IDAHO_CITY_A 48/18, NOTUS_A 54/31, RIVERSTONE_A 56/8. 
+Rimrock is thin on ball frames; note it, do not resample to fix it.
+- Frames come in windows: pass 2 of the label job read moment-10 .. moment+30, 
+so crops from one window are near copies. Train and val must never share a 
+window.
+- Start weights: v6 = 
+C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt, one class 
+{0: 'basketball'}, 3,011,043 params. v6 was trained with imgsz 640, batch 16, 
+freeze 10, epochs 10, patience 6, device 0, seed 0, deterministic true 
+(v6/args.yaml). v6's own dataset (Temp/ball_net_ds_v3) is empty now; do not use 
+it.
+- GPU: NVIDIA GeForce RTX 5060 Laptop GPU, 8151 MiB. Training environment: 
+C:/Users/scott/AppData/Local/Programs/Python/Python312/python.exe has torch 
+2.11.0+cu128, cuda True, ultralytics 8.4.99. The repo venv (.venv, torch 
+2.14.1+cpu, ultralytics 8.4.189) is NOT changed and not used for training.
+- D1 test script: .team/shot_detectors/keep_ball_detections.py has --v6-weights 
+and --out-json options (lines 1348, 1350). D1 result 
+(Liberty_Shot_Outputs/ball_arc/d1_report.md): makes_right 29, 
+misses_called_makes 0.
+
+Write these sections:
+1. Inputs (above) and what is excluded (the 86 dropped; nothing from holdout, 
+build set, Adrian Q4, Notus A1 - the label job already kept them out; say the 
+script re-checks that every crop name is from the 7 films).
+2. Dataset build: YOLO format under 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/ds (outside the repo); 
+box -> normalized center x/y, w/h by that crop's real width/height; no-ball 
+frame = empty label file (background). Val split fixed before training: by 
+window (group = crops of one film whose frame numbers are within 40 of the 
+previous crop), about 15% of windows per film, seed 42; write split.json. Stop 
+if the output folder is not empty.
+3. Training config, all numbers fixed now, never changed after seeing results: 
+start from v6, imgsz 640, batch 16, freeze 10, single class, device 0, seed 42, 
+deterministic; pick epochs and patience (state them; small set, so modest), keep
+ultralytics default augmentation unless you give a reason. project/name 
+explicit: Liberty_Shot_Outputs/d2_train/runs/d2v1. New weights stay at 
+runs/d2v1/weights/best.pt outside the repo; never copied to models/; 
+models/ball_detector.pt and ball_confidence 0.28 unchanged.
+4. The one test: after training, rerun keep_ball_detections.py with --v6-weights
+pointing at the new best.pt and --out-json to a new file under 
+Liberty_Shot_Outputs/d2_train/, nothing else changed (conf 0.28, zone, crop, 140
+shots, rule as D1). Say which python runs it (D1's own; if not in a file you 
+read, write "NOT FOUND - Claude Code to check"). Pass = makes_right > 29 AND 
+misses_called_makes == 0. One try, then stop for Scott (gate 3). No tuning, no 
+retry.
+5. Report to write: val precision/recall/mAP50 for v6 and for the new model on 
+the same val split (v6 measured first, before training), the D1 rerun numbers 
+next to D1's, and wall time.
+6. Live play note: "in play" (not warmup, breaks, off the court) is decided 
+after detection, not by this model; out of scope here, a later plan.
+7. Tests the build script needs (no GPU, no video): box conversion incl. edge 
+crops, empty label for no ball, split never shares a window, split reproducible 
+with seed 42, refuses a crop name outside the 7 films, refuses a non-empty 
+output folder.
+8. Stops: any check fails -> stop and report; no training without this spec 
+VETTED by Claude Code and AGREE from Muse.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read 21_d2_plan.md  0.2s
+📖 Read 22_d2_label_job_spec.md  0.2s
+📖 Read AUTHORITY.md  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md  0.2s
+✗ Grep --v6-weights|--out-json [Search failed: rg: unrecognized flag --v6-wei...]
+🔎 Grep v6-weights|out-json  0.1s
+✗ Read d1_report.md  0.1s [File not found: d1_report.md]
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/  0.1s
+💻 $ ls -la /mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/ball_arc/  0.1s
+📖 Read d1_report.md
+📖 Read labels_live.json
+
+────────────────────────────────────────
+☤ Hermes
+Now I have all the facts needed. Let me write the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/23_d2_train_job_spec.md  0.1s
+│ .team/specs/23_d2_train_job_spec.md
+│ @@ -0,0 +1,146 @@
+│ +D2 TRAIN JOB SPEC v1 - nothing built
+│ +
+│ +# Stage D2 Train Job: Fine-tune Ball Detector v6 on Scott's 514 Labels
+│ +
+│ +From: `.team/specs/21_d2_plan.md` §§3,4,5,6 (VETTED), `.team/specs/22_d2_label_job_spec.md` (VETTED), `AUTHORITY.md`, `AGENT_OPERATIONAL_PROTOCOL.md`, Scott's gate 2 words 2026-11-02.
+│ +
+│ +---
+│ +
+│ +## 1. Inputs and Exclusions
+│ +
+│ +**Training labels (kept):** `C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_frames/labels_live.json` — 514 frames total from the 7 eligible films:
+│ +- HSB_H: 73 ball / 13 no-ball
+│ +- HSB_H1: 65 ball / 15 no-ball
+│ +- RIMROCK_H: 18 ball / 56 no-ball
+│ +- GARDEN_VALLEY_A: 47 ball / 12 no-ball
+│ +- IDAHO_CITY_A: 48 ball / 18 no-ball
+│ +- NOTUS_A: 54 ball / 31 no-ball
+│ +- RIVERSTONE_A: 56 ball / 8 no-ball
+│ +
+│ +Rimrock is thin on ball frames (18); noted, not resampled.
+│ +
+│ +**Excluded (already removed by label job, script re-checks):**
+│ +- The 86 dropped frames (warmup, halftime, breaks, off-court balls) in `labels_all.json` / `dropped.json` — never used.
+│ +- Nothing from the 140-shot build set (Notus A1 Q1, Adrian Q1–Q3).
+│ +- Nothing from holdout (20 frames: 10 Notus A1, 10 Notus A).
+│ +- Nothing from tagged unseen check shots (Adrian Q4 18 shots, Notus A1 Q2–Q4).
+│ +- The build script refuses any crop name not from the 7 films above.
+│ +
+│ +**Source frames:** JPEGs in the same folder (`d2_frames/`), native crop sizes (most 520×440, edge crops smaller e.g. 520×389). `frames.json` gives film, frame_number, time_seconds, crop_box per crop.
+│ +
+│ +**Label row format:** `{"frame": "<crop jpg name>", "boxes": [[x, y, w, h]] or [], "class": "basketball"}` — box is top-left origin in crop pixels.
+│ +
+│ +**Live-play note:** "in play" (not warmup, breaks, off the court) is decided *after* detection, not by this model; out of scope here, a later plan.
+│ +
+│ +---
+│ +
+│ +## 2. Dataset Build (YOLO format, outside repo)
+│ +
+│ +**Output root:** `C:/Users/scott/Documents/Liberty_Shot_Outputs/d2_train/ds/`
+│ +
+│ +**Box conversion:** For each label row, read the crop JPEG to get its real width W and height H. Convert each box [x, y, w, h] (top-left, crop pixels) to YOLO normalized center format:
+│ +- `xc = (x + w/2) / W`
+│ +- `yc = (y + h/2) / H`
+│ +- `nw = w / W`
+│ +- `nh = h / H`
+│ +Write one line per box: `0 xc yc nw nh` (class 0 = basketball). No-ball frame (`boxes: []`) → empty `.txt` label file (background).
+│ +
+│ +**Val split — fixed before training, by window, seed 42:**
+│ +- Window definition: crops from one film whose frame numbers are within 40 of the previous crop (Pass 2 read moment-10 .. moment+30 makes near-copies).
+│ +- Group all 514 frames by (film, window). Randomly assign ~15% of windows per film to val, rest to train, using seed 42.
+│ +- Train and val **never share a window**.
+│ +- Write `split.json` recording every frame's assigned split and its window_id.
+│ +
+│ +**Stop condition:** If `d2_train/ds/` is not empty before building, stop and report — never overwrite.
+│ +
+│ +---
+│ +
+│ +## 3. Training Config (all numbers fixed now, never changed after seeing results)
+│ +
+│ +**Start weights:** v6 at `C:/Users/scott/AppData/Local/Temp/ball_net_runs/v6/weights/best.pt` (1 class {0: 'basketball'}, 3,011,043 params).
+│ +
+│ +**Hyperparameters (copied from v6's `args.yaml` unless noted):**
+│ +- `imgsz: 640`
+│ +- `batch: 16`
+│ +- `freeze: 10` (freeze backbone)
+│ +- `single_cls: true` (class 0 only)
+│ +- `device: 0` (GPU)
+│ +- `seed: 42`
+│ +- `deterministic: true`
+│ +- `epochs: 30` (small set, modest)
+│ +- `patience: 10` (small set, modest)
+│ +- Augmentation: ultralytics defaults (no reason to change)
+│ +
+│ +**Project / name (explicit, outside repo):**
+│ +- `project: Liberty_Shot_Outputs/d2_train/runs`
+│ +- `name: d2v1`
+│ +- New weights land at `Liberty_Shot_Outputs/d2_train/runs/d2v1/weights/best.pt` — **never copied to `models/`**.
+│ +
+│ … omitted 68 diff line(s) across 1 additional file(s)/section(s)
+📖 Read 23_d2_train_job_spec.md
+
+────────────────────────────────────────
+☤ Hermes
+Created. The spec file at .team/specs/23_d2_train_job_spec.md contains all 8 required sections with every fact from the files read and the prompt, plus the "NOT FOUND - Claude Code to check" marker for the D1 python interpreter confirmation.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-ae57caebcf6a5864945d5c2cbd065081a7f6f670d6f0740aa21b41a60e269128
+  hermes -c "Create D2 train job spec file"
+
+Session:        local-ae57caebcf6a5864945d5c2cbd065081a7f6f670d6f0740aa21b41a60e269128
+Title:          Create D2 train job spec file
+Duration:       1m 40s
+Messages:       25 (1 user, 23 tool calls)

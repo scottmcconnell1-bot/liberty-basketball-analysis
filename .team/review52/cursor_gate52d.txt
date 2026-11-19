@@ -1,0 +1,67 @@
+## Verdict
+
+**Spec 52d v3.1 binding same-5 re-gate = FAIL.** Claimed film numbers match the on-disk reports. Longer/coarser clips fixed the gvg first-shot silent and raised notus, but made gvg class-0 look like shots (checks 20→140) and hurt rimrock shot calling (auto 94.3→88.6).
+
+---
+
+### 1. Number check (Proven)
+
+From `Liberty_Shot_Outputs/mm_clip/runs/logo52d/{gate52_report.json,gate52d_stdout.txt,logo_report.json}` vs `logo52c/`:
+
+| Film | 52d gate | Match claim? |
+|------|----------|--------------|
+| adrian | PASS 93.7, checks 5, silent 0 | yes |
+| notus | PASS 93.5, silent 0 (checks 4) | yes |
+| gvg | FAIL 95.9, checks **140**, silent 0 | yes |
+| hsb | PASS 97.1, checks 6 | yes |
+| rimrock | FAIL auto **88.6**, checks 34, silent 1 | yes |
+| OVERALL | FAIL | yes |
+
+First-shot P(shot) from `logo_preds.npz` (ensemble):
+- notus 252520: **0.170 → 0.289** (clears silent floor 0.2; still &lt;0.5 auto)
+- gvg 1158600: **0.092 → 0.789** (silent cleared)
+- rimrock 274807: **0.037 → 0.111** (still silent: ens &lt;0.2 and all seeds &lt;0.5)
+
+Logo ensemble: gvg `nonshot_rejected` **0.993 → 0.793**; rimrock `shots_correct_overall` **0.935 → 0.870**.
+
+Reproduced gate checks with `postproc52b` + session filter: gvg **20 → 140**, rimrock **21 → 34**. Drift_log end matches this FAIL write-up.
+
+---
+
+### 2. Why gvg checks jumped / rimrock worsened
+
+**gvg checks 20→140 — Proven: class-0 now look like shots; G3 is real but not the whole story.**
+
+With the real check rule (`shot_list` + `extras_require_seed_disagreement`):
+- 52d gvg: **73 extras** (70 are label-0) + **67 auto checks** (40 are label-0) = 140.
+- Class-0 auto-as-shot: **1 → 44**; `auto_false` **11 → 65**.
+- Class-0 mean P(shot): **0.21 → 0.45**; bands shift from mostly &lt;0.5 to 99 in 0.2–0.5 and **44 ≥0.5**.
+- New extras vs 52c: **70 class-0**, all with seed disagreement under 52d (0 under 52c) — that unlocks the 52b floor-band extras.
+
+**G3 confound (disclosed):** class-0 with a real shot within +6 s = **17/145 (11.7%)** on gvg. Those rows move harder (mean P(shot) 0.24→0.55; 0%→53% predicted shot) than non-G3 (0.21→0.43; 1%→16%). But of the **70 new class-0 extras, only 7 are G3**; of **43 new class-0 autos, 10 are G3**. So: scrambles/non-shots broadly got shot-like under the long window; G3 amplifies that, it does not explain most of the check pile.
+
+**rimrock worse — Proven which rows; cause is Inferred.**
+
+Logo/gate: shots_correct 0.935→0.870; auto 116/123 (94.3%) → 109/123 (88.6%); checks 21→34; silent still 1 at 274807.
+
+Strict 3-class on Y∈{1,2}: **9 losses, 1 gain**.
+- **Reject (miss→not-shot):** 1653507, 2797836, 3526920, 3965298, 4753584, 5325664 (6)
+- **Make/miss flip (miss→make):** 647516, 2091651, 2387092 (3)
+- **Gain:** 4876820 not-shot→miss
+
+**Inferred (not separable from these files):** the pinned ~6.9 s window + STEP 0.16 (halved temporal rate on the shot) + disclosed K_TRIG crop shift / pooling dilution (G2/G8). No ablation here, so you cannot prove “camera/crop” vs “halved frame rate” as the single driver—only that the 52d clip recipe moved those nine rows the wrong way while barely helping the rimrock silent.
+
+---
+
+### 3. Options for Scott (no tuning on this run; new work needs a new prereg)
+
+1. **Two-stream / dual clip (new prereg):** keep a **52c-style short clip** for make/miss, add a **long-context path only for shot vs not-shot** (or fuse at predict time). Risk: more code/surface area; G3 can still poison the long path unless class-0 near later shots are handled in the prereg; another same-5 fail possible.
+
+2. **Accept partial / stop chasing same-5:** freeze a short-clip ensemble for make/miss where it already works (adrian/hsb/notus-ish), treat gvg non-shot rejection and rimrock as coach-check or out-of-scope until blind films. Risk: binding gate stays FAIL; you are choosing ops over the written pass bar.
+
+3. **More / cleaner labels + stop model thrashing:** label more true non-shots that look like rim traffic (especially gvg), and/or exclude reverse-confound class-0 from train in a prereg—then one new run. Risk: more Scott film time; may not fix rimrock temporal dilution if the window itself is wrong.
+
+---
+
+CURSOR: VERIFIED
+[cursor_wsl] exit 0 at 21:55:14

@@ -1,0 +1,91 @@
+[muse] model recursive/flint-v1.0:free 08:24:48
+Query: You are advising the Liberty basketball team on ONE decision. Read-only: 
+do not change any file.
+Read: the last 3 entries of .team/drift_log.md (the 2026-11-10 diagnosis), 
+.team/shot_detectors/small_fixes_v6_copy.py decide_shot (the hand rules), 
+collect_q4_bodd.py v6_ball (the fixed-pixel crop and pick).
+
+SCOTT (binding, 2026-11-10): "So, yes, try your suggestion to fix the issue. Ask
+the other AIs for their opinion." Goal: makes/misses right on games the program 
+has never seen, without overwhelming the coach.
+
+FACTS (Claude Code, Proven unless marked):
+- Hand rules (decide_shot: ~12 reject checks, ~50 fixed numbers) were tuned on 
+Adrian Q1-Q3. Makes found: Adrian Q1-Q3 27/38 (tuned set), Adrian Q4 (same game,
+not tuned) 2/5, Notus 2/9, GV 17/64 with the spec-45 film scale (10/64 without).
+Each film fails different checks.
+- 720p ball tracks are not thinner (ball points per make: Adrian 25, Notus 31, 
+GV 37).
+- Cause (proven on 2 GV frames, inferred for the rest): v6 crop (hoop +-260 px 
+x, -200/+240 px y) and 220 px pick radius are fixed pixels. At 720p they cover 
+~8x7 hoop widths instead of ~5x4.5, so the shooter's release and balls on the 
+floor are inside the crop; the rule "ball starts well below rim = rebound" then 
+rejects normal shots (14 of 43 GV missed makes).
+- Labels: Adrian coach tags 127 shots (43 make; Q4 18 shots was the old 
+holdout), Notus A1 coach tags 31 (9 make), GV Claude Code labels from frames 184
+real shots (64 make) plus 326 non-shot moments. Total 342 shots, 116 makes, 3 
+games, 2 gyms (Adrian away gym; Notus A1 and GV = Liberty home gym).
+- Unseen films: Riverstone (Liberty HOME gym, finder already run, not looked 
+at), HSB, HSB1, Rimrock (Liberty AWAY = other gyms), Idaho City (seen for FT 
+only, Liberty home).
+- Models on hand: BODD (ball/hoop/player/referee), v6 ball, d2v1 ball (trained 
+on 7 films' ball boxes). GPU: RTX 5060 laptop. Finder gives rim-time moments (no
+tags) on any film.
+
+Claude Code's proposal (not yet a spec): replace the hand rules with a LEARNED 
+make/miss model.
+- Input: a short clip around the rim from the finder moment, cropped and resized
+by hoop width (so every camera looks the same size), e.g. ~1.5 s, rim box ~3 
+hoop widths.
+- Model options: (a) small video/image-sequence classifier on the rim crop 
+(net/ball through rim); (b) hand-made features normalized by hoop width (BODD 
+ball path through rim zone, net-pixel motion below rim) + a simple model 
+(logistic regression / gradient boosting); (c) cheap step first: scale the v6 
+crop and pick radius by hoop width and re-run the rules (seen films only).
+- Honesty: train/measure with leave-one-game-out (train on 2 games, score the 
+3rd) so we see how it holds across games BEFORE any blind test. Then ONE blind 
+test on an unseen game, labels and score frozen first. Output = make / miss / 
+coach (unsure band), coach load reported.
+
+Questions: (1) Which option (a/b/c or a mix) and why, given only 342 labelled 
+shots? (2) Is leave-one-game-out the right check? Anything that would leak? (3) 
+Blind test game: Riverstone (same gym as Notus/GV) or an away game (HSB/Rimrock,
+new gym/camera) - or both? (4) Biggest risks (small data, label noise in Claude 
+Code's GV labels, tag-time vs finder-time clips, gym overfit, coach load) and 
+how to guard. (5) Anything Claude Code has wrong?
+Answer in at most 12 short lines. Then one line: RECOMMEND: <one sentence>.
+Last line exactly: MUSE: AGREE (if you support trying a learned model) or MUSE: 
+DISAGREE: <reason>.
+📖 Read drift_log.md  0.3s
+🔎 Grep def decide_shot|decide_shot  0.4s
+✗ Grep def v6_ball|v6_ball|fixed-pixel|pick  0.4s [Path not found: .team/shot_detectors/collect_...]
+📖 Read drift_log.md L250-269  1.1s
+🔎 Find collect_q4_bodd|v6_ball  1.1s
+📖 Read small_fixes_v6_copy.py L174-393  1.1s
+📖 Read small_fixes_v6_copy.py L392-671  7.6s
+🔎 Grep def v6_ball|v6_ball\(|fixed-pixel|fixed pixel  7.6s
+💻 $ find /mnt/c/Users/scott/Documents/liberty-basketball-analysis /home/scott -maxdepth 6 \( -name 'collect_q4_bodd.py' -o -name '*q4*bodd*' -o -name '*bodd*' \) -print 2>/dev/null  5.1s
+📖 Read collect_q4_bodd.py
+📖 Read small_fixes_v6_copy.py  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+LOO is right for small data; use game-level splits and frozen labels.
+(b) is the right first learned path: hoop-width-normalized BODD/path/net features, then simple logistic or boosting.
+(a) raw video classifier is premature at 342 shots / 2 gyms.
+Blind test should run away gym first (HSB/Rimrock), Riverstone as home-gym control.
+Guard against label noise, tag/finder time mismatch, gym overfit, and coach load; keep an unsure band.
+Claude Code is partly wrong: fixed 220 px crop/pick matters, but learned input must normalize by hoop width.
+RECOMMEND: Run the scaled/crop-fixed cheap rule check on seen films first, then train only if it shows real signal.
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-73ef4f3bdf30387f051409075b9ca9748bd6a5e488b9895b3ea8e750910694be
+  hermes -c "You are advising the Liberty basketball team on… #10"
+
+Session:        local-73ef4f3bdf30387f051409075b9ca9748bd6a5e488b9895b3ea8e750910694be
+Title:          You are advising the Liberty basketball team on… #10
+Duration:       1m 4s
+Messages:       17 (1 user, 15 tool calls)
+[muse] VERDICT (recursive/flint-v1.0:free): MUSE: AGREE

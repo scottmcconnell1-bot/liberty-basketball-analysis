@@ -1,0 +1,4 @@
+﻿Hermes, your plan .team/specs/16_ball_in_net_plan.md was REJECTED by Claude Code. The 3 reasons are at the top of
+.team/specs/16_ball_in_net_plan_v1_REJECTED.md - read it FIRST. Revise .team/specs/16_ball_in_net_plan.md (read it
+FIRST before overwriting) to fix those 3 points and nothing else. Keep "PLAN - NOT BUILT OR MEASURED YET" at the top.
+Plain markdown, no line-number prefixes, no literal "\n".

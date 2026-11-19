@@ -1,0 +1,119 @@
+Query: Work in /mnt/c/Users/scott/Documents/liberty-basketball-analysis. You are
+the Architect. Your previous plan was REJECTED by the Vetter. Read 
+.team/specs/04_notus_scoreboard_plan_v1_REJECTED.md: its first line lists the 
+four errors. Revise the plan to fix all four. The Notus scoreboard score digits 
+are RED and the clock is YELLOW (OpenCV loads BGR, so check color order). 
+Liberty is HOME (PATRIOTS) in both Notus games; map teams from 
+home_team/away_team in data/stat_books/confirmed/<game>.json. The plan must have
+OpenCode first measure the Notus board digit boxes on Notus frames and save 
+about 10 crops for the Vetter to check by eye before building full tracks. The 
+new reader must import and reuse functions from scoreboard_clock.py, never copy 
+or edit it. Keep the reusable check script, the 3-sample rule (not tuned), the 
+scorebook and Q1 tag checks, and the Adrian 43/43 regression test. STRICT: you 
+may create or edit ONLY NEXT_TASK.md. Do not create, edit, or delete any other 
+file. Do not run code that writes files. Write the revised plan to NEXT_TASK.md 
+with a ## Files section.
+📖 Read 04_notus_scoreboard_plan_v1_REJECTED.md
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/NEXT_TASK.md
+│ NEXT_TASK.md
+│ @@ -0,0 +1,113 @@
+│ +## Task: Build scoreboard tracks for both Notus games and check makes against scorebooks
+│ +
+│ +**Goal:** Create scoreboard tracks for the two Notus games (720p videos) and verify made baskets using the proven 3-sample hold rule, reporting per-team final scores and makes by value (2PT/3PT/FT) against confirmed scorebooks. Also check Notus A1 Q1 against Scott's film tags.
+│ +
+│ +**Constraints:**
+│ +- Must NOT edit `scoreboard_clock.py` (protected core file)
+│ +- Must NOT tune the rule to fit — use the same rule as Adrian: "a new score counts when the new value holds for 3 one-second samples; each rise is one made basket worth the rise"
+│ +- Must be a reusable script plus tests
+│ +- Must report per team: final score and makes by value against the book
+│ +- Must check Notus A1 Q1 against Scott's tags in `data/film_tags/`
+│ +
+│ +---
+│ +
+│ +## Files to Create
+│ +
+│ +### 1. `scoreboard_clock_720p.py` (new module)
+│ +A 720p-compatible scoreboard reader that imports and reuses digit-reading functions from `scoreboard_clock.py`.
+│ +- Import digit-reading utilities from `scoreboard_clock` (e.g., `read_digits`, `seven_segment_templates`, any HSV mask helpers)
+│ +- Define Notus-specific ROI boxes for score digits (red) and clock digits (yellow) — **measured on Notus frames, not scaled from Adrian**
+│ +- Add color masks for RED score digits (HSV hue ~0-10 or ~170-180, saturation > 150, value > 50) and YELLOW clock digits (HSV hue ~20-35, saturation > 150, value > 50)
+│ +- OpenCV loads BGR; verify color order when building masks
+│ +- Export `read_scoreboard_720p`, `load_scoreboard_track`, `scoreboard_at`
+│ +
+│ +### 2. `scripts/measure_notus_rois.py` (new script — **run first**)
+│ +Measures Notus scoreboard digit boxes on actual Notus frames and saves ~10 crops for Vetter eye-check.
+│ +- Load a few frames from each Notus video (e.g., at 300s, 600s, 900s)
+│ +- Use interactive or semi-automated detection to find the four digit ROIs: home score tens/ones, away score tens/ones, clock minutes/seconds (or minutes:seconds.tenths)
+│ +- Save the measured ROI coordinates (x, y, w, h for each digit box) to a JSON config: `data/roi/notus_scoreboard_rois.json`
+│ +- Extract and save ~10 crop images per game (5 per game) showing the digit boxes overlaid, written to `data/roi/notus_crops/` for Vetter visual verification
+│ +- **This script runs before any track building; the Vetter must approve the crops before proceeding.**
+│ +
+│ +### 3. `scripts/build_scoreboard_track_720p.py` (new script)
+│ +Wrapper that uses `scoreboard_clock_720p.read_scoreboard_720p` to build tracks for 720p videos.
+│ +- Reads ROI config from `data/roi/notus_scoreboard_rois.json`
+│ +- Same interface as `build_scoreboard_track.py` but calls the 720p reader with Notus ROIs
+│ +
+│ +### 4. `scripts/check_scoreboard_makes.py` (new reusable script + tests)
+│ +- Loads a scoreboard track (via `scoreboard_clock_720p.load_scoreboard_track`)
+│ +- Applies the 3-sample hold rule to detect makes for both teams
+│ +- Classifies each make by point value (1=FT, 2=2PT, 3=3PT)
+│ +- Loads confirmed scorebook from `data/stat_books/confirmed/{game_id}.json`
+│ +- **Team mapping comes from scorebook `home_team` / `away_team` fields** — Liberty is HOME (PATRIOTS) in both Notus games
+│ +- Reports per team (using scorebook team names): final score, makes by value, match ✓/✗ against book
+│ +- For Notus A1: also loads `data/film_tags/jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334.json`, filters Q1 makes (quarter ends at 14:43.4 = 883400 ms), matches scoreboard makes to tags within 25 s, reports matched/unmatched counts
+│ +- CLI: `python scripts/check_scoreboard_makes.py GAME_ID [GAME_ID2 ...]`
+│ +
+│ +### 5. `tests/test_check_scoreboard_makes.py` (new test file)
+│ +- Unit tests for the 3-sample hold detection logic (synthetic score sequences)
+│ +- Test make value classification
+│ +- Test Q1 tag matching logic
+│ +- Integration test: run on Adrian track (`jrhigh_adrian__or_LIBERTY_A_v_ADRIAN_H_20260809_221334`) as regression guard — must still yield 43 makes, 51-26
+│ +
+│ +---
+│ +
+│ +## Commands to Run
+│ +
+│ +```bash
+│ +# 0. Measure Notus ROIs and save crops for Vetter approval (RUN FIRST)
+│ +cd /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+│ +.venv/Scripts/python.exe scripts/measure_notus_rois.py
+│ +
+│ +# Vetter reviews crops in data/roi/notus_crops/ and approves the ROI config
+│ +
+│ +# 1. Build 720p scoreboard tracks for both Notus games (after ROI approval)
+│ +.venv/Scripts/python.exe scripts/build_scoreboard_track_720p.py "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334" "uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4"
+│ +.venv/Scripts/python.exe scripts/build_scoreboard_track_720p.py "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334" "uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4"
+│ +
+│ +# 2. Run the check script on both games
+│ +.venv/Scripts/python.exe scripts/check_scoreboard_makes.py "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334" "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334"
+│ +
+│ +# 3. Run tests (including Adrian regression)
+│ +.venv/Scripts/python.exe -m pytest tests/test_check_scoreboard_makes.py -q
+│ +```
+│ +
+│ +---
+│ +
+│ +## Expected Outputs (from commands above)
+│ +
+│ … omitted 35 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+Done. The revised plan in NEXT_TASK.md fixes all four rejection errors:
+
+1. Colors corrected — score digits are RED, clock is YELLOW (with HSV ranges); notes OpenCV BGR ordering.
+2. Team mapping from scorebook — Liberty = HOME = PATRIOTS via home_team/away_team fields.
+3. ROI measurement first — new scripts/measure_notus_rois.py runs first, measures on Notus frames, saves ~10 crops to data/roi/notus_crops/ for Vetter eye-check, writes ROI config to JSON; track building only proceeds after approval.
+4. Import/reuse only — scoreboard_clock_720p.py imports digit functions from scoreboard_clock.py; no copying or editing of the protected file.
+
+All required elements retained: reusable check script, fixed 3-sample rule, scorebook/Q1 tag checks, Adrian 43/43 regression test, and ## Files section.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-b3af7c9f4fd4ace8cf9d245716bc448a8d9a5c150aaced402d16cb683ceea2e0
+  hermes -c "Revise Notus scoreboard plan fix four errors"
+
+Session:        local-b3af7c9f4fd4ace8cf9d245716bc448a8d9a5c150aaced402d16cb683ceea2e0
+Title:          Revise Notus scoreboard plan fix four errors
+Duration:       1m 1s
+Messages:       6 (1 user, 4 tool calls)

@@ -1,0 +1,14 @@
+**Proven:** Live `nfhs.py` / `nfhs_download_jobs.py` match v2 for C1–C5; `tests/test_nfhs_recover.py` matches the v2 review tests; `pytest tests/test_nfhs_recover.py tests/test_nfhs_download.py` → **38 passed**.
+
+| # | Check | Result |
+|---|--------|--------|
+| C1 | Soft gate (`>=95%` **or** ≤30s short); clips via `end−start`; full via `--print-to-file before_dl:%(duration)s`; NA/unknown skips; applied to leftover / final / remux | OK |
+| C2 | `mtime >= run_started - 2` | OK |
+| C3 | Temps cleaned after recovery + on cancel; header/duration on exit paths | OK |
+| C4 | Remux needs `1.1 ×` free; source kept (no delete-before-verify) | OK |
+| C5 | `warning` + `log_path` in `_public_job`; error path sets `log_path` | OK |
+
+Nothing new broken for the requested scope.
+
+CURSOR: AGREE
+[cursor_wsl] exit 0 at 10:38:41

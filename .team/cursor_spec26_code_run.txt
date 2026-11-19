@@ -1,0 +1,12 @@
+Spec 26 v2 coded on `team/auto`. No video run, no commit.
+
+**Files**
+1. **NEW** `.team/shot_detectors/clip_moment_fix.py` — `CONFLICT_FRAMES = 23`; `resolve_clip_centres` returns `(clip_centres, flags)` only (no `adjusted_anchors`). Sorts by `t` without mutating input; earlier shot of a conflicting pair gets tag-frame centre + `clip_moment_conflict`; later shot untouched.
+2. **EDIT** `.team/shot_detectors/make_review_queue_page.py` — `--clip-moment-fix` (default off) and `--out-dir` (default today’s path); refuses if out-dir exists. Flag off: same shot selection and anchor-centred clips. Flag on: resolve over all tagged shots per film; flagged shots shown even if both models said miss, group `review`, clip at `clip_centres[t]`, conflict note on the card; results JSON read-only; prints flagged list + gray/orange counts.
+3. **NEW** `.team/shot_detectors/test_clip_moment_fix.py` — shared moment, far apart, last shot, equal anchors, negative gap, input not mutated, flagged centre = `round(t/1000*fps)`.
+
+**Test command** (Claude Code runs this + the one page run):
+```
+.venv/Scripts/python.exe -m pytest .team/shot_detectors -q
+```
+[cursor_wsl] exit 0 at 11:56:44

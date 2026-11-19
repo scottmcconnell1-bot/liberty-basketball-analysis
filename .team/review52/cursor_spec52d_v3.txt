@@ -1,0 +1,12 @@
+**Proven.** Spec sha matches `.team/review52/spec52d_v3_sha.txt` (`052fd15a…`). Probe cites match `gpu_probe52d.txt` (T=87 bs8 spill 9621 MiB / 21.148 s/step; T=44 bs8 5176 MiB / 0.534→0.53).
+
+**Arithmetic.** `N = int(round(6.88/0.16))+1 = 44`; `K_TRIG = int(round(0.88/0.16)) = 6`; last frame at `+6.0`; K_TRIG lands at `t_trig+0.08` (disclosed). Correct.
+
+**Build.** `extract_clips` today is `T0,STEP,N` constants (end implied); Item 4’s T0/STEP/WINDOW_END_S/N pin is buildable. `train_clip` still has 52c `SeqClipModel` + `Linear(513)` and aug `±2`; R4 `Dropout→Linear(512,3)`, `seq=None`, `±1` frame are straightforward. Speed guard is implementable as an ops STOP (threshold 1.06); spill without OOM is already caught by the 2× step-time rule. `predict` default remains `bs=16` — pin says 8 but Item 4 command/code list never forces it.
+
+**Honesty.** Make/miss trade-off is fair: halved shot sampling (~16 vs ~31 frames / ~2.5 s), `±1` frame = same physical jitter, accuracy unmeasured. G2 dilution still true for the ~6.9 s span.
+
+**Stale (fix before freeze).** Item 2.1 still has v2 `~100–120 min` and wrong `2376×44/32 ~ 68` (**actual ~54.5 min**; probe ~45–50). G2’s `N=44, ~5.5 s` and `dense N=44` are wrong/leftover — span is still ~6.9 s; N=44 is coarsened, not denser. Status v2 changelog keeping `107 min` / N=87 is fine as history.
+
+CURSOR: AGREE WITH CHANGES: Item 2.1 budget (~100-120 / ~68 → ~45-55); G2 drop ~5.5 s / "dense N=44"; Item 4 force predict bs=8
+[cursor_wsl] exit 0 at 19:31:16

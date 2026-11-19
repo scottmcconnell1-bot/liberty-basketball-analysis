@@ -1,0 +1,80 @@
+Query: You are advising the Liberty basketball team on ONE decision. Read-only: 
+do not change any file.
+Read: the last 2 entries of .team/drift_log.md (spec 47 LOGO result + 
+diagnosis), .team/specs/47_learned_make_miss_spec.md (V1-V8 + S1-S9), 
+Liberty_Shot_Outputs/mm_learned/logo/logo_report.md (path 
+/mnt/c/Users/scott/Documents/Liberty_Shot_Outputs/mm_learned/logo/logo_report.md
+).
+
+SCOTT asked (2026-11-10): "What do all of the AIs recommend?" Goal: makes/misses
+right on games never seen, without overwhelming the coach.
+
+FACTS (Claude Code, Proven):
+- Spec 47 learned model (15 hoop-width features incl. F14/F15 = old rule calls, 
+LogisticRegression balanced, band 0.80/0.20), leave-one-game-out, run once: FAIL
+on all 3 held-out games vs the spec-46 rules.
+  Adrian: makes 32/42 (rules 23), false makes 26 (10), coach 50 (7), silent 
+makes 4 (17).
+  Notus: 4/8 (5), false 2 (1), coach 12 (1), silent 1 (3).
+  GV: 27/64 (20), false 67 (21), coach 139 (93), silent 10 (37).
+  Coach work + uncaught errors together: learned worse (Adrian 80 vs 34, GV 216 
+vs 151).
+- Ranking AUC 0.73 / 0.80 / 0.79. Four measurements separate makes the same way 
+in all 3 gyms (crossing x offset, depth below rim, points in column, net 
+motion). F14/F15 behave differently per game; net-motion scale differs per gym; 
+make share differs (31% / 22% / 13%); probabilities shift per game (Adrian 
+non-makes median p 0.48).
+- The 3 seen games (Adrian, Notus A1, GV; 3 different gyms) are now used for 
+design. Unseen films left: Riverstone (finder already run, not looked at; gym 
+unknown), HSB, HSB1, Rimrock (Liberty away = other gyms). Only ~4 blind films 
+remain.
+- Hand rules alone: Adrian Q4 2/5, Notus 4/9, GV 20/64 makes found.
+
+OPTIONS Claude Code sees (pick, combine, or propose better):
+ A. Corrected learned model (spec 48), settings fixed BEFORE any new number: 
+drop F14/F15; per-film normalize net motion (e.g. divide by that film's median);
+keep only the features that held up in all 3 gyms; maybe a simpler model or 
+rank-based band. Judge it ONCE on Riverstone (labels frozen first), not on the 
+seen games.
+ B. More labelled data first: label one more game (costs a blind film, or 
+Scott/coach tags an unseen game) so training covers 4 gyms, then test on another
+unseen game.
+ C. Hybrid: keep the rules for clear calls, use the learned score only to pull 
+hidden makes (rules "miss" with high learned score) into the coach queue - fewer
+silent errors, coach load capped.
+ D. Stop make/miss automation for now; send every shot to the coach as one quick
+click (make/miss) with the clip, and use those clicks as training labels over 
+the season.
+ E. Something else.
+
+Questions: (1) Which option(s) and why? (2) What is the honest test, and which 
+blind film? (3) What must be fixed before any new number so it is not tuning on 
+seen games? (4) What did Claude Code get wrong or miss?
+Answer in at most 12 short lines. Then one line: RECOMMEND: <one sentence>.
+Last line exactly: MUSE: AGREE (if you support Claude Code's lean toward A, 
+judged once on Riverstone) or MUSE: DISAGREE: <reason>.
+📖 Read drift_log.md L1-100  0.2s
+📖 Read 47_learned_make_miss_spec.md L1-200  0.2s
+📖 Read logo_report.md L1-200  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Learned model fails LOGO on all 3 folds: worse false makes (26 vs 10, 2 vs 1, 67 vs 21) and coach load (50 vs 7, 12 vs 1, 139 vs 93) than rules. F14/F15 (rule calls) leak non-generalizing behavior; net-motion scale differs per gym; only 4 cross-gym features (crossing x offset, depth below rim, points in column, net motion) are stable. Three seen games = 3 gyms, ~4 blind films left. AUC 0.73-0.80 shows ranking works but 0.80/0.20 thresholds miscalibrate per game (Adrian non-makes median p=0.48).
+
+Option A fixes the right things: drop F14/F15, per-film normalize net motion, keep only the 4 cross-gym features, simpler model or rank-based band. But testing on Riverstone burns a precious blind film. Option B also burns a blind film. Option C (hybrid) is practical now: rules for clear calls, learned score only to pull hidden makes into capped coach queue. Option D abandons automation.
+
+Honest test: freeze Riverstone labels FIRST, then judge corrected model once. Must fix before any number: drop F14/F15, per-film net-motion normalization, restrict to 4 cross-gym features, lock thresholds/band logic. Claude Code missed: the 0.80/0.20 band is the calibration failure — rank percentile band (e.g. top 15% make, bottom 70% miss) would adapt per film without new numbers.
+
+RECOMMEND: Build corrected model (spec 48) with 4 cross-gym features, per-film net-motion normalization, rank-based band; judge once on Riverstone with labels frozen first; if it fails, fall back to hybrid (rules + learned score for hidden makes only, coach load capped).
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-4a7155ed6ad84061569dd12b8d85fc67f8c70618b094a3b82bd2f2d2cc2ffa60
+  hermes -c "Evaluate Spec 47 learned model vs rules"
+
+Session:        local-4a7155ed6ad84061569dd12b8d85fc67f8c70618b094a3b82bd2f2d2cc2ffa60
+Title:          Evaluate Spec 47 learned model vs rules
+Duration:       1m 28s
+Messages:       6 (1 user, 4 tool calls)

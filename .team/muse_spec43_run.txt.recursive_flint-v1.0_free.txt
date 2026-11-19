@@ -1,0 +1,50 @@
+Query: Muse, you check. Read-only. Repo: 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis.
+Read .team/specs/43_ft_next_release_spec.md (Claude Code's V1-V4 block at top 
+wins), .team/specs/43_ft_proto.py, .team/shot_detectors/ft_half_circle.py, last 
+4 lines of .team/drift_log.md.
+Check: (1) spec + V1-V4 match the prototype and SETTINGS FIXED; (2) nothing 
+chosen after seeing Idaho City; Idaho labels frozen before the rule runs; one 
+try; (3) the gate can catch a coding error incl. the maybe band; (4) no rule 
+broken (no core edits, finder reads no tags, no banned trials, one try then stop
+for Scott); (5) anything missing for Cursor; (6) does the maybe band add coach 
+load without need?
+Answer in at most 12 lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE.
+📖 Read 43_ft_next_release_spec.md  0.2s
+📖 Read 43_ft_proto.py  0.2s
+📖 Read ft_half_circle.py  0.2s
+📖 Read drift_log.md
+💻 $ tail -n 4 /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/drift_log.md  0.1s
+✗ $ git status --porcelain + 3 commands  111.9s [exit 2]
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/43* /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ + 1 command  0.3s
+💻 $ git diff --name-only HEAD -- .team/shot_detectors .team/specs .team/rim_first .team/scripts .team/*.py 2>/dev/null | grep -iE "ft|rim|shot|coach|make" + 1 command  0.7s
+💻 $ ls -la .team/specs/ | grep -iE "43|idaho" + 2 commands  0.6s
+💻 $ find . -iname "*idaho*" -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null + 1 command  14.7s
+💻 $ grep -n "def \|maybe_free_throw\|release_frame\|release_dx\|ft_maybe\|ft_reason\|release_not_shooter\|too_far_from_hoop\|no_lane_lines\|line_not_one\|ft_line_not_found" .team/shot_detectors/rim_first_finder.py
+💻 $ ls -la .team/ | grep -iE "cursor_spec4[123]" + 3 commands  1.0s
+💻 $ find . -name "*run42base*" -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null + 1 command  13.7s
+💻 $ grep -n "maybe\|release_not_shooter\|release_dx\|ft_reason\|free_throw\|maybe_free" .team/shot_detectors/rim_first_measure.py  0.1s
+💻 $ grep -n "maybe\|release_not_shooter\|release_dx\|release_frame\|RELEASE_DX\|MAYBE\|STILL_MOVE\|def test" .team/shot_detectors/test_ft_half_circle.py + 1 command  58.2s
+💻 $ find . -maxdepth 3 -name "run3*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./uploads/*" -not -path "./data/*" 2>/dev/null + 3 commands  61.3s
+
+────────────────────────────────────────
+☤ Hermes
+Muse check of spec 43 handoff, read-only:
+
+1. Spec plus V1-V4 versus prototype and SETTINGS FIXED: MISMATCH. 43_ft_proto.py has N1 next-candidate and N2 release check but no N3 maybe band; MAYBE_STILL_MAX 0.25 exists nowhere.
+2. V3 not met: 43_idaho_ft_labels.json and 43_idaho_score.py are absent, so freeze-before-retrace is still pending.
+3. Gate cannot yet catch a coding error in the maybe band; prototype lacks N3 and Cursor decide_ft lacks release_frame, N1, N2, N3.
+4. No core edits and no banned trials so far; finder reads no tags; one Idaho try not run; stop-for-Scott still in place.
+5. Missing for Cursor: no spec-43 cursor prompt or code run, plus missing maybe flag, measure reporting, apply_ft_decision release/maybe handling.
+6. Maybe band: adds orange coach flags but the need is real, not coach load without need.
+MUSE: DISAGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-453e7393394b937322cc31a7377db09497e15c850e80a90e20538ef835ed25a8
+  hermes -c "Muse, you check. Read-only. Repo… #2"
+
+Session:        local-453e7393394b937322cc31a7377db09497e15c850e80a90e20538ef835ed25a8
+Title:          Muse, you check. Read-only. Repo… #2
+Duration:       7m 11s
+Messages:       26 (1 user, 24 tool calls)

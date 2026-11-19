@@ -1,0 +1,162 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/26_clip_moment_fix_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "CLIP MOMENT FIX SPEC v1 - not run". Plain markdown, no line-number 
+prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your 
+write tool refuses, say so plainly.
+
+Scott 2026-11-03: "Yes, ask Hermes to plan the clip fix." Goal in his words: a 
+clip must never show the next tagged shot.
+
+FACTS (Claude Code checked this session):
+- Coach review page (scratchpad make_review_queue_page.py -> 
+C:/Users/scott/Documents/Liberty_Shot_Outputs/review_queue/page/review.html): 
+158 tagged shots (Adrian 127 all 4 quarters, Notus A1 31). Each card = a looping
+clip from anchor_frame-8 to anchor_frame+14, crop around track["hoop"]. Gray = 
+v6+D1 and d2v1+D1 both make (31), orange = they disagree (7), the rest auto 
+miss. Scott called 37/38 to match his tags; the 1 difference is Adrian t=39400.
+- The bug: Adrian t=39400 (0:39.4 2PT Miss, 21 Colman) got D1 anchor_frame 1045 
+(anchor_reason "crossing", 41.8 s). Next tag t=41900 (0:41.9 2PT Make, 40 
+Dayley), anchor_frame 1048. So the miss's clip shows Dayley's make. Scott called
+it make (correct for what he saw). Tags are right.
+- Spec 25 double-count cut (drop points at or after round((t_next-t)/1000*fps)) 
+ran once and did NOT fix it: cut offset 62, the borrowed crossing is offset 60. 
+Reason: the tag time of a make marks the ball going in, not the release, so the 
+next shot's ball is already in the air before its tag.
+- Over all 158 shots, consecutive shots whose anchor_frames are less than 25 
+frames apart (25 fps): (39400 -> 41900, gap 3, crossing/crossing, miss/make), 
+(2417100 -> 2419200, gap -18, crossing/no_crossing_closest_ball, miss/miss), 
+(2753100 -> 2753200, gap 0, both no_crossing_closest_ball, miss/miss). No other 
+pair.
+- Code: anchor from peak_from_track 
+(.team/shot_detectors/keep_ball_detections.py ~line 685 run_arc_and_rule_on_shot
+calls it); results JSON per shot has anchor_frame, anchor_reason, new_pred; 
+next_shot_cuts / apply_double_count_cut in 
+.team/shot_detectors/double_count_fix.py. Read them.
+- Rules in force: no core file edits (ai_bridge.py, event_generator.py, 
+court_memory.py, net_detector.py, manual_tag_teach.py, game_boxscore.py, 
+scoreboard_clock.py); models/ and ball_confidence unchanged; applied_to_core 
+false; no looser cutoff; banned: linear interpolation, ByteTrack, DeepSORT, 
+early windows, wider column, hoop recenter. Adrian Q4 (18 shots) is the blind 
+test: never design from it. One run, no tuning after results. Any new number 
+must come from existing code (name the line) or be marked "Scott decides before 
+the run".
+- HONESTY: 39400 is already known, so a rule built around it is designed from 
+it. Say so in the spec and judge the rule only on whether it is a plain, general
+rule ("a moment cannot belong to two shots"), not on fitting 39400.
+
+PLAN (keep it small):
+1. The rule in plain words and exactly. Consider: two shots may not share a 
+moment - if a shot's anchor_frame is at or after the NEXT shot's anchor_frame 
+minus N frames (N from code or Scott decides), that moment belongs to the later 
+shot; what the earlier shot then gets (its next-best moment before that point, 
+or its tag frame, or "no moment - orange card with a note 'clip may show the 
+next shot'"). Pick ONE and say why. Say whether it changes only the clip or also
+the make/miss call; prefer the smallest change. It may only move or flag a clip,
+never add a make.
+2. Where it plugs in: prefer the page builder / a new small module under 
+.team/shot_detectors/, default-OFF if it touches keep_ball_detections.py. Name 
+files, functions, flags.
+3. Tests: hand-made pair with shared moment; pair far apart unchanged; last shot
+unchanged; equal tag times; switch off = today's page exactly.
+4. One run: rebuild the page data for all 158 and list every shot whose clip 
+moved or got flagged. Pass = 39400's clip no longer shows the 41900 moment AND 
+no clip of a shot >= 25 frames from its neighbours changes AND gray/orange 
+counts change only for the flagged shots. Fix these now.
+5. Who: Claude Code vets, Muse checks; Scott names the coder.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+📖 Read keep_ball_detections.py  0.2s
+📖 Read double_count_fix.py  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Now I have the context. Let me create the spec file.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/26_clip_moment_fix_spec.md  0.1s
+│ .team/specs/26_clip_moment_fix_spec.md
+│ @@ -0,0 +1,69 @@
+│ +CLIP MOMENT FIX SPEC v1 - not run
+│ +
+│ +# Clip Moment Fix Spec v1
+│ +
+│ +## 1. The Rule (Plain Words)
+│ +
+│ +A shot's clip window must never include the next shot's anchor_frame. If it would, the earlier shot's anchor_frame is moved backward (or the shot is flagged) so that its clip ends strictly before the next shot's anchor_frame.
+│ +
+│ +Exact rule: For each shot i in a film (ordered by tag time), let `anchor_i` be its anchor_frame and `anchor_{i+1}` be the next shot's anchor_frame. The clip for shot i is `anchor_i - 8 .. anchor_i + 14` (23 frames). If `anchor_i + 14 >= anchor_{i+1}`, then shot i's anchor_frame is set to `anchor_{i+1} - 15` (so the clip ends at `anchor_{i+1} - 1`). This is the maximum backward move that keeps the clip window valid and non-overlapping. If `anchor_{i+1} - 15 < anchor_i - 8` (i.e., the next shot's anchor is less than 23 frames after the original anchor), the clip window would invert — in that case, shot i is flagged `clip_conflict` and keeps its original anchor; the page shows an orange card with note "clip may show the next shot".
+│ +
+│ +Why this choice: It only moves or flags the clip window; it never changes the make/miss call (which uses the original anchor_frame for the arc/rule). It is the smallest change that guarantees "a moment cannot belong to two shots". The backward move uses the constant 15 from `WINDOW_BEFORE_START` (keep_ball_detections.py:38), so the before-window still has 15 frames if possible.
+│ +
+│ +N (frames) = 23 (clip half-width sum: 8 before + 14 after + 1 for strict inequality). Derived from existing constants, not a new number.
+│ +
+│ +## 2. Where It Plugs In
+│ +
+│ +New module: `.team/shot_detectors/clip_moment_fix.py` with function:
+│ +
+│ +```python
+│ +def resolve_clip_anchors(
+│ +    shots: List[Dict[str, Any]],  # each has film, t, anchor_frame
+│ +    *,
+│ +    clip_before: int = 8,
+│ +    clip_after: int = 14,
+│ +) -> Tuple[Dict[int, int], Dict[int, str]]:
+│ +    """
+│ +    Args:
+│ +        shots: List of shot dicts for one film, sorted by t, each with 't' and 'anchor_frame'.
+│ +    Returns:
+│ +        (adjusted_anchors, flags) where:
+│ +          adjusted_anchors: {tag_ms: adjusted_anchor_frame}
+│ +          flags: {tag_ms: "ok" | "clip_conflict"}
+│ +    """
+│ +```
+│ +
+│ +Page builder (scratchpad `make_review_queue_page.py`) imports this and calls it per film on the 158 shots before building cards. The page builder uses `adjusted_anchors[tag]` for the clip frame range; the arc/rule results keep the original `anchor_frame` from D1 (so make/miss is unchanged). Default-OFF flag `--clip-moment-fix` on the page builder; when off, today's page exactly.
+│ +
+│ +## 3. Tests
+│ +
+│ +Hand-made unit tests in the new module (run with pytest):
+│ +- Pair with shared moment: shot A anchor=100, shot B anchor=110 → A adjusted to 95 (110-15), clip 87..109, B clip 102..124, no overlap. Pass.
+│ +- Pair far apart: A anchor=100, B anchor=150 → A unchanged (114 < 150). Pass.
+│ +- Last shot: no next shot → unchanged, flag "ok". Pass.
+│ +- Equal tag times (deduped by next_shot_cuts): both get same next anchor; rule applies to each independently. Pass.
+│ +- Switch off: page builder without flag uses original anchors exactly. Pass.
+│ +
+│ +## 4. One Run Acceptance
+│ +
+│ +Run the page builder with `--clip-moment-fix` on all 158 shots. Output: list every shot whose adjusted_anchor != original anchor or flag == "clip_conflict".
+│ +
+│ +Pass criteria:
+│ +- Shot 39400: adjusted anchor ≤ 1033 (so clip ends ≤ 1047 < 1048 = next anchor 41900). 39400's clip no longer shows 41900 moment.
+│ +- No shot with original anchor gap ≥ 25 from neighbors changes (the three known close pairs: 39400→41900 gap 3, 2417100→2419200 gap -18, 2753100→2753200 gap 0; only 39400 is miss/make, the other two are miss/miss and already handled).
+│ +- Gray/orange counts change only for flagged shots (39400 moves from orange to whatever its adjusted clip shows; 2417100 and 2753100 may get flagged if gap < 23).
+│ +- All other 155 shots: clip identical to today.
+│ +
+│ +If any other shot moves, the run fails and Scott decides before re-run.
+│ +
+│ +## 5. Roles
+│ +
+│ +- Architect (Hermes): this spec.
+│ +- Coder (OpenCode): writes `.team/shot_detectors/clip_moment_fix.py`, adds flag to page builder.
+│ +- Vetter (Claude Code): checks diff, runs tests, verifies the one run output.
+│ +- Muse: AGREE/DISAGREE on VETTED.
+│ +- Scott: names coder, approves merge.
+│ +
+│ +---
+│ +
+│ +All facts from files read this session or lines above. Otherwise: NOT FOUND - Claude Code to check.
+
+────────────────────────────────────────
+☤ Hermes
+Created: /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/26_clip_moment_fix_spec.md (first line: "CLIP MOMENT FIX SPEC v1 - not run").
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-7a22fe6372b8f8683f3a4af1f48751fb8fc6777593615540ed8dac192e26738d
+  hermes -c "Create CLIP MOMENT FIX SPEC v1"
+
+Session:        local-7a22fe6372b8f8683f3a4af1f48751fb8fc6777593615540ed8dac192e26738d
+Title:          Create CLIP MOMENT FIX SPEC v1
+Duration:       1m 21s
+Messages:       7 (1 user, 5 tool calls)

@@ -1,0 +1,526 @@
+Query: You are HERMES. FINAL CHECK of the NFHS download fix, v2. Read-only.
+
+Round 1 verdicts: HERMES, MUSE, CURSOR all AGREE WITH CHANGES. Requested changes
+and what v2 does:
+C1 expected-duration gate (all 3): soft. Clips: expected = end_ms - start_ms. 
+Full games: yt-dlp
+   writes %(duration)s via `--print-to-file before_dl:%(duration)s <tmp>` 
+(verified with yt-dlp
+   2025.12.08 on a local HLS stream: wrote 12 for a 12 s stream; progress lines 
+still printed; output
+   normal MP4). NFHS lookup metadata has no duration field. Reject when probed <
+95% of expected AND
+   more than 30 s short. Unknown/NA -> gate skipped. Applied to final file, 
+leftover .temp.mp4, remux.
+C2 stale-file guard (Cursor): recovery only accepts files with mtime >= run 
+start - 2 s.
+C3 temp cleanup (Hermes, Cursor): .temp.mp4 / .filmtool_fix.mp4 removed after 
+any recovery attempt
+   and on cancel; duration/header temp files removed on every exit path.
+C4 free-space check before remux (Cursor): needs 1.1 x file size free or fails 
+with a message.
+   (Muse's "~1.4 GB free" was wrong: C: has 432 GB free; likely the WSL disk.)
+C5 job API (Cursor): warning + log_path now in _public_job; error jobs carry 
+log_path.
+Not done: remux disk-peak reduction (Hermes: optional) - deleting the source 
+before the remux is
+   verified would risk losing the only copy.
+Tests: 4 more (earlier-run file rejected, much-shorter rejected / exact OK, 
+duration reader, full
+   fake-yt-dlp run with 600 s expected but 3 s file -> error + no temp files 
+left). 38/38 NFHS pass.
+Files: .team/review_nfhs_fix/fix_v2.diff, 
+.team/review_nfhs_fix/test_nfhs_recover_v2.py
+
+Check each C1-C5 is correctly applied and nothing new is broken. Then ONE 
+verdict line starting exactly with:
+HERMES: AGREE   or   HERMES: AGREE WITH CHANGES: <list>   or   HERMES: DISAGREE:
+<reason>
+
+=== fix_v2.diff ===
+diff --git a/nfhs.py b/nfhs.py
+index 6fead1d..ef20a98 100644
+--- a/nfhs.py
++++ b/nfhs.py
+@@ -16,6 +16,7 @@ import subprocess
+ import sys
+ import tempfile
+ import threading
++import time
+ from datetime import datetime
+ 
+ import requests
+@@ -480,10 +481,18 @@ def download_nfhs_vod(
+             "error": "yt-dlp not installed. From your project venv run: pip 
+install yt-dlp",
+         }
+ 
++    # yt-dlp writes the video length it expects here (if the stream reports 
+one), so a
++    # recovered file can be checked against it. --print-to-file does not quiet 
+the output.
++    duration_file = os.path.join(tempfile.gettempdir(), 
+f"nfhs_duration_{game_id}.txt")
++    _cleanup_files()
++    temp_files = 
++    run_started = time.time()
++
+     # Try yt-dlp with custom headers
+     try:
+         cmd = [
+             *_yt_dlp_command(),
++            "--print-to-file", "before_dl:%(duration)s", duration_file,
+             "--no-check-certificates",
+             "--newline",
+             "--progress",
+@@ -517,7 +526,7 @@ def download_nfhs_vod(
+         for line in iter(proc.stdout.readline, ""):
+             if download_control and download_control.cancelled:
+                 download_control.request_cancel()
+-                _cleanup_files()
++                _cleanup_files(temp_files + list(_temp_paths(output_path)))
+                 return {
+                     "success": False,
+                     "file_path": None,
+@@ -548,7 +557,7 @@ def download_nfhs_vod(
+                             _emit_download_status(progress_callback, percent=0,
+message=phase_message)
+         return_code = proc.wait(timeout=7200)
+         if download_control and download_control.cancelled:
+-            _cleanup_files()
++            _cleanup_files(temp_files + list(_temp_paths(output_path)))
+             return {
+                 "success": False,
+                 "file_path": None,
+@@ -556,19 +565,55 @@ def download_nfhs_vod(
+                 "error": "Download cancelled",
+                 "cancelled": True,
+             }
++        log_path = _write_download_log(game_id, output_lines, token, 
+return_code)
++        expected_s = _read_expected_duration(duration_file, start_ms if 
+is_section else None,
++                                             end_ms if is_section else None)
++        _cleanup_files(temp_files)
+         if return_code == 0 and os.path.exists(output_path):
+             file_size = os.path.getsize(output_path)
+-            _cleanup_files()
+             if progress_callback:
+                 progress_callback(percent=100.0, message="Download finished")
+-            return {"success": True, "file_path": output_path, "file_size": 
+file_size, "error": None}
++            return {"success": True, "file_path": output_path, "file_size": 
+file_size, "error": None,
++                    "log_path": log_path}
++
++        # yt-dlp reported a failure. If the finished file is there, check it 
+and
++        # complete the last step ourselves instead of throwing away a full 
+download.
++        recovery_note = ""
++        if os.path.exists(output_path) or 
+os.path.exists(_temp_paths(output_path)[0]):
++            _emit_download_status(progress_callback, percent=100, 
+message="Checking the downloaded video…")
++            try:
++                ok, done = _recover_finished_download(
++                    output_path, expected_s=expected_s, run_started=run_started
++                )
++            except OSError as exc:
++                ok, done = False, f"could not finish the file: {exc}"
++            # Leftover repair copies are never useful after this point.
++            _cleanup_files(list(_temp_paths(output_path)))
++            if not ok:
++                recovery_note = f"\nThe Film Tool checked the file: {done}."
++            if ok:
++                if progress_callback:
++                    progress_callback(percent=100.0, message="Download 
+finished")
++                return {
++                    "success": True,
++                    "file_path": output_path,
++                    "file_size": os.path.getsize(output_path),
++                    "error": None,
++                    "warning": f"yt-dlp reported a problem at the end; the Film
+Tool {done}.",
++                    "log_path": log_path,
++                }
+ 
+         combined = "".join(output_lines)
+         error_msg = (combined or "yt-dlp failed")[-500:]
+-        _cleanup_files()
+-        return {"success": False, "file_path": None, "file_size": 0, "error": 
+f"yt-dlp error: {error_msg}"}
++        if token:
++            error_msg = error_msg.replace(token, "<token removed>")
++        error_msg += recovery_note
++        if log_path:
++            error_msg += f"\n(Full log: {log_path})"
++        return {"success": False, "file_path": None, "file_size": 0, "error": 
+f"yt-dlp error: {error_msg}",
++                "log_path": log_path}
+     except FileNotFoundError:
+-        _cleanup_files()
++        _cleanup_files(temp_files)
+         return {
+             "success": False,
+             "file_path": None,
+@@ -576,10 +621,188 @@ def download_nfhs_vod(
+             "error": "yt-dlp not installed. From your project venv run: pip 
+install yt-dlp",
+         }
+     except subprocess.TimeoutExpired:
+-        _cleanup_files()
++        _cleanup_files(temp_files)
+         return {"success": False, "file_path": None, "file_size": 0, "error": 
+"Download timed out (2 hour limit)"}
+ 
+ 
++_NFHS_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+"logs")
++
++
++def _write_download_log(game_id: str, lines: list, token: str | None, 
+return_code) -> str | None:
++    """Keep the full yt-dlp output (token removed) so a failure can be 
+diagnosed later."""
++    try:
++        os.makedirs(_NFHS_LOG_DIR, exist_ok=True)
++        path = os.path.join(
++            _NFHS_LOG_DIR, 
+f"nfhs_download_{game_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
++        )
++        text = "".join(lines)
++        if token:
++            text = text.replace(token, "<token removed>")
++        with open(path, "w", encoding="utf-8", errors="replace") as f:
++            f.write(text)
++            f.write(f"\n yt-dlp exit code: {return_code}\n")
++        return path
++    except OSError:
++        return None
++
++
++def _probe_video(path: str) -> dict | None:
++    """Return {format, has_video, duration} for a media file, or None if 
+ffprobe cannot read it."""
++    ffprobe = shutil.which("ffprobe")
++    if not ffprobe or not os.path.exists(path) or os.path.getsize(path) == 0:
++        return None
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=120,
++        )
++        if res.returncode != 0:
++            return None
++        info = json.loads(res.stdout or "{}")
++        fmt = info.get("format", {})
++        return {
++            "format": fmt.get("format_name", ""),
++            "has_video": any(s.get("codec_type") == "video" for s in 
+info.get("streams", [])),
++            "duration": float(fmt.get("duration") or 0),
++        }
++    except (OSError, subprocess.TimeoutExpired, ValueError):
++        return None
++
++
++def _plays_to_end(path: str) -> bool:
++    """Decode the last few seconds: a cut-off or broken file fails here."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=300,
++        )
++        return res.returncode == 0
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _is_good_mp4(path: str) -> bool:
++    info = _probe_video(path)
++    return bool(
++        info and info["has_video"] and info["duration"] > 0
++        and ("mp4" in info["format"] or "mov" in info["format"])
++        and _plays_to_end(path)
++    )
++
++
++def _replace_with_retry(src: str, dst: str, attempts: int = 10, delay: float = 
+2.0) -> None:
++    """os.replace, retrying while Windows has the file open (virus scan, video 
+preview)."""
++    for n in range(attempts):
++        try:
++            os.replace(src, dst)
++            return
++        except PermissionError:
++            if n == attempts - 1:
++                raise
++            time.sleep(delay)
++
++
++def _remux_to_mp4(src: str, dst: str) -> bool:
++    """Copy the streams into a normal MP4 (what yt-dlp's final 'fixup' step 
+does)."""
++    ffmpeg = shutil.which("ffmpeg")
++    if not ffmpeg:
++        return False
++    try:
++        res = subprocess.run(
++            ,
++            capture_output=True, text=True, timeout=3600,
++        )
++        return res.returncode == 0 and _is_good_mp4(dst)
++    except (OSError, subprocess.TimeoutExpired):
++        return False
++
++
++def _temp_paths(output_path: str) -> tuple:
++    """(yt-dlp's fixup output, the Film Tool's own remux output) for a final 
+file name."""
++    base, _ext = os.path.splitext(output_path)
++    return base + ".temp.mp4", base + ".filmtool_fix.mp4"
++
++
++def _long_enough(path: str, expected_s: float | None) -> bool:
++    """Soft length gate: only applies when the expected length is known."""
++    if not expected_s or expected_s <= 0:
++        return True
++    info = _probe_video(path)
++    if not info:
++        return False
++    return info["duration"] >= 0.95 * expected_s or expected_s - 
+info["duration"] <= 30
++
++
++def _written_this_run(path: str, run_started: float | None) -> bool:
++    """Never treat a file left over from an earlier download as this run's 
+result."""
++    if run_started is None:
++        return True
++    try:
++        return os.path.getmtime(path) >= run_started - 2
++    except OSError:
++        return False
++
++
++def _recover_finished_download(
++    output_path: str, *, expected_s: float | None = None, run_started: float | 
+None = None
++) -> tuple:
++    """
++    yt-dlp only writes the final file name after every piece has downloaded, so
+if that
++    file exists the download itself finished; a non-zero exit then means a last
+step
++    (usually the MP4 'fixup') failed. Check the file and finish that step 
+ourselves.
++    Returns (ok, what_was_done). Never accepts a file from an earlier run or 
+one much
++    shorter than the expected length (when known).
++    """
++    leftover, fixed = _temp_paths(output_path)
++    if (os.path.exists(leftover) and _written_this_run(leftover, run_started)
++            and _is_good_mp4(leftover) and _long_enough(leftover, expected_s)):
++        _replace_with_retry(leftover, output_path)
++        return True, "finished yt-dlp's interrupted MP4 repair"
++    if not os.path.exists(output_path):
++        return False, "no finished file"
++    if not _written_this_run(output_path, run_started):
++        return False, "the video file is from an earlier download, not this 
+one"
++    if not _long_enough(output_path, expected_s):
++        return False, "the video is much shorter than NFHS says it should be"
++    if _is_good_mp4(output_path):
++        _cleanup_files()
++        return True, "file checked: complete, plays to the end"
++    info = _probe_video(output_path)
++    if info and info["has_video"] and info["duration"] > 0:
++        need = int(os.path.getsize(output_path) * 1.1)
++        if 
+shutil.disk_usage(os.path.dirname(os.path.abspath(output_path))).free < need:
++            return False, f"not enough free disk space to repair it (needs 
+about {need // 2**30 + 1} GB)"
++        if _remux_to_mp4(output_path, fixed) and _long_enough(fixed, 
+expected_s):
++            _replace_with_retry(fixed, output_path)
++            _cleanup_files()
++            return True, "repaired the stream into a normal MP4"
++    return False, "file is not a playable video"
++
++
++def _read_expected_duration(path: str, start_ms: int | None, end_ms: int | 
+None) -> float | None:
++    """Section length for clips; otherwise the duration yt-dlp reported (if 
+any)."""
++    if start_ms is not None and end_ms is not None and end_ms > start_ms:
++        return (end_ms - start_ms) / 1000.0
++    try:
++        with open(path, encoding="utf-8") as f:
++            vals = 
++        for v in reversed(vals):
++            try:
++                d = float(v)
++                if d > 0:
++                    return d
++            except ValueError:
++                continue
++    except OSError:
++        pass
++    return None
++
++
+ def _cleanup_files(paths: list):
+     """Clean up temporary files."""
+     for path in paths:
+diff --git a/nfhs_download_jobs.py b/nfhs_download_jobs.py
+index 807ad61..4a3e2c8 100644
+--- a/nfhs_download_jobs.py
++++ b/nfhs_download_jobs.py
+@@ -37,6 +37,8 @@ def _public_job(job: dict) -> dict:
+         "last_segment": job.get("last_segment"),
+         "nfhs_game_id": job.get("nfhs_game_id"),
+         "error": job.get("error"),
++        "warning": job.get("warning"),
++        "log_path": job.get("log_path"),
+     }
+     if job.get("status") == "cancelled":
+         payload["status"] = "cancelled"
+@@ -177,7 +179,8 @@ def _run_download_job(
+                 _update_job(job_id, status="cancelled", message="Download 
+cancelled", percent=0)
+                 return
+             if not result["success"]:
+-                _update_job(job_id, status="error", error=result["error"], 
+message=result["error"])
++                _update_job(job_id, status="error", error=result["error"], 
+message=result["error"],
++                            log_path=result.get("log_path"))
+                 return
+ 
+             lookup = lookup_game(game_id, email, password)
+@@ -199,7 +202,9 @@ def _run_download_job(
+                 job_id,
+                 status="complete",
+                 percent=100,
+-                message="Download complete",
++                message="Download complete" + (" (checked and repaired by the 
+Film Tool)" if result.get("warning") else ""),
++                warning=result.get("warning"),
++                log_path=result.get("log_path"),
+                 file_size=result["file_size"],
+                 stored_filename=saved["stored_filename"],
+                 game_id=saved["game_id"],
+
+────────────────────────────────────────
+☤ Hermes
+I'll start by reading all the relevant files to verify the fix.
+────────────────────────────────────────
+
+📖 Read nfhs.py  0.2s
+📖 Read fix_v2.diff  0.2s
+📖 Read test_nfhs_recover_v2.py  0.3s
+📖 Read nfhs_download_jobs.py  0.3s
+
+────────────────────────────────────────
+☤ Hermes
+Now let me check the repo state and environment before running the tests.
+────────────────────────────────────────
+
+💻 $ git status --short + 2 commands  101.7s
+✗ $ python --version + 3 commands [BLOCKED: Command flagged as dangerous (script...]
+
+────────────────────────────────────────
+☤ Hermes
+The git status was too noisy. Let me narrow down and check the environment.
+────────────────────────────────────────
+
+💻 $ git status --short -- nfhs.py nfhs_download_jobs.py tests/test_nfhs_download.py .team/review_nfhs_fix/ + 1 command  0.3s
+✗ $ python --version + 2 commands  0.1s [exit 1]
+💻 $ git config core.autocrlf + 4 commands  0.2s
+✗ $ file nfhs.py nfhs_download_jobs.py tests/test_nfhs_download.py .team/review_nfhs_fix/fix_v2.diff .team/review_nfhs_fix/test_nfhs_recover_v2.py .venv/bin/python + 2 commands  0.1s [exit 127]
+💻 $ git diff -- nfhs.py  0.2s
+💻 $ git ls-files --eol nfhs.py nfhs_download_jobs.py tests/test_nfhs_download.py .team/review_nfhs_fix/fix_v2.diff .team/review_nfhs_fix/test_nfhs_recover_v2.py + 2 commands  0.2s
+💻 $ /home/scott/.local/bin/pytest --version + 1 command  1.6s
+
+────────────────────────────────────────
+☤ Hermes
+pytest works via /home/scott/.local/bin/pytest. Now let me run the full NFHS test suite (existing + new).
+────────────────────────────────────────
+
+💻 $ /home/scott/.local/bin/pytest tests/test_nfhs_download.py .team/review_nfhs_fix/test_nfhs_recover_v2.py -q  17.9s
+
+────────────────────────────────────────
+☤ Hermes
+All 38 NFHS tests pass. Now let me verify no other callers/usages of the new helpers exist and that everything compiles.
+────────────────────────────────────────
+
+💻 $ /usr/bin/python3 -m py_compile nfhs.py nfhs_download_jobs.py tests/test_nfhs_download.py .team/review_nfhs_fix/test_nfhs_recover_v2.py + 1 command  0.2s
+✗ Exec from hermes_tools import search_files [This code is not allowed in an unattended session — it did not run.]
+🔎 Grep _recover_finished_download|_long_enough|_written_this_run|_temp_paths|_read_expected_duration|_probe_video|_remux_to_mp4|_is_good_mp4|_plays_to_end|_replace_with_retry|_write_download_log  1.2s
+🔎 Grep _public_job|start_download_job|get_download_job|cancel_download_job  1.2s
+💻 $ ls -la tests/ | grep -i nfhs + 1 command  0.5s
+📖 Read test_nfhs_recover.py
+💻 $ git status --short -- tests/ | grep -i nfhs + 1 command  0.2s
+💻 $ echo poll
+✗ Exec from hermes_tools import process_manage [This code is not allowed in an unattended session — it did not run.]
+🔎 Searching tools · process poll kill wait background session  0.1s
+📖 Reading tool details · 1 tool
+✗ Proc poll proc_e0290b2 [No process with ID proc_e0290b2dfc]
+⚙️ Proc ls processes
+⚙️ Proc poll proc_e0290b8
+
+────────────────────────────────────────
+☤ Hermes
+While that runs, let me check the operational protocol context for how verdicts should be delivered.
+────────────────────────────────────────
+
+💻 $ ls *.md + 1 command  0.2s
+📖 Read AGENT_OPERATIONAL_PROTOCOL.md
+📖 Read AUTHORITY.md
+⚙️ Proc poll proc_e0290b8
+⚙️ Proc poll proc_e0290b8
+⚙️ Proc poll proc_e0290b8
+⚙️ Proc poll proc_e0290b8
+
+────────────────────────────────────────
+☤ Hermes
+The -k nfhs run finished: 53 passed, 1 failed — the failure is in tests/e2e/test_e2e_flow.py::test_04_games_sources_nfhs (KeyError: 'scheduled_games'). Let me confirm that's outside the fix's scope and check the test-file diffs.
+────────────────────────────────────────
+
+💻 $ git status --short tests/e2e/ + 2 commands  1.5s
+💻 $ diff -q tests/test_nfhs_recover.py .team/review_nfhs_fix/test_nfhs_recover_v2.py + 1 command  0.2s
+💻 $ git diff --ignore-all-space -- tests/test_nfhs_download.py + 1 command  0.2s
+💻 $ git show HEAD:tests/test_nfhs_download.py | file - + 3 commands  0.5s
+💻 $ git diff --ignore-all-space -- nfhs.py + 3 commands  0.3s
+💻 $ git diff --ignore-all-space --stat -- tests/e2e/ tests/ + 4 commands  1.6s
+
+────────────────────────────────────────
+☤ Hermes
+Final check complete. All five requested changes verified as correctly applied in the code:
+
+- C1: expected-duration gate — --print-to-file before_dl:%(duration)s wired in, _read_expected_duration (clips use section ms, full games use yt-dlp duration, NA → None/skip), _long_enough accepts ≥95% of expected OR ≤30 s short, applied to leftover, final file, and remux output. Logic is the correct complement of "reject <95% AND >30 s short".
+- C2: stale-file guard — _written_this_run (mtime ≥ run_started − 2 s) enforced on leftover and final file in recovery.
+- C3: temp cleanup — cancel paths clean temp_files + _temp_paths; post-recovery cleanup of repair copies; duration/header temps removed on all exit paths.
+- C4: free-space gate — 1.1× file-size check with failure message before remux. (Muse's ~1.4 GB note was indeed wrong; code uses real shutil.disk_usage.)
+- C5: job API — warning + log_path in _public_job, error jobs carry log_path, complete jobs carry warning/log_path and the repair note.
+
+Verification results: py_compile clean on all touched files; content diff (--ignore-all-space) confirms only the additive fix landed (whole-file diff is CRLF-vs-LF noise only); NFHS suite run together: 38 passed (tests/test_nfhs_download.py + tests/test_nfhs_recover_v2.py); full -k nfhs sweep: 53 passed, 1 pre-existing failure (tests/e2e/test_e2e_flow.py::test_04_games_sources_nfhs, KeyError 'scheduled_games' — content identical to HEAD, unrelated to this fix).
+
+HERMES: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-bd798325214d8402f60d34bb892e8bd269a01738bf6685e433aea8538267d3a1
+  hermes -c "You are HERMES. FINAL CHECK of the NFHS…"
+
+Session:        local-bd798325214d8402f60d34bb892e8bd269a01738bf6685e433aea8538267d3a1
+Title:          You are HERMES. FINAL CHECK of the NFHS…
+Duration:       8m 10s
+Messages:       71 (1 user, 69 tool calls)
+[hermes] exit 0 at 10:45:03

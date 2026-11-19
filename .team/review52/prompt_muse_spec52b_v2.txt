@@ -1,0 +1,6 @@
+You are MUSE, the REVIEWER (not Hermes). READ-ONLY: do not edit, create or rewrite ANY file. Output = review text.
+Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis
+Confirm .team/specs/52b_check_rule_prereg.md v2 applies the Muse and Cursor changes (review52/cursor_spec52b.txt,
+review52/muse_spec52b.txt): seed_disagreement-only corroboration, other cues FUTURE, qualified disclosure, silent
+unchanged and stated not fixed by 52b, stale next-step refreshed. Protocol honest as written?
+End with one line: CURSOR: AGREE | AGREE WITH CHANGES: ... | DISAGREE: ...

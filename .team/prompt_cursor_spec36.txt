@@ -1,0 +1,48 @@
+You are the Coder. Implement spec 36 (.team/specs/36_rim_first_extras_fix_spec.md). The K1-K8 block at the top of that file OVERRIDES the body text where they differ (in particular: H is not_a_shot, not orange; C and D do NOT read tags anywhere; there is no merge_window_ms). Scott approved the six K8 numbers. This prompt is the exact design Claude Code will check against.
+
+Edit ONLY: .team/shot_detectors/rim_first_finder.py, .team/shot_detectors/rim_first_measure.py, .team/shot_detectors/test_rim_first.py. No other file. Do not commit. Do not run video or models. Do not delete or weaken any existing function or test; existing tests must still pass (adjust only where a field is added).
+
+FINDER (rim_first_finder.py) - reads video + models only, as now. No tag/scoreboard/DB import.
+
+N1 Constants block, each with its source comment "spec 36 K8, Scott approved 2026-11-05":
+  HOOP_W_MIN_WIDTHS = 0.5, HOOP_W_MAX_WIDTHS = 1.5, MIN_SERIES_V6_POINTS = 3, SHOOT_AROUND_MIN_BALLS = 3, FOUL_REF_WINDOW_MS = 1500.
+  Shoot-around look-back reuses TRACE_BEFORE_MS (3000) - no new constant.
+N2 Referee boxes: keep BODD "referee" boxes in their own list (do not merge them with players; players stay as now). Add them to the compact frame as key "r" [[x,y,w,h,c],...]. A frame with only referees is still saved.
+N3 frames.json becomes {"frames": [...compact frames...], "series": [...]} (still no indent). Each series row: {"series": si, "ref_x", "median_hoop_w", "n_v6_points", "kept": bool, "drop_reason": str|None, "points": [[frame, x, y], ...] (v6 points)}.
+N4 Pure function hoop_series_ok(series_hoop_w, film_hoop_w, n_v6_points, w_min, w_max, min_points) -> (ok, reason). series_hoop_w = median w of that series' hoop_samples; film_hoop_w = median w of all BODD hoops of the span after dedupe_hoops per frame (raw detections, not carried hoops). Not ok if ratio < w_min or > w_max ("not_a_hoop_size") or n_v6_points < min_points ("not_a_hoop_traffic"). Moments from a not-ok series are still emitted, with no trace (shooter orange, shooter_reason "not_a_hoop"), shot_call not_a_shot, shot_reason "not_a_hoop". Record film_hoop_w in moments.json metadata.
+N5 Every moment gets (K1): shot_call in {"shot","orange","not_a_shot"}, shot_reason (None when shot), shooter in {"found","orange"} = the existing trace status, shooter_reason = existing trace reason. Keep the existing "status"/"reason" fields unchanged too (old tools read them). Also "flags": list of every rule below that fired (audit), even when a higher rule decided shot_call.
+N6 Pure function assign_shot_calls(moments, series_ok, bodd_balls, referee_boxes, player_boxes, v6_by_series, fps, ...numbers) applied in emit_moments after all moments exist, before the final sort. First rule that fires sets shot_call, in this order:
+  1 not_a_hoop (N4) -> not_a_shot.
+  2 same_shot_merged (K2): within one series, moments in frame order; a moment is merged into the previous moment of the same series unless, on some frame STRICTLY between the two trigger frames, the ball was inside a player box (ball_inside_player(bx, by, box, RELEASE_TRACE_FACTOR, mode="release")). Ball per frame = combine_ball_track(this series' v6 points, best-conf BODD ball per frame) - same as trace_shooter. Merged -> not_a_shot, shot_reason "same_shot_merged", plus "merged_into_frame". No time number. The first moment of a series is never merged.
+  3 referee_holding (K4): at the trigger frame, the ball (series v6 point on that frame, else best-conf BODD ball) is inside a referee box (ball_inside_player, same factor and mode) -> not_a_shot "referee_holding". No ball on that frame -> rule does not fire.
+  4 possible_shoot_around (K3 B): on any frame in [trigger - TRACE_BEFORE_MS, trigger], the number of BODD basketballs on that frame >= SHOOT_AROUND_MIN_BALLS -> orange.
+  5 possible_fouled_miss (K3 C): only kind_hint "rim" (a "make" hint stays a shot - and-one). On any frame in (trigger, trigger + FOUL_REF_WINDOW_MS], any BODD ball or this series' v6 point is inside a referee box -> orange.
+  6 otherwise shot.
+  Blocks (D): no rule. Say so in a comment.
+N7 Index everything by frame (bisect / dict) so this is not O(n^2) over ~83,000 frames.
+
+MEASURE (rim_first_measure.py) - the only script that reads tags. Keep all existing fields and CLI.
+M1 Tag report scores on shot_call: match tags (Q4 out, as now) against moments with shot_call "shot" only (match_shot_indices, 8000 ms). Moments with no shot_call field count as shot (old files). found/missed/extra per kind as now.
+M2 Hidden by fix (K6): also match tags against ALL moments; a tag matched there but missed in M1 is "hidden", listed with the matched moment's shot_call and shot_reason; count by reason.
+M3 Optional --truth PATH and --truth-run NAME (adrian|notus). Truth entries = rows of that file with run == NAME and label != "Q4_not_examined". Candidate moments = all moments NOT matched to a tag in M1. Each truth entry takes the candidates with |t_ms - entry t_ms| <= 1500 (EXTRA_MATCH_WINDOW_MS = 1500, "spec 36 K8, Scott approved"). Verdict:
+  E_putback_real_shot: exactly one shot -> correct; zero shot -> missed (if an orange candidate, say "orange"); two or more -> wrong (double count).
+  A/B/C/D/F/H labels: any shot candidate -> wrong; else correct (orange, not_a_shot, or none).
+  G_unclear_orange: orange -> correct; none or not_a_shot -> "gone"; shot -> "shot_on_unclear" (listed, not counted wrong).
+  Shot-call "shot" candidates within 1500 ms of no truth entry -> "new_extra" (wrong), listed by time.
+  Report per label group and totals: correct / wrong / missed / orange / gone / shot_on_unclear / new_extra. Also counts of every moment by shot_call and shot_reason.
+M4 results.json gains "shot_calls", "hidden", "truth" (when --truth given); summary.md gets matching sections in plain words.
+
+TESTS (test_rim_first.py), pure functions on hand data, no video:
+  hoop_series_ok: size too small, too big, too few points, ok.
+  same_shot_merged: two moments, no player possession between -> second merged; ball in a player box on a frame strictly between -> both kept; ball in a player box only ON a trigger frame -> merged (strictly between).
+  referee_holding at trigger; ball near but outside referee box -> not fired.
+  shoot_around: 3 balls on one frame inside the look-back -> orange; 2 -> shot; 3 balls after the trigger -> shot.
+  fouled_miss: rim hint + ref has ball 1.0 s after -> orange; at 2.0 s -> shot; make hint + ref at 1.0 s -> shot.
+  order: not_a_hoop beats everything; flags list keeps all fired rules.
+  measure: M1 ignores orange/not_a_shot; M2 lists a hidden tag with reason; M3 each verdict kind incl. double count and new_extra; old moments without shot_call count as shot.
+  A test that greps rim_first_finder.py imports for tag/scoreboard/db/sqlite modules stays (add it if missing).
+
+Run and print the exact command and result:
+.venv/Scripts/python.exe -m pytest .team/shot_detectors/test_rim_first.py .team/shot_detectors/test_shot_rules_measure.py .team/shot_detectors/test_ball_track_check.py -q
+(if .venv python cannot run in your sandbox, use python3 -m pytest with the same files and say so).
+End with a short list: each function added/changed, and any place you had to choose something this prompt did not say.

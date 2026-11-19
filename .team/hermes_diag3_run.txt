@@ -1,0 +1,97 @@
+Query: You are Hermes, the architect. FIRST read 
+.team/specs/14_missed_makes_diagnosis_plan.md. Muse found a contradiction: Scott
+REMOVED the 2 duplicate Adrian tag rows on 2026-10-28 (backup in 
+data/film_tags/_history), but sections 2/3C/9 and the checklist still say the 
+duplicates are in the tag file. Update every such sentence (search the whole 
+file for "duplicate") to say: the tag file no longer has them (127 shots, 109 in
+Q1-Q3); v6_tracks.json and the step-1 results file still list t=2738600 and 
+t=2747200 twice, so each t is selected once. Section 9 becomes a one-line note 
+that this is done. Keep line 1 unchanged. Do not edit any other file. Read the 
+file back and quote every line containing "duplicate". If a write fails, say so 
+plainly.
+📖 Read 14_missed_makes_diagnosis_plan.md  0.1s
+🔎 Grep duplicate  0.1s
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/14_missed_makes_diagnosis_plan.md
+│ .team/specs/14_missed_makes_diagnosis_plan.md
+│ @@ -18,7 +18,7 @@
+│  **Measured facts (2026-10-28):**
+│  - Current rule misses 19 makes (Notus A1 Q1: 7, Adrian Q1–Q3: 12) and calls 0 misses makes.
+│  - 50 of 142 build shots have no rim crossing in the saved ball path.
+│ -- `net_moved_after_shot` as-is catches 6 of 19 missed makes but fires on 38 of 93 misses (Adrian tags contain 2 exact duplicate miss rows at 45:38.6 and 45:47.2; true Adrian Q1–Q3 baseline is 97 of 109; whole film 111 of 127).
+│ +- `net_moved_after_shot` as-is catches 6 of 19 missed makes but fires on 38 of 93 misses (Adrian tag file no longer has the 2 duplicate miss rows at 45:38.6 and 45:47.2 — 127 shots, 109 in Q1-Q3; v6_tracks.json and the step-1 results file still list t=2738600 and t=2747200 twice, so each t is selected once; true Adrian Q1–Q3 baseline is 97 of 109; whole film 111 of 127).
+│
+│  ---
+│
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/14_missed_makes_diagnosis_plan.md
+│ .team/specs/14_missed_makes_diagnosis_plan.md
+│ @@ -68,7 +68,7 @@
+│
+│  ### C. 10 Misses (Ground Truth = Miss, Rule Prediction = Miss)
+│
+│ -**Selection rule (fixed before looking):** From the build set shots where `gt_make=false` and `rule_pred_make=false`, take the first 10 by timestamp (ascending `t`) **excluding the 2 duplicate Adrian rows** (t=2738600 "45:38.6 2PT Miss" and t=2747200 "45:47.2 3PT Miss" — same timestamps appear twice in tags and tracks). If fewer than 10 after deduplication, take all unique.
+│ +**Selection rule (fixed before looking):** From the build set shots where `gt_make=false` and `rule_pred_make=false`, take the first 10 by timestamp (ascending `t`) **excluding the 2 Adrian rows that appear twice in v6_tracks.json and the step-1 results** (t=2738600 "45:38.6 2PT Miss" and t=2747200 "45:47.2 3PT Miss" — the tag file no longer has these duplicates, but tracks/results still list each t twice, so select each t once). If fewer than 10 after deduplication, take all unique.
+│
+│  ---
+│
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/14_missed_makes_diagnosis_plan.md
+│ .team/specs/14_missed_makes_diagnosis_plan.md
+│ @@ -281,9 +281,9 @@
+│
+│  ---
+│
+│ -## 9. Duplicate Tag Rows Recommendation
+│ -
+│ -**One line in the plan (Scott decides):** The Adrian tag file contains 2 exact duplicate miss rows at 45:38.6 (2PT Miss, t=2738600) and 45:47.2 (3PT Miss, t=2747200) — same timestamp, label, player. The v6_tracks.json also contains both duplicates (111 rows, 109 unique). Recommend deduplicating the tag file before any future baseline measurement; Scott decides whether to delete one of each pair or keep both as separate tagged events.
+│ +## 9. Duplicate Tag Rows — Done
+│ +
+│ +Scott removed the 2 duplicate Adrian tag rows on 2026-10-28 (backup in `data/film_tags/_history/`). The tag file now has 127 shots, 109 in Q1-Q3. v6_tracks.json and the step-1 results file still list t=2738600 and t=2747200 twice; each t is selected once.
+│
+│  ---
+│
+🔧 Patch /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/14_missed_makes_diagnosis_plan.md
+│ .team/specs/14_missed_makes_diagnosis_plan.md
+│ @@ -303,7 +303,7 @@
+│
+│  - [ ] All 19 missed makes from `net_moved_build_results.json` (`missed_make=true`) are included.
+│  - [ ] 10 correct makes selected by fixed rule (first 10 by `t` where `gt_make=true` and `rule_pred_make=true`).
+│ -- [ ] 10 misses selected by fixed rule (first 10 unique by `t` where `gt_make=false` and `rule_pred_make=false`, excluding the 2 duplicate Adrian rows at t=2738600 and t=2747200).
+│ +- [ ] 10 misses selected by fixed rule (first 10 unique by `t` where `gt_make=false` and `rule_pred_make=false`, excluding the 2 Adrian rows that appear twice in v6_tracks.json and the step-1 results at t=2738600 and t=2747200 — the tag file no longer has these duplicates, but tracks/results still list each t twice, so select each t once).
+│  - [ ] Peak frame taken from `net_moved_build_results.json` (absolute, already validated) for all 39 shots.
+│  - [ ] 36-frame crop strips (10 before, peak, 25 after) saved as PNG with hoop box **centered on (hoop_x, hoop_y)**, ball points drawn at absolute frames, peak marker.
+│  - [ ] `overlay_data.json` and `shot_meta.json` written per shot with all required fields.
+🔎 Grep duplicate  0.1s
+
+────────────────────────────────────────
+☤ Hermes
+Done. Every line containing "duplicate" in the file (line 1 kept unchanged as requested):
+
+Line 1 (unchanged):
+VETTED by Claude Code (plan checker), 2026-10-28 (v2): fixes (1)-(3) checked by reading the lines: peak frames come from net_moved_build_results.json (absolute, rerun by the checker; lines 117-119, 307) and drawn ball points use absolute frame = round(t/1000*fps) + offset (line 127); counts updated to 127 shots / 109 in Q1-Q3 (line 28) and the duplicate times corrected to 2738600 and 2747200 (lines 286, 306); hoop box centred (line 126). BINDING CHECKER NOTES: (a) fix (4) is not in the plan text
+
+Line 21 (updated):
+- net_moved_after_shot as-is catches 6 of 19 missed makes but fires on 38 of 93 misses (Adrian tag file no longer has the 2 duplicate miss rows at 45:38.6 and 45:47.2 — 127 shots, 109 in Q1-Q3; v6_tracks.json and the step-1 results file still list t=2738600 and t=2747200 twice, so each t is selected once; true Adrian Q1–Q3 baseline is 97 of 109; whole film 111 of 127).
+
+Line 28 (already correct):
+- Tag files: ... (127 shots, 109 Q1–Q3) — duplicates removed (backup in data/film_tags/_history/)
+
+Line 29 (correct — v6_tracks.json still has them):
+- Saved v6 tracks: ... (111 tracks, includes 2 duplicates) — look tracks up by t from the deduped tags
+
+Line 71 (updated):
+Selection rule (fixed before looking): From the build set shots where gt_make=false and rule_pred_make=false, take the first 10 by timestamp (ascending t) excluding the 2 Adrian rows that appear twice in v6_tracks.json and the step-1 results (t=2738600 "45:38.6 2PT Miss" and t=2747200 "45:47.2 3PT Miss" — the tag file no longer has these duplicates, but tracks/results still list each t twice, so select each t once). If fewer than 10 after deduplication, take all unique.
+
+Line 286 (Section 9 — now one-line note):
+Scott removed the 2 duplicate Adrian tag rows on 2026-10-28 (backup in data/film_tags/_history/). The tag file now has 127 shots, 109 in Q1-Q3. v6_tracks.json and the step-1 results file still list t=2738600 and t=2747200 twice; each t is selected once.
+
+Line 306 (updated checklist):
+- [ ] 10 misses selected by fixed rule (first 10 unique by t where gt_make=false and rule_pred_make=false, excluding the 2 Adrian rows that appear twice in v6_tracks.json and the step-1 results at t=2738600 and t=2747200 — the tag file no longer has these duplicates, but tracks/results still list each t twice, so select each t once).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-236c58fa0c6610c435b6a9b7f33a18793bfea7df697b624b82c7c494c14f3387
+  hermes -c "Update missed makes diagnosis plan for duplicate tags"
+
+Session:        local-236c58fa0c6610c435b6a9b7f33a18793bfea7df697b624b82c7c494c14f3387
+Title:          Update missed makes diagnosis plan for duplicate tags
+Duration:       1m 36s
+Messages:       16 (1 user, 14 tool calls)

@@ -1,0 +1,1 @@
+Read-only check. Do not edit or run anything. Reply with exactly one line: CURSOR: READY

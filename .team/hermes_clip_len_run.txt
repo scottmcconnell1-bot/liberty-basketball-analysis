@@ -1,0 +1,97 @@
+﻿Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/27_flagged_clip_length_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "FLAGGED CLIP LENGTH SPEC v1 - not run". Plain markdown, no line-number 
+prefixes, no literal "\n". Edit nothing else, run nothing that writes. If your 
+write tool refuses, say so plainly. Keep it SHORT (one page).
+
+Scott 2026-11-03 after reviewing spec 26's page 
+(Liberty_Shot_Outputs/review_queue/page_v2/review.html): one clip "wasn't long 
+enough to say for sure if it was a make or a miss"; 0:39.4 note "nothing to mark
+no shot". Then: "So what are you waiting on me for?" - plan it now.
+
+FACTS (Claude Code checked this session):
+- Spec 26 (PASS, read .team/specs/26_clip_moment_fix_spec.md) flags the earlier 
+shot of a pair whose anchor_frames are within 23; its clip is tag_frame-8 .. 
+tag_frame+14 (BEFORE=8, AFTER=14 in 
+.team/shot_detectors/make_review_queue_page.py). Code: 
+.team/shot_detectors/clip_moment_fix.py resolve_clip_centres; page builder flag 
+--clip-moment-fix.
+- Claude Code looked at the tag-frame image of 39400 (tag frame 985) and 2753100
+(tag frame 68828): the shooter is releasing / still holding the ball. So for 
+these shots the tag time marks the RELEASE; 14 frames (0.56 s at 25 fps) after 
+it the ball has not reached the rim.
+- The three flagged shots: 39400 (tag frame 985, next shot 41900 anchor 1048), 
+2417100 (tag frame 60428, next 2419200 anchor 60483), 2753100 (tag frame 68828, 
+next 2753200 anchor 68836; the next tag is only 0.1 s later - possibly one shot 
+tagged twice, Scott not yet asked to decide; Scott: the question can wait).
+- Page bug: localStorage key 'coach_review_v1' is the same on every page built, 
+so calls from the first page carried over to page_v2 (39400 showed "make" from 
+the old page).
+- Rules: no core file edits; models and ball_confidence unchanged; 
+applied_to_core false; no banned trials; no tuning after results; Adrian Q4 
+never used to design; any new number from existing code (name it) or "Scott 
+decides before the run". Make/miss result files never written.
+
+PLAN:
+1. Flagged shots only: clip runs from tag_frame - BEFORE to (next shot's 
+anchor_frame - 1), i.e. up to just before the moment that belongs to the next 
+shot. No new number. Unflagged clips unchanged. If that end is at or before 
+tag_frame + AFTER (too short, e.g. 2753100: 68835 - 68828 = 7 frames after the 
+tag), keep the clip to that end and the card note adds "next tag only X.X s 
+later - may be the same shot tagged twice" (X.X from the two tag times). Show 
+arithmetic for the three shots (clip first/last frame, length).
+2. Page storage key includes the output folder name (or a build stamp) so each 
+built page keeps its own calls.
+3. Where: clip_moment_fix.py (return a clip end per flagged shot, or a separate 
+small function) and make_review_queue_page.py; default behaviour with 
+--clip-moment-fix off stays byte-identical in clips.
+4. Tests: clip end = next anchor - 1; too-short case gets the note; unflagged 
+unchanged; storage key differs between two out dirs.
+5. One run: rebuild page with the fix to a NEW out dir; pass = only the 3 
+flagged shots' clips change, their lengths match the arithmetic, gray 31 orange 
+9.
+6. Roles: Claude Code vets, Muse checks, Cursor codes (Scott: use Cursor until 
+it runs out).
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - 
+Claude Code to check".
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/27_flagged_clip_length_spec.md  0.2s
+│ .team/specs/27_flagged_clip_length_spec.md
+│ @@ -0,0 +1,23 @@
+│ +FLAGGED CLIP LENGTH SPEC v1 - not run
+│ +
+│ +## Facts
+│ +
+│ +- Spec 26 (PASS, read `.team/specs/26_clip_moment_fix_spec.md`) flags the earlier shot of a pair whose `anchor_frames` are within 23; its clip is `tag_frame - 8 .. tag_frame + 14` (BEFORE=8, AFTER=14 in `.team/shot_detectors/make_review_queue_page.py`). Code: `.team/shot_detectors/clip_moment_fix.py` `resolve_clip_centres`; page builder flag `--clip-moment-fix`.
+│ +- Tag frame marks RELEASE (Claude Code verified: shooter releasing/still holding ball at tag frame for 39400 and 2753100). At 25 fps, 14 frames = 0.56 s after release the ball has not reached the rim.
+│ +- Three flagged shots:
+│ +  - 39400: tag frame 985, next shot 41900 anchor 1048
+│ +  - 2417100: tag frame 60428, next 2419200 anchor 60483
+│ +  - 2753100: tag frame 68828, next 2753200 anchor 68836 (next tag only 0.1 s later — possibly same shot tagged twice; Scott: question can wait)
+│ +- Page bug: `localStorage` key `coach_review_v1` is the same on every page built, so calls from first page carried over to page_v2 (39400 showed "make" from old page).
+│ +- Rules: no core file edits; models and `ball_confidence` unchanged; `applied_to_core` false; no banned trials; no tuning after results; Adrian Q4 never used to design; any new number from existing code (name it) or "Scott decides before the run". Make/miss result files never written.
+│ +
+│ +## Plan
+│ +
+│ +1. **Flagged shots only**: clip runs from `tag_frame - BEFORE` to `(next shot's anchor_frame - 1)`, i.e. up to just before the moment that belongs to the next shot. No new number. Unflagged clips unchanged. If that end is at or before `tag_frame + AFTER` (too short, e.g. 2753100: 68835 - 68828 = 7 frames after the tag), keep the clip to that end and the card note adds `"next tag only X.X s later - may be the same shot tagged twice"` (X.X from the two tag times). Show arithmetic for the three shots (clip first/last frame, length).
+│ +2. **Page storage key** includes the output folder name (or a build stamp) so each built page keeps its own calls.
+│ +3. **Where**: `clip_moment_fix.py` (return a clip end per flagged shot, or a separate small function) and `make_review_queue_page.py`; default behaviour with `--clip-moment-fix` off stays byte-identical in clips.
+│ +4. **Tests**: clip end = next anchor - 1; too-short case gets the note; unflagged unchanged; storage key differs between two out dirs.
+│ +5. **One run**: rebuild page with the fix to a NEW out dir; pass = only the 3 flagged shots' clips change, their lengths match the arithmetic, gray 31 orange 9.
+│ +6. **Roles**: Claude Code vets, Muse checks, Cursor codes (Scott: use Cursor until it runs out).
+│ +
+│ +Every fact from a file you read or the lines above; otherwise "NOT FOUND - Claude Code to check".
+
+────────────────────────────────────────
+☤ Hermes
+Created: .team/specs/27_flagged_clip_length_spec.md (2713 bytes).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-c081184771f04c1ebc4ea33f49441e647c6e5788ecd173698bddd940564bcd1c
+  hermes -c "Create flagged clip length spec file"
+
+Session:        local-c081184771f04c1ebc4ea33f49441e647c6e5788ecd173698bddd940564bcd1c
+Title:          Create flagged clip length spec file
+Duration:       20s
+Messages:       4 (1 user, 2 tool calls)

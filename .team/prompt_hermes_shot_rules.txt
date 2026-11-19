@@ -1,0 +1,31 @@
+Hermes, you are the Architect. CREATE ONE file: .team/specs/33_shot_flight_rules_measure_spec.md (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Line 1: "SHOT FLIGHT RULES - MEASURE SPEC v1 - not run". Plain markdown, no line-number prefixes, no literal "\n". Edit nothing else, run nothing that writes (read-only code reading, reading JSON files, and sqlite SELECTs on film_analysis.db opened read-only are fine). If your write tool refuses, say so plainly. One to two pages.
+
+Scott 2026-11-04: shot finding must work from VIDEO ONLY (no scoreboard: often missing or unreadable, and it cannot see shooter or spot). Scott: players shoot differently (textbook or heave), so the start of a shot cannot be a body pattern. Agreed approach: find a ball flight, decide by HOW IT ENDS, then trace the arc back to the release (release frame = start of shot -> later gives shooter and floor spot). Scott: "these rules seem worth pursuing. Have Hermes check."
+
+THE FOUR RULES (Scott agreed, not yet coded):
+1. Caught by a player before reaching the hoop -> PASS.
+2. Comes down onto the rim/backboard, untouched -> SHOT (then make/miss as today).
+3. Aimed at the hoop (rises above rim height), comes down NEAR the hoop, touches nothing -> AIRBALL = missed shot.
+4. Lands far from the hoop, or was headed at a teammate -> BAD PASS, not a shot.
+Between 3 and 4, or unclear -> orange card for the coach (Scott's standing rule: program first, coach review fallback).
+Two distances are needed: "on the rim" (rule 2) and "near the hoop" (rule 3). Each must come from EXISTING code (name file + line) or be "Scott decides before the run" with a proposed value and why.
+
+THIS SPEC = MEASUREMENT ONLY, no new detector in the product, no training, no tuning. Questions to answer on Adrian Q1-Q3 (109 tags) and Notus Q1 (31 tags):
+A. For each TAGGED shot: how much of the ball's flight does the ball detector see, from release to rim (frames seen / frames in flight, longest gap)? Split by 2PT/3PT/FT.
+B. For each tagged shot: which of the four rules would it fall in (it should be 2 or 3)?
+C. For each FAKE shot from spec 32 (finder shots with no tag; listed in Liberty_Shot_Outputs/find_shots/results.json, precision+rim_arc, excluding generator "tagged_gap"): which rule would it fall in? If most land in 1 or 4, the rules would remove them.
+D. Release: can the arc be traced back to a player's hands (frame + player box)? Report how often.
+
+FACTS (Claude Code checked this session):
+- Existing arc finder: event_generator.py:1071 rim_arc_shots(ball_track, hoop_samples, min_rise=170.0, max_dist=280.0, cluster_ms=4000) - peak within 280 px of the hoop centre (a PEAK distance, not a landing distance). Spec 32: rim_arc 14 found, 0 extra. Read also court_memory.py ball_through_rim and net_detector.py (rim_r) for any existing rim-size number. Do not edit these core files.
+- Saved ball tracks: C:/Users/scott/AppData/Local/Temp/v6_tracks.json (Adrian, 111 entries) and v6_tracks_notus_q1.json (31). Each entry {t, result, hoop [x,y,w,h], ball [[frame,x,y],...], bodd [[frame,x,y],...]}; first Adrian entry covers frames 0..35 only (~1.4 s) around the tag. So saved tracks DO NOT cover the full flight back to the release, and do NOT exist for the fake shots. Say exactly what new detection run is needed (existing v6 ball model and/or BODD C:/Users/scott/AppData/Local/Temp/BODD_yolov8n_0001.pt classes basketball, hoop, player, referee - running an existing model is not training), how long a window per moment (a number from existing code or "Scott decides"), full frame or crop, and the compute cost estimate.
+- Videos: uploads/nfhs_gam0a66d85e12.mp4 (Adrian, 25 fps), uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4. Tags: data/film_tags/*.json (loader .team/shot_detectors/pixel_miss/measure_net_moved.py load_shot_tags). Spec 32 window 8000 ms (manual_tag_teach.py MATCH_TOLERANCE_MS line 18).
+- Rules: no core file edits (ai_analyzer.py, event_generator.py, court_memory.py, net_detector.py, manual_tag_teach.py, game_boxscore.py, scoreboard_clock.py); schema.sql, models/, ball_confidence untouched; applied_to_core false; banned: linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter - if the ball is lost mid-flight, DO NOT fill the gap; just report the gap. Any other gap-filling idea = Scott decision, named as such. No tuning after results. ADRIAN Q4 IS NOT TOUCHED IN THIS SPEC (blind test, kept for later). DB read-only. Film shows minors: any image output stays local.
+
+PLAN TO WRITE:
+1. What data exists vs what must be produced (new detection run: script name, inputs, window, output dir under Liberty_Shot_Outputs/shot_rules/ - refuse if exists).
+2. How each rule is measured from ball + player + hoop positions (plain words, then the function names). Name every number and its source.
+3. Output: results JSON + short markdown table for A-D, per film and per kind.
+4. Code: new script(s) under .team/shot_detectors/ (name them) with pure functions + tests on hand-made tracks (clean shot, airball short, lob caught near rim, overthrown pass past hoop, gap mid-flight).
+5. Roles: Claude Code vets, Muse checks, Cursor codes. Stop for Scott with the table, and before the run for any "Scott decides" number.
+Every fact from a file you read or the lines above; otherwise "NOT FOUND - Claude Code to check".

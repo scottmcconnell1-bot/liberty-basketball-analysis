@@ -1,0 +1,406 @@
+{
+  "generated_by": "scripts/measure_notus_rois.py",
+  "method": "Ten frames per game sampled evenly across the film; red score digit components in home/away search windows clustered into tens/ones slots; yellow clock components clustered into the clock field and the nominal M:SS minute/second boxes. Clock digits are located with a measurement-only yellow mask because Notus A's clock is dimmer than _warm_mask accepts. Boxes are the union across samples plus one pixel of padding.",
+  "video_size": {
+    "width": 1280,
+    "height": 720
+  },
+  "games": {
+    "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334": {
+      "game_id": "jrhigh_notus_LIBERTY_H_v_NOTUS_A1_20260809_221334",
+      "video": "uploads/LIBERTY_H_v_NOTUS_A1_20260809_221334.mp4",
+      "width": 1280,
+      "height": 720,
+      "fps": 25.0,
+      "warnings": [],
+      "samples": [
+        {
+          "timestamp_ms": 201900,
+          "crop": "data/roi/notus_crops/notus_A1_00_202s.png"
+        },
+        {
+          "timestamp_ms": 605700,
+          "crop": "data/roi/notus_crops/notus_A1_01_606s.png"
+        },
+        {
+          "timestamp_ms": 1009500,
+          "crop": "data/roi/notus_crops/notus_A1_02_1010s.png"
+        },
+        {
+          "timestamp_ms": 1413300,
+          "crop": "data/roi/notus_crops/notus_A1_03_1413s.png"
+        },
+        {
+          "timestamp_ms": 1817100,
+          "crop": "data/roi/notus_crops/notus_A1_04_1817s.png"
+        },
+        {
+          "timestamp_ms": 2220900,
+          "crop": "data/roi/notus_crops/notus_A1_05_2221s.png"
+        },
+        {
+          "timestamp_ms": 2624700,
+          "crop": "data/roi/notus_crops/notus_A1_06_2625s.png"
+        },
+        {
+          "timestamp_ms": 3028500,
+          "crop": "data/roi/notus_crops/notus_A1_07_3028s.png"
+        },
+        {
+          "timestamp_ms": 3432300,
+          "crop": "data/roi/notus_crops/notus_A1_08_3432s.png"
+        },
+        {
+          "timestamp_ms": 3836100,
+          "crop": "data/roi/notus_crops/notus_A1_09_3836s.png"
+        }
+      ],
+      "home_score_tens": [
+        1031,
+        614,
+        25,
+        29
+      ],
+      "home_score_ones": [
+        1057,
+        613,
+        26,
+        30
+      ],
+      "away_score_tens": [
+        1197,
+        613,
+        26,
+        30
+      ],
+      "away_score_ones": [
+        1223,
+        613,
+        26,
+        30
+      ],
+      "home_score_cell": [
+        1029,
+        611,
+        56,
+        34
+      ],
+      "away_score_cell": [
+        1195,
+        611,
+        56,
+        34
+      ],
+      "clock_field": [
+        1103,
+        562,
+        87,
+        28
+      ],
+      "clock_minutes": [
+        1103,
+        562,
+        24,
+        28
+      ],
+      "clock_seconds": [
+        1140,
+        562,
+        50,
+        28
+      ],
+      "scores": {
+        "home": {
+          "tens": [
+            1031,
+            614,
+            25,
+            29
+          ],
+          "ones": [
+            1057,
+            613,
+            26,
+            30
+          ],
+          "cell": [
+            1029,
+            611,
+            56,
+            34
+          ]
+        },
+        "away": {
+          "tens": [
+            1197,
+            613,
+            26,
+            30
+          ],
+          "ones": [
+            1223,
+            613,
+            26,
+            30
+          ],
+          "cell": [
+            1195,
+            611,
+            56,
+            34
+          ]
+        }
+      },
+      "clock": {
+        "clock_field": [
+          1103,
+          562,
+          87,
+          28
+        ],
+        "clock_minutes": [
+          1103,
+          562,
+          24,
+          28
+        ],
+        "clock_seconds": [
+          1140,
+          562,
+          50,
+          28
+        ]
+      }
+    },
+    "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334": {
+      "game_id": "jrhigh_notus_LIBERTY_H_v_NOTUS_A_20260809_221334",
+      "video": "uploads/LIBERTY_H_v_NOTUS_A_20260809_221334.mp4",
+      "width": 1280,
+      "height": 720,
+      "fps": 25.0,
+      "warnings": [],
+      "samples": [
+        {
+          "timestamp_ms": 187300,
+          "crop": "data/roi/notus_crops/notus_A_00_187s.png"
+        },
+        {
+          "timestamp_ms": 561900,
+          "crop": "data/roi/notus_crops/notus_A_01_562s.png"
+        },
+        {
+          "timestamp_ms": 936500,
+          "crop": "data/roi/notus_crops/notus_A_02_936s.png"
+        },
+        {
+          "timestamp_ms": 1311100,
+          "crop": "data/roi/notus_crops/notus_A_03_1311s.png"
+        },
+        {
+          "timestamp_ms": 1685700,
+          "crop": "data/roi/notus_crops/notus_A_04_1686s.png"
+        },
+        {
+          "timestamp_ms": 2060300,
+          "crop": "data/roi/notus_crops/notus_A_05_2060s.png"
+        },
+        {
+          "timestamp_ms": 2434900,
+          "crop": "data/roi/notus_crops/notus_A_06_2435s.png"
+        },
+        {
+          "timestamp_ms": 2809500,
+          "crop": "data/roi/notus_crops/notus_A_07_2810s.png"
+        },
+        {
+          "timestamp_ms": 3184100,
+          "crop": "data/roi/notus_crops/notus_A_08_3184s.png"
+        },
+        {
+          "timestamp_ms": 3558700,
+          "crop": "data/roi/notus_crops/notus_A_09_3559s.png"
+        }
+      ],
+      "home_score_tens": [
+        1032,
+        615,
+        22,
+        28
+      ],
+      "home_score_ones": [
+        1058,
+        614,
+        23,
+        29
+      ],
+      "away_score_tens": [
+        1199,
+        615,
+        22,
+        28
+      ],
+      "away_score_ones": [
+        1225,
+        614,
+        23,
+        29
+      ],
+      "home_score_cell": [
+        1030,
+        612,
+        53,
+        33
+      ],
+      "away_score_cell": [
+        1197,
+        612,
+        53,
+        33
+      ],
+      "clock_field": [
+        1079,
+        562,
+        110,
+        28
+      ],
+      "clock_minutes": [
+        1105,
+        562,
+        21,
+        28
+      ],
+      "clock_seconds": [
+        1141,
+        562,
+        48,
+        28
+      ],
+      "scores": {
+        "home": {
+          "tens": [
+            1032,
+            615,
+            22,
+            28
+          ],
+          "ones": [
+            1058,
+            614,
+            23,
+            29
+          ],
+          "cell": [
+            1030,
+            612,
+            53,
+            33
+          ]
+        },
+        "away": {
+          "tens": [
+            1199,
+            615,
+            22,
+            28
+          ],
+          "ones": [
+            1225,
+            614,
+            23,
+            29
+          ],
+          "cell": [
+            1197,
+            612,
+            53,
+            33
+          ]
+        }
+      },
+      "clock": {
+        "clock_field": [
+          1079,
+          562,
+          110,
+          28
+        ],
+        "clock_minutes": [
+          1105,
+          562,
+          21,
+          28
+        ],
+        "clock_seconds": [
+          1141,
+          562,
+          48,
+          28
+        ]
+      }
+    }
+  },
+  "default": {
+    "scores": {
+      "home": {
+        "tens": [
+          1031,
+          614,
+          25,
+          29
+        ],
+        "ones": [
+          1057,
+          613,
+          26,
+          30
+        ],
+        "cell": [
+          1029,
+          611,
+          56,
+          34
+        ]
+      },
+      "away": {
+        "tens": [
+          1197,
+          613,
+          26,
+          30
+        ],
+        "ones": [
+          1223,
+          613,
+          26,
+          30
+        ],
+        "cell": [
+          1195,
+          611,
+          56,
+          34
+        ]
+      }
+    },
+    "clock": {
+      "clock_field": [
+        1079,
+        562,
+        111,
+        28
+      ],
+      "clock_minutes": [
+        1103,
+        562,
+        24,
+        28
+      ],
+      "clock_seconds": [
+        1140,
+        562,
+        50,
+        28
+      ]
+    }
+  }
+}

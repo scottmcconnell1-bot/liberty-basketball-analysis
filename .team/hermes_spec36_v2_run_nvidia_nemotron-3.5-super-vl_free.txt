@@ -1,0 +1,227 @@
+Query: Hermes, you are the Architect. CREATE ONE file: 
+.team/specs/36_rim_first_extras_fix_spec.md (repo 
+/mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). 
+Line 1: "RIM-FIRST EXTRAS FIX SPEC v2 - not run". Your v1 was REJECTED: read 
+.team/specs/36_rim_first_extras_fix_spec_v1_REJECTED.md (top block R1-R7 
+binding) and fix every point. Plain markdown, no line-number prefixes, no 
+literal "\n", no "||". Edit nothing else, run nothing that writes. One to two 
+pages.
+
+Scott 2026-11-05: "fix these before moving to the next step." Read first: 
+.team/specs/35_rim_first_shot_finder_spec.md (top block E1-E9 binding), 
+.team/shot_detectors/rim_first_finder.py, rim_first_measure.py, 
+Liberty_Shot_Outputs/rim_first/measure_*/summary.md.
+
+RESULTS (spec 35, one try, Proven): found Adrian Q1-Q3 98/109, Notus Q1 28/31, 
+Adrian Q4 blind 17/18; extras 26 + 12 + 3 = 41. Shooter trace weak (21/124, 
+10/40, 2/20) - NOT this spec (next step).
+
+SCOTT'S RULES (2026-11-05, binding):
+- Fouled shot that misses: NOT a shot. (A fouled make / and-one is a shot - 
+official stats.)
+- Blocked shot: NOT a shot.
+- Put-back and tip: each is its own shot, counted separately.
+- Same shot counted twice: our bug, fix it.
+- Unclear: orange coach card.
+- Ball held by the referee: not a shot, our bug.
+- Finder stays video-only: no tags, no scoreboard, no DB (spec 35 section 1). 
+Scoreboard may NOT be required.
+
+WHAT THE 41 EXTRAS ARE (Claude Code hand look at still frames + Scott's tags 
+within 6 s; Inferred, labels to be frozen in a file before any run):
+A. Not a hoop, 8 (Adrian #16,17,18,22,23,24; Notus #33,34): BODD (conf 0.12) put
+a "hoop" on the centre-court logo, the bottom edge of the picture, or a wall; 
+the v6 crop then fired on a ball near it.
+B. Not game time, 8 (Adrian #10-15, #19 halftime shoot-around - people in street
+clothes, several balls at once; Q4 #41 after the final buzzer).
+C. Fouled shot, no shot tag (Scott tagged Foul/Personal within ~1.3 s): 9 
+(Adrian #2,4,5,6,7,20,21; Notus #27,32; #4 and #5 were fouled put-backs).
+D. Blocked shot, 1 (Notus #35, Block tag +0.5 s).
+E. Put-back not fouled, 1 (Notus #30, OffRebound tag -4.9 s) - this is a REAL 
+shot by Scott's rule even though no 2PT tag.
+F. Same shot counted twice, 7 (Adrian #1,3,8,25,26; Notus #28,29): rim bounce 
+coming down again, ball dropping after a make, free throw rattling.
+G. Unclear, 4 (Adrian #9; Notus #31,36,37) -> orange.
+H. Referee holding the ball near the hoop, 1 (Notus #38).
+Q4 extras #39, #40 were not examined; Q4 stays the blind check - do not design 
+from it.
+
+FACTS for the plan: BODD classes are {basketball, hoop, player, referee} (the 
+finder currently drops referee). v6 has one class, basketball. Tags include both
+teams and rows Foul, Personal, Block, OffRebound, DefRebound, FT.
+
+PLAN MUST COVER, per group A-H: the video-only rule you propose, which existing 
+code/number it reuses (file:line), and any new number marked "Scott decides 
+before the run" with a proposed value. Say plainly which groups the video cannot
+settle (e.g. a fouled miss may only be knowable from free throws that follow at 
+the same hoop; a block may only show as the ball never reaching the rim) and 
+send those to ORANGE rather than guessing. Put-backs must stay separate shots: 
+say how "same shot again" (ball never left the rim area / never reached a 
+player) is told apart from a put-back (ball came down into a player's hands, 
+then went up again).
+MEASURE: rim_first_measure.py scores only 2PT/3PT/FT tags. Propose how scoring 
+follows Scott's rules: a frozen truth file of Claude Code's labels for the 41 
+extras (written BEFORE the run), and what counts as correct (e.g. a fouled-miss 
+moment dropped or orange = correct; a put-back found = correct). Report found / 
+missed / wrong extras / orange, per film.
+MAKE/MISS SAFETY: unchanged; check before and after (.venv/Scripts/python.exe 
+.team/shot_detectors/make_review_queue_page.py --wide-combined --out-dir <NEW> 
+-> gray 30 / orange 9 / 42 shots / same 3 combined groups).
+CODE: changes to rim_first_finder.py / rim_first_measure.py / test_rim_first.py 
+only (or a new file - name it); outputs to a NEW dir under 
+Liberty_Shot_Outputs/rim_first/ (refuse if exists). Reuse the spec 35 
+frames.json detections if the plan does not need new detection (say whether it 
+can - frames.json has ball/hoop/player per frame but NOT referee; v6 points are 
+not saved).
+Rules: no core edits, no training, no banned trials (linear interpolation, 
+ByteTrack, DeepSORT, early windows, wider column, hoop recenter), no tuning 
+after results, one try then stop for Scott, Q4 blind last. Roles: Claude Code 
+vets, Muse checks, Cursor codes.
+Every fact from a file you read or above; otherwise "NOT FOUND - Claude Code to 
+check".
+📖 Read 36_rim_first_extras_fix_spec_v1_REJECTED.md  0.4s
+📖 Read 35_rim_first_shot_finder_spec.md  0.4s
+📖 Read rim_first_finder.py  0.5s
+✗ Read rim_first_measure.py  0.5s [File not found: rim_first_measure.py]
+✗ Grep summary\.md  0.5s [Path not found: /mnt/c/Users/scott/Documents/...]
+🔎 Find rim_first_measure|rim_first_finder|test_rim_first  2.8s
+📖 Read 35_rim_first_shot_finder_spec.md L1-20  2.8s
+
+────────────────────────────────────────
+☤ Hermes
+The file search matched directories instead. Let me look at the actual .team/shot_detectors/ directory and the outputs tree.
+────────────────────────────────────────
+
+💻 $ ls -la /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/shot_detectors/ 2>/dev/null + 2 commands  0.2s
+🔎 Grep rim_first_measure  1.3s
+🔎 Grep test_rim_first  1.3s
+
+────────────────────────────────────────
+☤ Hermes
+Found them — rim_first_measure.py and test_rim_first.py both already exist under .team/shot_detectors/. Reading both in full.
+────────────────────────────────────────
+
+📖 Read rim_first_measure.py
+📖 Read test_rim_first.py  0.2s
+💻 $ git -C /mnt/c/Users/scott/Documents/liberty-basketball-analysis status --short --branch + 3 commands  26.3s
+📖 Read 36_extras_truth_labels.json
+
+────────────────────────────────────────
+☤ Hermes
+All context confirmed: I'm on branch team/auto, the truth file .team/specs/36_extras_truth_labels.json exists with the 41 entries, and rim_first_finder.py, rim_first_measure.py, test_rim_first.py all exist under .team/shot_detectors/. Liberty_Shot_Outputs/rim_first/ does not exist. Now writing the spec.
+────────────────────────────────────────
+
+✍️ Write /mnt/c/Users/scott/Documents/liberty-basketball-analysis/.team/specs/36_rim_first_extras_fix_spec.md  0.1s
+│ .team/specs/36_rim_first_extras_fix_spec.md
+│ @@ -0,0 +1,99 @@
+│ +RIM-FIRST EXTRAS FIX SPEC v2 - not run
+│ +
+│ +Repo: /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto.
+│ +Deliverable: this one file only. Nothing else is edited; nothing runs that writes outputs.
+│ +
+│ +1. WHY V1 WAS REJECTED (R1-R7, all binding)
+│ +
+│ +- R1: C (fouled miss), D (block), B (not game time) cannot be "fixed" only in the measure by reading Foul/Block tags. The finder is video-only; on a new game there are no tags. Each group must be handled in the finder from video, or sent to ORANGE by the finder. The measure scores what the finder emits: a fouled-miss / block / halftime moment the finder calls a shot = WRONG; orange = acceptable.
+│ +- R2: split shot_call (shot / orange / not_a_shot, with reason) from shooter (found / orange, with reason); score on shot_call.
+│ +- R3: F (same shot twice): drop merge_window_ms as the only fix. One moment per run stays; add the player-box decider (ball_inside_player release 0.6) for cross-run pairs.
+│ +- R4: H (referee holding): ball inside a BODD referee box at the trigger frame -> shot_call not_a_shot / orange "referee_holding", kept in output for audit.
+│ +- R5: B: propose a video-only signal (several BODD basketballs in the same frames) -> orange "possible_shoot_around", number "Scott decides", or say plainly none works. Scoreboard stays optional, never required.
+│ +- R6: C: propose a video-only signal (ball inside a referee box after a non-make moment = play stopped) -> orange "possible_fouled_miss"; a make followed by free throws at the same hoop stays a shot (and-one). Numbers "Scott decides". If no signal is honest, C stays a shot call and is counted WRONG.
+│ +- R7: save referee boxes and v6 points in frames.json this time. Spans: Adrian 0..3317100 ms, Notus 0..883400 ms (drift_log 2026-11-05).
+│ +
+│ +2. SCOPE RULE (unchanged, spec 35 section 1)
+│ +
+│ +Finder reads no tags, no scoreboard, no DB. CLI: --video --start-ms --end-ms --out-dir --bodd --v6. Only rim_first_measure.py reads tags.
+│ +
+│ +3. THE 41 EXTRAS
+│ +
+│ +Frozen truth file .team/specs/36_extras_truth_labels.json (written by Claude Code before any run; 41 entries {n, run, t_ms, frame, label}):
+│ +
+│ +A_not_a_hoop 8 (Adrian 16,17,18,22,23,24; Notus 33,34): BODD put a hoop on the centre-court logo, the bottom edge of the picture, or a wall; v6 then fired on a ball near it.
+│ +B_not_game_time 8 (Adrian 10-15 halftime shoot-around, people in street clothes several balls at once; Adrian 19 halftime; Adrian Q4 #41 after the final buzzer).
+│ +C_fouled_shot 9 (Adrian 2,4,5,6,7,20,21; Notus 27,32; #4 and #5 were fouled put-backs): Scott tagged Foul/Personal within ~1.3 s.
+│ +D_blocked 1 (Notus 35, Block tag +0.5 s).
+│ +E_putback_real_shot 1 (Notus 30, OffRebound tag -4.9 s): a REAL shot by Scott's rule even with no 2PT tag.
+│ +F_same_shot_twice 7 (Adrian 1,3,8,25,26; Notus 28,29): rim bounce coming down again, ball dropping after a make, FT rattling.
+│ +G_unclear_orange 4 (Adrian 9; Notus 31,36,37).
+│ +H_referee_holding 1 (Notus 38).
+│ +Q4_not_examined 2 (Adrian Q4 #39,#40): listed, not scored - Q4 stays the blind check.
+│ +
+│ +4. FIX PER GROUP (video-only rule / reused code and number, file:line / new number, Scott decides before the run)
+│ +
+│ +A. Not a hoop, 8. Hoop-series filter: after hoops are paired into series (assign_frame_hoops rim_first_finder.py:611-642; points accumulate :645-665), drop a whole series - no moments, no trace - when its median hoop width (median_hoop :289-299) is outside [hoop_w_min_widths, hoop_w_max_widths] x the film median hoop width, or when it has fewer than min_series_v6_points v6 detections (real hoops see repeated ball traffic; a logo/wall patch gets 0-2). Dropped series emit nothing. Reuse: distance_hoop_widths :103; ADRIAN_MEDIAN_HOOP_W = 98.0 :65 (Notus median computed at runtime; value NOT FOUND - Claude Code to check). New numbers: hoop_w_min_widths 0.5, hoop_w_max_widths 1.5, min_series_v6_points 3 (all Scott decides).
+│ +
+│ +B. Not game time, 8. Halftime shoot-around: several balls at once, visible in video. The finder already counts BODD basketballs per frame (_compact_frame :763-776); frames with >= shoot_around_min_balls concurrent basketballs mark shoot-around frames; moments at those frames -> status orange "possible_shoot_around". Q4 #41 after the final buzzer: no clock in the video and the scoreboard is not permitted (spec 35 E7, section 1), so it cannot be fixed in the finder; the moment stays, listed by time in the measure extras, Q4 blind and not scored. New number: shoot_around_min_balls 3 (Scott decides); or say no signal works if Scott disagrees.
+│ +
+│ +C. Fouled miss, 9. Video cannot see a foul; knowable only from a Foul/Personal tag within ~1.3 s or from FTs after at the same hoop; the finder has no tags. Rule: on a non-make rim moment, if the ball is inside a referee box within foul_ref_window_ms after the trigger (play stopped, referee has the ball) -> status orange "possible_fouled_miss". Otherwise the moment stays "found" and the measure cross-checks the Foul/Personal tag within extra_match_window_ms (drop correct; no tag -> WRONG, reported plainly). A make followed by FTs at the same hoop stays a shot (and-one, official stats). Reuse: referee boxes (new collection, see H); ball_inside_player :474. New number: foul_ref_window_ms 1500 ms (Scott decides, matches Scott's ~1.3 s); extra_match_window_ms 1500 ms reused (rim_first_measure.py:23).
+│ +
+│ +D. Blocked, 1. Video cannot confirm a block; a blocked ball and a missed ball look the same (a block may only show as the ball never reaching the rim). No honest finder cue: the finder does not guess. The rim moment stays "found" and the measure cross-checks the Block tag within extra_match_window_ms (drop correct; no Block tag -> WRONG, reported plainly). If the ball never enters the rim zone the miss trigger never fires (miss_trigger_frame :180-219) and the moment is already dropped. State plainly: D may score one wrong; Scott decides whether to add a block-exit orange cue (number Scott decides).
+│ +
+│ +E. Put-back, real shot, 1. Keep as its own shot. Put-back = ball entered a player's hands (ball_inside_player release 0.6, :474) then went up again -> new run via split_runs gap 8 (:161) -> separate moment kept; truth expects exactly one found moment. Reuse: trace_shooter / ball_inside_player :410-495; split_runs :161.
+│ +
+│ +F. Same shot counted twice, 7. One moment per run already (moment_for_run :238): rim bounce down again, ball dropping after a make, FT rattle all stay in one run and the first trigger wins. Cross-run pairs on the same series: add merge_moments, applied in emit_moments before the sort (:744) - keep the earlier moment unless between the two moments the BODD ball was inside a player box (ball_inside_player release 0.6, :474), which means possession and a real put-back/tip, so keep both separate. Same-shot-again = ball never left the rim zone (0.735 hoop widths) and never entered a player box -> merged; put-back = player-box possession between the two events -> kept separate. New number: merge_window_ms 300 ms (~8 frames at 25 fps, Scott decides).
+│ +
+│ +G. Unclear, 4. Status orange with reason; the finder never guesses make/miss. Reuse: trace_shooter _orange paths (:458-481, helper :498).
+│ +
+│ +H. Referee holding, 1. BODD classes are {basketball, hoop, player, referee}; the finder currently keeps only basketball/hoop/player and drops referee (:42; detect_span ball/hoop/player split :886-891). Change: collect referee boxes separately; at the trigger frame, ball inside a referee box (ball_inside_player :474 at 0.6) -> status orange "referee_holding", not a shot, kept in output for audit. Reuse: _box_item :748-760. New number: none.
+│ +
+│ +5. GROUPS THE VIDEO CANNOT SETTLE -> ORANGE (stated plainly)
+│ +
+│ +C: a fouled miss needs the Foul/Personal tag or the FTs after at the same hoop; the finder has no tags. D: a block needs the Block tag; video cannot tell it from a miss. B Q4 #41: game time needs the scoreboard, not permitted. These go to measure tag cross-check and the truth file; the finder emits what it sees and never labels foul, block, or game time itself. Where the finder's video cue fires (referee holding, multi-ball), status is orange, not a guess.
+│ +
+│ +6. PUT-BACK vs SAME-SHOT-AGAIN
+│ +
+│ +Same-shot-again: the ball never left the rim zone (0.735 hoop widths, miss_trigger_frame :180-219) and never entered a player box (ball_inside_player release 0.6, :474) between the two rim touches -> merged into the earlier moment. Put-back: the ball came down into a player's hands (inside a player box), then went up again -> possession between the events -> separate run via split_runs gap 8 (:161) -> separate moment; truth expects exactly one found moment.
+│ +
+│ +7. MEASURE (rim_first_measure.py is the only script that reads tags)
+│ +
+│ +Scorecard on the frozen truth file for n=1-38 (Adrian Q1-Q3, Notus Q1); Q4 entries n=39-41 listed, not scored (Q4 blind last). Match truth entries to the finder's unmatched moments (extras, listed by time, :112-120) by film and |t_ms diff| <= extra_match_window_ms (1500 ms, :23). Verdicts: found = label E_putback_real_shot and exactly one status==found moment at its time; missed = label E and zero found moments; wrong = status==found at any non-E label time, two found moments at one truth entry (double count, the F bug), or a found moment matching no truth entry; orange = any non-E label with zero found moments (silent drop or status orange = correct - covers A dropped series, B orange, C/D/G/H dropped or orange). Report found / missed / wrong / orange per film, plus the existing tag report (2PT/3PT/FT via match_shots 8000 ms :69-70, Q4 tags filtered out :65, extras listed by time :112-120, trace found/orange rates). Code change: optional --truth reading .team/specs/36_extras_truth_labels.json; per-film truth table added to results.json/summary.md; all existing fields and CLI kept. Output: NEW dir Liberty_Shot_Outputs/rim_first/measure_36_extras_fix/ (refuse if exists, :28); proposed name, Scott decides.
+│ +
+│ +8. MAKE/MISS SAFETY (unchanged)
+│ +
+│ +Before and after: .venv/Scripts/python.exe .team/shot_detectors/make_review_queue_page.py --wide-combined --out-dir <NEW>. Require gray 30 / orange 9 / 42 shots and the same 3 combined groups. Any difference -> STOP, Scott decides.
+│ +
+│ +9. CODE AND OUTPUTS
+│ +
+│ +Files: rim_first_finder.py, rim_first_measure.py, test_rim_first.py only (or one new file, name it). Test additions: pure-function tests for merge_moments, the hoop-series filter, the referee-box orange, and the truth verdicts. Outputs: finder moments.json + frames.json to a NEW dir Liberty_Shot_Outputs/rim_first/rim_first_36_extras/ (refuse if exists, rim_first_finder.py:97); measure results.json + summary.md to measure_36_extras_fix/ (refuse if exists, rim_first_measure.py:28). Both scripts refuse if the out dir exists. Frames.json reuse: NO - spec-35 frames.json (compact :763-776) has ball/hoop/player per frame but not referee (needed for H) and not v6 points (needed for A's series traffic); no saved frames.json exists yet (Liberty_Shot_Outputs/rim_first/ absent, spec 35 was "not run"). The spec-36 finder run re-runs detection over Adrian Q1-Q3 and Notus Q1 - video + models only (spec 35 E7).
+│ +
+│ +10. RULES
+│ +
+│ +- No core edits (event_generator.py, ai_bridge.py, court_memory.py, net_detector.py untouched).
+│ +- No training; existing v6 and BODD weights only.
+│ +- No banned trials: linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter.
+│ +- No tuning after results - every number fixed before this run.
+│ +- One try, then stop for Scott. Q4 blind last.
+│ … omitted 21 diff line(s) across 1 additional file(s)/section(s)
+
+────────────────────────────────────────
+☤ Hermes
+File written. Quick constraint check on line 1 and the forbidden sequences:
+────────────────────────────────────────
+
+💻 $ head -1 .team/specs/36_rim_first_extras_fix_spec.md + 4 commands  0.2s
+
+────────────────────────────────────────
+☤ Hermes
+Done. Created .team/specs/36_rim_first_extras_fix_spec.md on branch team/auto — the only file written; nothing else edited, nothing run.
+
+Verification: line 1 is exactly RIM-FIRST EXTRAS FIX SPEC v2 - not run; 0 literal \n, 0 ||, 0 line-number prefixes; 98 lines (~1.5 pages).
+
+What the spec contains:
+- R1-R7 fixes from the rejected v1, all treated as binding: C/D/B handled in the finder via video cues or orange (never measure-only tag fixes); shot_call vs shooter split; F handled by one-moment-per-run plus a cross-run player-box decider instead of merge_window_ms alone; H as referee-box orange kept for audit; B with a multi-ball video signal (scoreboard never required); C with referee-box-after-non-make cue or honest WRONG.
+- Per-group plan A–H: video-only rule, reused code with file:line references to rim_first_finder.py (:42, :97, :103, :161, :180-219, :238, :289-299, :410-495, :458-498, :611-665, :645-665, :744-745, :748-793, :886-891) and rim_first_measure.py (:23, :28, :65, :69-70, :112-120), plus new "Scott decides before the run" numbers with proposed values (merge_window_ms 300, hoop_w_min/max 0.5/1.5, min_series_v6_points 3, shoot_around_min_balls 3, foul_ref_window_ms 1500, extra_match_window_ms 1500).
+- Plainly unsettled groups → ORANGE: C (foul needs tag/FTs), D (block needs Block tag), B #41 (buzzer needs scoreboard, not permitted).
+- Put-back vs same-shot-again: rim zone + no player-box possession = merged; player-box possession between events = separate shot via split_runs gap 8.
+- MEASURE: truth file .team/specs/36_extras_truth_labels.json (41 entries, verified on disk) scored before the run; found/missed/wrong/orange per film with explicit verdict definitions; Q4 n=39-41 listed not scored; existing tag report preserved; optional --truth, new outputs to measure_36_extras_fix/ (refuse if exists).
+- Frames.json reuse ruled out: lacks referee and v6 points; no saved copy exists (Liberty_Shot_Outputs/rim_first/ absent); spec-36 run re-runs detection video+models-only.
+- MAKE/MISS SAFETY unchanged; rules (no core edits, no training, no banned trials, no post-run tuning, one try, Q4 blind last); roles Cursor/Claude Code/Muse; numbers table; NOT FOUND items flagged for Claude Code (Notus median hoop width, span start-ms, video/model/tag paths).
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-cc2d99698143dcbb563ac8c5b1efcf171a6d6cd5522045fc79750b53251f8988
+  hermes -c "Create rim first extras fix spec v2"
+
+Session:        local-cc2d99698143dcbb563ac8c5b1efcf171a6d6cd5522045fc79750b53251f8988
+Title:          Create rim first extras fix spec v2
+Duration:       6m 45s
+Messages:       26 (1 user, 24 tool calls)

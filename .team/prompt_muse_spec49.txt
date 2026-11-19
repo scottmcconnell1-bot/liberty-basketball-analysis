@@ -1,0 +1,4 @@
+Muse, you review the Architect. Read-only: do not change any file. Checked BEFORE code exists.
+Same route as spec 48b: Claude Code writes, Muse and Cursor review, Cursor builds. Read .team/specs/49_hybrid_pull_spec.md (whole), .team/design49/design48.py, .team/specs/48b_game_session_v2_spec.md S7b, and the last 12 entries of .team/drift_log.md.
+Questions: (1) Is the Riverstone test fair and blind (order H7: what is frozen before what; can anything leak make/miss into the labels or a setting into the result)? (2) Are the pass bars P1-P3 fixed before results and sensible given the seen numbers? (3) Can anything silently drop a real shot or silently send warm-ups to the coach? (4) Anything tuned on seen games that will not hold on Riverstone?
+At most 8 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: <reason>.

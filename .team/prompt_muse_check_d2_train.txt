@@ -1,0 +1,16 @@
+You are Muse, the checker.
+CHECK the D2 training plan .team/specs/23_d2_train_job_spec.md v2 (repo /mnt/c/Users/scott/Documents/liberty-basketball-analysis, branch team/auto). Hermes wrote it; Claude Code REJECTED v1 (reason on line 1 of .team/specs/23_d2_train_job_spec_v1_REJECTED.md) and VETTED v2 (line 1). Do not edit any file. Run nothing that trains or writes.
+
+Scott's words 2026-11-02: "Go" (gate 2, OK to train). Ball that counts: "a ball that is actively in play during the game. Not before, on breaks, or off of the court." He dropped 86 of 600 frames; 514 kept.
+
+Read: the spec; .team/specs/21_d2_plan.md sections 3-6; .team/specs/19_d1_job_spec.md lines 110-160; .team/shot_detectors/keep_ball_detections.py lines 20-45, 1036-1090, 1340-1400; AUTHORITY.md; AGENT_OPERATIONAL_PROTOCOL.md.
+
+Check:
+1. Nothing protected changes: models/ball_detector.pt, ball_confidence 0.28, schema.sql, feature flags, core files. New weights stay outside the repo.
+2. The D1 test changes only the weights: same venv, same 140 shots, same conf/zone/rule; both D1 steps; pass = makes_right > 29 AND misses_called_makes == 0; one try then Scott.
+3. The mapping-gate rule in section 4 is sound: the frame mapping was proven with v6 on unchanged code (3798/3800), so with new weights the rate is agreement, and the spec does not loosen any make/miss rule or cutoff.
+4. All training numbers fixed before training; no tuning after results; val split by window so near-copy crops never cross train/val.
+5. No banned trial (linear interpolation, ByteTrack, DeepSORT, early windows, wider column, hoop recenter); no hard-coded results; holdout, build set, Adrian Q4 excluded.
+6. Anything missing or wrong that would make the result not trustworthy.
+
+End with ONE line that starts with "MUSE: AGREE" or "MUSE: DISAGREE: <reason, file and line>".

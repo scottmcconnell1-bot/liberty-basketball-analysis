@@ -1,0 +1,68 @@
+Query: Muse, you check the Vetter. Read-only: do not change any file.
+Read: .team/specs/45_film_scale_make_miss_spec.md (Claude Code's VETTED WITH 
+CONDITIONS V1-V8 block at the top, then Hermes's spec), 
+.team/shot_detectors/rim_first_make_miss.py (subcommands tracks/d1/vote), 
+.team/shot_detectors/small_fixes_v6_copy.py lines 185-200, 
+.team/shot_detectors/keep_ball_detections.py run_arc_and_rule_on_shot (~685) and
+apply_arc_replacements (~470), last 2 entries of .team/drift_log.md.
+Check that Claude Code did not miss or approve anything wrong:
+- Does the scale really reach decide_shot for v6 and d2v1 (keys copied except 
+"result")?
+- Can the Adrian gate G1 (scale exactly 1.0, byte-match new_pred+new_reason on 
+109 adrian rows) truly prove Adrian is unchanged?
+- Any tag, label, scoreboard or truth read in the scale path? Any tuning after 
+seeing a test number? Any edit outside the two wrapper files?
+- Is the Riverstone test truly blind for the make/miss rule (see V7 disclosure),
+with labels and the score script frozen first and the hand-check before the 
+score?
+- Is the V6 stop-check (0.55-0.80) a fair stop, not hidden tuning?
+At most 10 short lines. Last line exactly: MUSE: AGREE or MUSE: DISAGREE: 
+<reason>.
+📖 Read 45_film_scale_make_miss_spec.md  0.1s
+📖 Read drift_log.md  0.2s
+📖 Read drift_log.md
+💻 $ wc -l .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/small_fixes_v6_copy.py .team/shot_detectors/keep_ball_detections.py .team/drift_log.md
+💻 $ tail -n 12 .team/drift_log.md
+📖 Read small_fixes_v6_copy.py
+📖 Read rim_first_make_miss.py
+💻 $ grep -n "def run_arc_and_rule_on_shot\|def apply_arc_replacements\|def decide_shot\|def run_saved_v6_rule\|def summarize_results\|def _decide\|decide_shot(" .team/shot_detectors/keep_ball_detections.py
+💻 $ git status --porcelain + 2 commands  80.8s
+📖 Read keep_ball_detections.py
+💻 $ git diff --stat -- .team/  0.4s
+💻 $ git diff -- .team/shot_detectors/rim_first_make_miss.py + 2 commands  0.2s
+💻 $ grep -n "_court_scale\|geo_mean_scale\|def decide_shot\|def run_saved_v6_rule" ai_bridge.py
+💻 $ grep -n "film_scale\|_court_scale\|median\|hoop_median\|REF_HOOP_W\|ref_hoop_w" .team/shot_detectors/*.py .team/specs/*.py 2>/dev/null
+💻 $ sed -n '900,1010p' ai_bridge.py
+💻 $ sed -n '1400,1490p' ai_bridge.py
+💻 $ git status --porcelain -- .team/specs/45_film_scale_make_miss_spec.md .team/shot_detectors/rim_first_make_miss.py .team/shot_detectors/test_rim_first_make_miss.py .team/shot_detectors/keep_ball_detections.py .team/shot_detectors/small_fixes_v6_copy.py .team/shot_detectors/measure_net_moved.py .team/shot_detectors/collect_q4_bodd.py .team/shot_detectors/rim_first_finder.py .team/shot_detectors/rim_first_measure.py .team/shot_detectors/q4_blind_test.py .team/shot_detectors/double_count_fix.py .team/shot_detectors/measure_player_motion.py .team/specs/44_gv_score.py .team/specs/44_gv_labels.json  0.2s
+💻 $ grep -n "film_scale\|REF_HOOP_W\|ref_hoop_w\|_court_scale" .team/shot_detectors/measure_net_moved.py .team/shot_detectors/rim_first_finder.py .team/shot_detectors/rim_first_measure.py .team/shot_detectors/q4_blind_test.py .team/shot_detectors/double_count_fix.py .team/shot_detectors/collect_q4_bodd.py
+💻 $ ls .team/ | grep -i "muse\|spec45\|spec44" + 2 commands
+💻 $ cat .team/muse_scale45_run.txt
+💻 $ cat .team/prompt_muse_scale45.txt
+💻 $ grep -rn "film_scale\|_court_scale_x\|_court_scale_y" --include=*.py . | grep -v "^./ai_bridge.py\|^./.venv\|node_modules"  36.7s
+
+────────────────────────────────────────
+☤ Hermes
+Scale reaches decide_shot: CONFIRMED — apply_arc_replacements strips only "result"; decide_shot reads _court_scale_x/_court_scale_y (default 1.0); wrapper sets them in memory before D1; same film_scale to v6 and d2v1. No miss there.
+
+G1 Adrian gate: SOUND — median 98.0/98.0 = 1.0 exactly, scale is identity, byte-match on 109 adrian rows by t is a valid hard gate.
+
+No tag/label/scoreboard/truth read in the scale step; no tuning after test numbers; no spec-45 edits outside the two wrapper files (fall-through edits predate, from spec 44).
+
+Riverstone blind per V7/plan — d2v1 saw ball crops only, no make/miss labels; labels+score frozen before run; hand-check before score; one try then stop. Not yet run (spec v1 not run).
+
+V6 stop-check 0.55-0.80: fair — pre-registered before any Riverstone number, stop-not-clamp, never changed.
+
+Caveats: conditions approved pre-implementation; wrapper --film-scale absent so far; G1 n_tracks_used 111 vs 109 rows wording loose.
+
+MUSE: AGREE
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-91c18d6bc6bb2531ea1611da1d89634b82628cf319c8710d51331fe4cb7c77b5
+  hermes -c "Muse, you check the Vetter. Read-only: do not…"
+
+Session:        local-91c18d6bc6bb2531ea1611da1d89634b82628cf319c8710d51331fe4cb7c77b5
+Title:          Muse, you check the Vetter. Read-only: do not…
+Duration:       6m 19s
+Messages:       37 (1 user, 35 tool calls)
